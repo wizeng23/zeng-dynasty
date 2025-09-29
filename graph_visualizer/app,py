@@ -1,0 +1,27 @@
+from flask import Flask, render_template, request, jsonify
+
+app = Flask(__name__)
+
+# Example graph data (could be loaded from anywhere)
+graph_data = {
+    "nodes": [
+        {"data": {"id": "A"}},
+        {"data": {"id": "B"}},
+        {"data": {"id": "C"}},
+    ],
+    "edges": [
+        {"data": {"source": "A", "target": "B"}},
+        {"data": {"source": "B", "target": "C"}},
+    ]
+}
+
+@app.route('/')
+def index():
+    return render_template('index.html', graph=graph_data)
+
+@app.route('/graph', methods=['GET'])
+def get_graph():
+    return jsonify(graph_data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
