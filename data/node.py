@@ -29,5 +29,3 @@ class Node:
 
     notes: str
     """Notes about the person. For now, this is handwritten notes in the book by the person's name."""
-
-
