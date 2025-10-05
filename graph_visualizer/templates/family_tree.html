@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Family Tree</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/d3-graphviz@5.0.2/build/d3-graphviz.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #graph { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="graph"></div>
+  <script>
+    // Build DOT string from Flask data
+    const relations = {{ relations|tojson }};
+    const images = {{ images|tojson }};
+
+    let dot = `
+      digraph FamilyTree {
+        rankdir=TB;
+        node [fontsize=14, shape=box, style=rounded];
+    `;
+
+    // Add nodes (text or image)
+    const nodes = new Set();
+    relations.forEach(([parent, child]) => {
+      nodes.add(parent);
+      nodes.add(child);
+    });
+
+    nodes.forEach(node => {
+      if (images[node]) {
+        dot += `"${node}" [shape=none, label="", image="static/${images[node]}"];\n`;
+      } else {
+        dot += `"${node}";\n`;
+      }
+    });
+
+    // Add edges
+    relations.forEach(([parent, child]) => {
+      dot += `"${parent}" -> "${child}";\n`;
+    });
+
+    dot += "}";
+
+    // Render
+    d3.select("#graph").graphviz()
+      .zoom(true)
+      .fit(true)
+      .renderDot(dot);
+  </script>
+</body>
+</html>

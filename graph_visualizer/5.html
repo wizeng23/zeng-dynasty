@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Family tree (Graphviz + Viz.js)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body { height:100%; margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; }
+    #controls { padding:10px; background:#f5f7fa; border-bottom:1px solid #ddd; display:flex; gap:8px; align-items:center; }
+    textarea { width:48ch; height:12rem; font-family:monospace; }
+    #graph-wrap { height: calc(100% - 120px); overflow:hidden; position:relative; }
+    #graph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+    #graph svg { width:100%; height:100%; }
+    button { padding:6px 10px; cursor:pointer; }
+    .note { color: #555; font-size:0.9rem; margin-left:8px; }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <button id="renderBtn">Render</button>
+    <button id="fitBtn">Fit to view</button>
+    <button id="resetBtn">Reset zoom</button>
+    <div class="note">Make sure your images are served by HTTP (e.g. run <code>python -m http.server</code>).</div>
+  </div>
+
+  <div style="display:flex; gap:12px; padding:10px;">
+    <textarea id="dotArea" spellcheck="false">
+digraph family {
+  rankdir=TB;
+  node [shape=none, margin=0];
+
+  // Text-only node
+  John [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD><B>John Doe</B></TD></TR><TR><TD>b. 1950</TD></TR></TABLE>>];
+
+  // Image-only node (image must be reachable via HTTP)
+  Alice [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0"><TR><TD><IMG SRC="images/alice.jpg" SCALE="TRUE"/></TD></TR></TABLE>>];
+
+  // Image + text
+  Bob [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="4"><TR><TD><IMG SRC="images/bob.jpg" SCALE="TRUE"/></TD></TR><TR><TD><B>Bob Smith</B></TD></TR></TABLE>>];
+
+  // Another mixed node
+  Carol [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="4"><TR><TD><IMG SRC="images/carol.png" SCALE="TRUE" /></TD></TR><TR><TD>Carol Lee</TD></TR></TABLE>>];
+
+  // Edges (directed)
+  John -> Bob;
+  John -> Alice;
+  Alice -> Carol;
+}
+    </textarea>
+
+    <div id="graph-wrap">
+      <div id="graph"></div>
+    </div>
+  </div>
+
+  <!-- Viz.js (Graphviz compiled to WASM/JS).
+       If a particular CDN fails, download viz.js locally and reference it. -->
+  <script src="https://unpkg.com/viz.js@2.1.2/dist/viz.js"></script>
+  <script src="https://unpkg.com/viz.js@2.1.2/dist/full.render.js"></script>
+
+  <!-- svg-pan-zoom for pannable/zoomable SVG -->
+  <script src="https://unpkg.com/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+
+  <script>
+    // Grab references
+    const dotArea = document.getElementById('dotArea');
+    const renderBtn = document.getElementById('renderBtn');
+    const graphDiv = document.getElementById('graph');
+    const fitBtn = document.getElementById('fitBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Create Viz instance (Viz and render are provided by viz.js scripts)
+    const viz = new Viz();
+
+    let panZoomInstance = null;
+
+    async function renderDot(dotSource) {
+      try {
+        // Render to SVG string
+        const svgString = await viz.renderString(dotSource, { format: "svg", engine: "dot" });
+
+        // Insert into container
+        graphDiv.innerHTML = svgString;
+
+        // Ensure SVG is visible height/width (Graphviz sets viewBox)
+        const svgEl = graphDiv.querySelector('svg');
+        if (!svgEl) throw new Error('No SVG produced');
+
+        // Remove any inline width/height to let pan/zoom control it if desired
+        svgEl.removeAttribute('width');
+        svgEl.removeAttribute('height');
+
+        // Initialize/replace panZoomInstance
+        if (panZoomInstance) {
+          try { panZoomInstance.destroy(); } catch(e) { /* ignore */ }
+        }
+        panZoomInstance = svgPanZoom(svgEl, {
+          zoomEnabled: true,
+          controlIconsEnabled: true,
+          fit: true,
+          center: true,
+          minZoom: 0.1,
+          maxZoom: 10
+        });
+
+        // initial fit
+        panZoomInstance.fit();
+        panZoomInstance.center();
+
+      } catch (err) {
+        console.error(err);
+        graphDiv.innerHTML = '<pre style="color:red">Error rendering graph: ' + (err.message || err) + '</pre>';
+        // If Viz.js internal error may require reloading the WASM / worker:
+        // viz = new Viz(); // re-init if needed (can't reassign const).
+      }
+    }
+
+    // Initial render on load
+    renderBtn.addEventListener('click', () => renderDot(dotArea.value));
+    window.addEventListener('load', () => renderDot(dotArea.value));
+
+    fitBtn.addEventListener('click', () => {
+      if (panZoomInstance) panZoomInstance.fit();
+    });
+    resetBtn.addEventListener('click', () => {
+      if (panZoomInstance) panZoomInstance.resetZoom();
+      if (panZoomInstance) panZoomInstance.center();
+    });
+
+    // Helpful: re-render when window resized so fit/center works well
+    window.addEventListener('resize', () => {
+      if (panZoomInstance) {
+        panZoomInstance.resize();
+        panZoomInstance.fit();
+        panZoomInstance.center();
+      }
+    });
+  </script>
+</body>
+</html>

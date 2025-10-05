@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Family Tree with Images</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/d3-graphviz@5.0.2/build/d3-graphviz.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #graph {
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="graph"></div>
+  <script>
+    // Graphviz DOT definition
+    const dot = `
+      digraph FamilyTree {
+        rankdir=TB;
+        node [fontsize=14, shape=box, style=rounded];
+
+        // Text-only nodes
+        "Grandpa Joe";
+        "Grandma Mary";
+        "Dad";
+        "Mom";
+        "Sister";
+
+        // Example image node
+        Me [shape=none, label="", image="cat.png"];
+
+        // Relationships
+        "Grandpa Joe" -> "Dad";
+        "Grandma Mary" -> "Dad";
+        "Dad" -> Me;
+        "Mom" -> Me;
+        "Dad" -> "Sister";
+        "Mom" -> "Sister";
+      }
+    `;
+
+    const graphviz = d3.select("#graph").graphviz()
+      .zoom(true)   // enable pan/zoom
+      .fit(true);   // fit to screen initially
+
+    graphviz.renderDot(dot);
+  </script>
+</body>
+</html>
