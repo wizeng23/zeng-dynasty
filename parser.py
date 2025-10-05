@@ -3,7 +3,7 @@ import collections
 from PIL import Image
 import numpy as np
 
-DIR = '/Users/williamzeng/Library/Mobile Documents/com~apple~CloudDocs/Documents/misc/projects/family_tree/book1'
+DIR = './book1'
 PATH = '{}/family-tree-{}.png'
 # PATH = '/Users/williamzeng/Downloads/11.png'
 
@@ -11,10 +11,10 @@ def get_tilt(corners):
   sums = [sum(p) for p in corners]
   min_sum = min(sums)
   max_sum = max(sums)
-  top_left = [p for p in corners if sum(p) = min_sum]
-  bottom_right = [p for p in corners if sum(p) = max_sum]
+  top_left = [p for p in corners if sum(p) == min_sum]
+  bottom_right = [p for p in corners if sum(p) == max_sum]
 
-  i_sorted = sorted(corner, lambda p: p[0])
+  i_sorted = sorted(corners, lambda p: p[0])
   if sum(i_sorted[0]) == min_sum:
     top_right = i_sorted[1]
   else:
@@ -23,7 +23,7 @@ def get_tilt(corners):
     bottom_left = i_sorted[3]
   else:
     bottom_left = i_sorted[2]
-  print(f'Top left: {}')
+  print(f'Top left: ')
 
 def get_page_old(grid, start_i, start_j):
   print(f'get_page_old {start_i} {start_j}')

@@ -79,6 +79,7 @@ We could feed the pages into an LLM like Claude, and ask it to parse the image f
 * Language support for both Chinese \+ English?  
 * For famous zengs in our tree, could link to their wikipedia page or other articles about them  
 * Could have an about page with other famous zengs too outside our tree?
+* Given a node, can list all ancestors above that node
 
 # 4\) Create dynamic website
 

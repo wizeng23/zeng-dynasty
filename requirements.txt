@@ -1,0 +1,5 @@
+ipykernel
+numpy
+opencv-python
+pandas
+pillow
