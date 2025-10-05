@@ -15,36 +15,47 @@
   <h2>Graph Visualizer</h2>
   <div id="cy"></div>
 
-  <script>
-    fetch('/graph')
-      .then(res => res.json())
-      .then(graph => {
-        cytoscape({
-          container: document.getElementById('cy'),
-          elements: [...graph.nodes, ...graph.edges],
-          style: [
-            {
-              selector: 'node',
-              style: {
-                'background-color': '#0074D9',
-                'label': 'data(id)'
-              }
-            },
-            {
-              selector: 'edge',
-              style: {
-                'width': 2,
-                'line-color': '#ccc',
-                'target-arrow-color': '#ccc',
-                'target-arrow-shape': 'triangle'
-              }
+
+<script>
+  fetch('/graph')
+    .then(res => res.json())
+    .then(graph => {
+      cytoscape({
+        container: document.getElementById('cy'),
+        elements: [...graph.nodes, ...graph.edges],
+        style: [
+          {
+            selector: 'node',
+            style: {
+              'background-color': '#0074D9',
+              'background-fit': 'cover',
+              'background-image': 'data(image)',     // Will use image if available
+              'label': 'data(label)',                // Will show label if image not there
+              'color': '#fff',
+              'text-valign': 'bottom',
+              'text-halign': 'center',
+              'text-outline-color': '#000',
+              'text-outline-width': 2,
+              'width': 60,
+              'height': 60
             }
-          ],
-          layout: {
-            name: 'cose'
+          },
+          {
+            selector: 'edge',
+            style: {
+              'width': 2,
+              'line-color': '#ccc',
+              'target-arrow-color': '#ccc',
+              'target-arrow-shape': 'triangle'
+            }
           }
-        });
+        ],
+        layout: {
+          name: 'cose'
+        }
       });
-  </script>
+    });
+</script>
+
 </body>
 </html>
