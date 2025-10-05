@@ -13,9 +13,9 @@
 <body>
   <div id="graph"></div>
   <script>
-    // Build DOT string from Flask data
     const relations = {{ relations|tojson }};
     const images = {{ images|tojson }};
+    const staticBase = "{{ url_for('static', filename='') }}"; // Flask static base URL
 
     let dot = `
       digraph FamilyTree {
@@ -23,29 +23,23 @@
         node [fontsize=14, shape=box, style=rounded];
     `;
 
-    // Add nodes (text or image)
     const nodes = new Set();
-    relations.forEach(([parent, child]) => {
-      nodes.add(parent);
-      nodes.add(child);
-    });
+    relations.forEach(([p, c]) => { nodes.add(p); nodes.add(c); });
 
     nodes.forEach(node => {
       if (images[node]) {
-        dot += `"${node}" [shape=none, label="", image="static/${images[node]}"];\n`;
+        dot += `"${node}" [shape=none, label="", image="${staticBase}${images[node]}"];\n`;
       } else {
         dot += `"${node}";\n`;
       }
     });
 
-    // Add edges
-    relations.forEach(([parent, child]) => {
-      dot += `"${parent}" -> "${child}";\n`;
+    relations.forEach(([p, c]) => {
+      dot += `"${p}" -> "${c}";\n`;
     });
 
     dot += "}";
 
-    // Render
     d3.select("#graph").graphviz()
       .zoom(true)
       .fit(true)

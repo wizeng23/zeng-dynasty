@@ -16,8 +16,8 @@ def family_tree():
 
     # Optional images for specific nodes
     images = {
-        "Me": "/static/cat.png",
-        "Dad": "/static/cat.png",
+        "Me": "http://127.0.0.1:5000/static/cat.png",
+        "Dad": "cat.png",
         "Mom": "cat.png",
     }
 

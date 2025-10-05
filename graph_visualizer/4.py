@@ -16,7 +16,7 @@ def create_family_tree():
     dot.node("B", image="", label="", shape="box")
 
     # Example: node with image and text
-    dot.node("C", image="\\static\\cat.png", label="Parent", labelloc="b", shape="box")
+    dot.node("C", image="http://127.0.0.1:5000/static/cat.png", label="Parent", labelloc="b", shape="box")
 
     # Edges
     dot.edge("A", "B")
