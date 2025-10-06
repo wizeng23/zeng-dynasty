@@ -1,0 +1,9 @@
+// Family Tree
+digraph {
+	rankdir=TB
+	"Grandpa Joe" -> Dad
+	"Grandma Mary" -> Dad
+	Dad -> Me
+	Mom -> Me
+	Dad -> Sister
+}

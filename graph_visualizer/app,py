@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 
 # Example graph data (could be loaded from anywhere)
+"""
 graph_data = {
     "nodes": [
         {"data": {"id": "A"}},
@@ -14,6 +15,20 @@ graph_data = {
         {"data": {"source": "B", "target": "C"}},
     ]
 }
+"""
+
+graph_data = {
+    "nodes": [
+        {"data": {"id": "A", "label": "Node A"}},  # Label-only
+        {"data": {"id": "B", "image": "/static/cat.png"}},  # Image-only
+        {"data": {"id": "C", "label": "Node C", "image": "/static/dog.png"}},  # Both
+    ],
+    "edges": [
+        {"data": {"source": "A", "target": "B"}},
+        {"data": {"source": "B", "target": "C"}},
+    ]
+}
+
 
 @app.route('/')
 def index():
