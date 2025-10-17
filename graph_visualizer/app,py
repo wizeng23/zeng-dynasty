@@ -60,6 +60,7 @@ def index():
 
 @app.route('/graph', methods=['GET'])
 def get_graph():
+    print(jsonify(graph_data))
     return jsonify(graph_data)
 
 if __name__ == '__main__':
