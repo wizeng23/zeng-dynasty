@@ -1,33 +1,57 @@
 from flask import Flask, render_template, request, jsonify
+from dataclasses import dataclass
+
 
 app = Flask(__name__)
 
-# Example graph data (could be loaded from anywhere)
-"""
-graph_data = {
-    "nodes": [
-        {"data": {"id": "A"}},
-        {"data": {"id": "B"}},
-        {"data": {"id": "C"}},
-    ],
-    "edges": [
-        {"data": {"source": "A", "target": "B"}},
-        {"data": {"source": "B", "target": "C"}},
-    ]
-}
-"""
+@dataclass
+class Node:
+    id: int
+    """Unique identifier for the node."""
+
+    name: str
+    """Full name of the person. Can be empty string."""
+
+    name_images: list[str]
+    """List of image paths, where each image is a character in the person's name."""
+
+    biography: str
+    """Biographical text about the person."""
+
+    generation: int
+    """Which generation this person belongs to in the family tree. 1 for the root, -1 if not known."""
+
+    children: list[int]
+    """List of child node IDs."""
+
+C = Node('C', 'Node C', [], "Stuff", 2, [])
+C2 = Node('C', 'Node C', [], "Stuff", 2, [])
+B = Node('B', 'Node B', [], "Stuff", 2, [C, C2])
+B2 = Node('B', 'Node B', [], "Stuff", 2, [])
+A2 = Node('A2', 'Node A2', ["/static/dog.png"], "Stuff", 2, [ B2])
+A = Node('A', 'Node A', ["/static/cat.png"], "Stuff", 1, [A2, B])
+
+nodes = []
+edges = []
+
+def compute_graph_data(node):
+    assert len(node.name_images) <= 1
+    data = {"id": node.id, "label": node.name}
+    if len(node.name_images) > 0: 
+        data["image"] = node.name_images[0]
+    nodes.append({"data": data})
+
+    for child in node.children:
+        compute_graph_data(child)
+        edges.append({"data": {"source": node.id, "target": child.id}})
+
+compute_graph_data(A)
 
 graph_data = {
-    "nodes": [
-        {"data": {"id": "A", "label": "Node A"}},  # Label-only
-        {"data": {"id": "B", "image": "/static/cat.png"}},  # Image-only
-        {"data": {"id": "C", "label": "Node C", "image": "/static/dog.png"}},  # Both
-    ],
-    "edges": [
-        {"data": {"source": "A", "target": "B"}},
-        {"data": {"source": "B", "target": "C"}},
-    ]
+    "nodes": nodes,
+    "edges": edges
 }
+print(graph_data)
 
 
 @app.route('/')
@@ -36,6 +60,7 @@ def index():
 
 @app.route('/graph', methods=['GET'])
 def get_graph():
+    print(jsonify(graph_data))
     return jsonify(graph_data)
 
 if __name__ == '__main__':

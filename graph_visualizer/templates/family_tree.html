@@ -1,3 +1,6 @@
+</body>
+</html>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,39 +14,36 @@
   </style>
 </head>
 <body>
-  <div id="graph"></div>
-  <script>
-    const relations = {{ relations|tojson }};
-    const images = {{ images|tojson }};
-    const staticBase = "{{ url_for('static', filename='') }}"; // Flask static base URL
+<div id="graph"></div>
+<script>
+  const relations = {{ relations|tojson }};
+  const images = {{ images|tojson }};
 
-    let dot = `
-      digraph FamilyTree {
-        rankdir=TB;
-        node [fontsize=14, shape=box, style=rounded];
-    `;
+  let dot = `
+    digraph FamilyTree {
+      rankdir=TB;
+      node [shape=none, fontsize=14];
+  `;
 
-    const nodes = new Set();
-    relations.forEach(([p, c]) => { nodes.add(p); nodes.add(c); });
+  const nodes = new Set();
+  relations.forEach(([p, c]) => { nodes.add(p); nodes.add(c); });
 
-    nodes.forEach(node => {
-      if (images[node]) {
-        dot += `"${node}" [shape=none, label="", image="${staticBase}${images[node]}"];\n`;
-      } else {
-        dot += `"${node}";\n`;
-      }
-    });
+  nodes.forEach(node => {
+    if (images[node]) {
+      const uri = images[node];
+      dot += `"${node}" [image='http://127.0.0.1:5000/static/cat.png'];
+      `;
+    } else {
+      dot += `"${node}" [label="${node}", shape=box, style=rounded];\n`;
+    }
+  });
 
-    relations.forEach(([p, c]) => {
-      dot += `"${p}" -> "${c}";\n`;
-    });
+  relations.forEach(([p, c]) => { dot += `"${p}" -> "${c}";\n`; });
+  dot += "}";
+  
+  console.log(dot);
 
-    dot += "}";
-
-    d3.select("#graph").graphviz()
-      .zoom(true)
-      .fit(true)
-      .renderDot(dot);
-  </script>
+  d3.select("#graph").graphviz().zoom(true).fit(true).renderDot(dot);
+</script>
 </body>
 </html>
