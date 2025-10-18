@@ -2,10 +2,6 @@
 
 May 23, 2025
 
-Note: Don't tell mom. She doesn't like these books. Maybe don't tell dad either until we got something cool to show
-
-TODO: Create GitHub repo
-
 # 1\) Scan book
 
 **Status:** book 1 scanned: [book1](https://drive.google.com/drive/folders/1sc8DNkmQs1mHApdG_d3b-h264wRuQcoe)
