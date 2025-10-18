@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            overflow: auto;
+        }
+        #tree-container {
+            width: 100%;
+            height: 100vh;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .node image {
+            cursor: pointer;
+        }
+        .link {
+            fill: none;
+            stroke: #555;
+            stroke-width: 2px;
+        }
+        #file-input {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #file-input input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="file-input">
+        <span id="status">Loading family tree...</span>
+    </div>
+    <div id="tree-container"></div>
+
+    <script>
+        const width = window.innerWidth - 40;
+        const height = window.innerHeight - 100;
+
+        const svg = d3.select("#tree-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${width/2}, 50)`);
+
+        // Add zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 3])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+        
+        svg.call(zoom);
+
+        function parseJsonl(text) {
+            const lines = text.trim().split('\n');
+            return lines.map(line => JSON.parse(line));
+        }
+
+        function buildTree(nodes) {
+            // Find root node (parent === -1)
+            const root = nodes.find(n => n.parent === -1);
+            if (!root) {
+                throw new Error("No root node found");
+            }
+
+            // Create a map for quick lookup
+            const nodeMap = new Map(nodes.map(n => [n.id, {...n}]));
+
+            // Build tree structure using the children field
+            function buildNode(nodeId) {
+                const node = nodeMap.get(nodeId);
+                if (!node) return null;
+                
+                // Recursively build children
+                if (node.children && node.children.length > 0) {
+                    node.children = node.children
+                        .map(childId => buildNode(childId))
+                        .filter(child => child !== null);
+                } else {
+                    node.children = [];
+                }
+                
+                return node;
+            }
+
+            return buildNode(root.id);
+        }
+
+        function renderTree(treeData) {
+            // Clear previous render
+            g.selectAll("*").remove();
+
+            // First, load all images to get their dimensions
+            const imagePromises = [];
+            
+            function collectImages(node) {
+                if (node.name_images && node.name_images.length > 0) {
+                    const promise = new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = function() {
+                            node.imgWidth = this.width;
+                            node.imgHeight = this.height;
+                            resolve();
+                        };
+                        img.onerror = function() {
+                            node.imgWidth = 100;
+                            node.imgHeight = 100;
+                            resolve();
+                        };
+                        img.src = node.name_images[0];
+                    });
+                    imagePromises.push(promise);
+                }
+                if (node.children) {
+                    node.children.forEach(collectImages);
+                }
+            }
+            
+            collectImages(treeData);
+            
+            Promise.all(imagePromises).then(() => {
+                // Create tree layout with dynamic sizing
+                const treeLayout = d3.tree()
+                    .nodeSize([200, 150])
+                    .separation((a, b) => {
+                        const aWidth = a.data.imgWidth || 100;
+                        const bWidth = b.data.imgWidth || 100;
+                        return (aWidth + bWidth) / 200 + 0.5;
+                    });
+
+                const root = d3.hierarchy(treeData);
+                treeLayout(root);
+
+                // Draw links
+                g.selectAll(".link")
+                    .data(root.links())
+                    .enter()
+                    .append("path")
+                    .attr("class", "link")
+                    .attr("d", d3.linkVertical()
+                        .x(d => d.x)
+                        .y(d => d.y));
+
+                // Draw nodes
+                const nodes = g.selectAll(".node")
+                    .data(root.descendants())
+                    .enter()
+                    .append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+                // Add images at original size
+                nodes.append("image")
+                    .attr("xlink:href", d => d.data.name_images && d.data.name_images.length > 0 ? d.data.name_images[0] : "")
+                    .attr("x", d => -(d.data.imgWidth || 100) / 2)
+                    .attr("y", d => -(d.data.imgHeight || 100) / 2)
+                    .attr("width", d => d.data.imgWidth || 100)
+                    .attr("height", d => d.data.imgHeight || 100)
+                    .style("border", "2px solid #333")
+                    .on("error", function(event, d) {
+                        // Fallback if image fails to load
+                        d3.select(this.parentNode)
+                            .append("rect")
+                            .attr("x", -50)
+                            .attr("y", -50)
+                            .attr("width", 100)
+                            .attr("height", 100)
+                            .attr("fill", "#ddd")
+                            .attr("stroke", "#333")
+                            .attr("stroke-width", 2);
+                        
+                        d3.select(this.parentNode)
+                            .append("text")
+                            .attr("text-anchor", "middle")
+                            .attr("dy", "0.35em")
+                            .text("No Image");
+                    });
+
+                // Add border around images
+                nodes.append("rect")
+                    .attr("x", d => -(d.data.imgWidth || 100) / 2)
+                    .attr("y", d => -(d.data.imgHeight || 100) / 2)
+                    .attr("width", d => d.data.imgWidth || 100)
+                    .attr("height", d => d.data.imgHeight || 100)
+                    .attr("fill", "none")
+                    .attr("stroke", "#333")
+                    .attr("stroke-width", 2);
+            });
+        }
+
+        // Load the JSONL file automatically
+        fetch('data/book1_merged.jsonl')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to load data file');
+                }
+                return response.text();
+            })
+            .then(text => {
+                const nodes = parseJsonl(text);
+                console.log('Total nodes loaded:', nodes.length);
+                console.log('Nodes:', nodes);
+                const tree = buildTree(nodes);
+                console.log('Tree structure:', tree);
+                renderTree(tree);
+                document.getElementById("status").textContent = `Loaded ${nodes.length} nodes`;
+            })
+            .catch(error => {
+                document.getElementById("status").textContent = `Error: ${error.message}`;
+                console.error(error);
+            });
+    </script>
+</body>
+</html>

@@ -6,21 +6,21 @@
 {"id": 6, "name": "", "name_images": ["book1/names/6.png"], "generation": -1, "parent": 5, "children": [7], "biography": "", "notes": "0_0_5"}
 {"id": 7, "name": "", "name_images": ["book1/names/7.png"], "generation": -1, "parent": 6, "children": [8], "biography": "", "notes": "0_0_6"}
 {"id": 8, "name": "", "name_images": ["book1/names/8.png"], "generation": -1, "parent": 7, "children": [10], "biography": "", "notes": "0_0_7/1_1_0"}
-{"id": 10, "name": "", "name_images": ["book1/names/10.png"], "generation": -1, "parent": 9, "children": [11], "biography": "", "notes": "1_1_1"}
+{"id": 10, "name": "", "name_images": ["book1/names/10.png"], "generation": -1, "parent": 8, "children": [11], "biography": "", "notes": "1_1_1"}
 {"id": 11, "name": "", "name_images": ["book1/names/11.png"], "generation": -1, "parent": 10, "children": [12, 13], "biography": "", "notes": "1_1_2"}
 {"id": 12, "name": "", "name_images": ["book1/names/12.png"], "generation": -1, "parent": 11, "children": [], "biography": "", "notes": "1_1_3"}
 {"id": 13, "name": "", "name_images": ["book1/names/13.png"], "generation": -1, "parent": 11, "children": [14], "biography": "", "notes": "1_1_4"}
 {"id": 14, "name": "", "name_images": ["book1/names/14.png"], "generation": -1, "parent": 13, "children": [15], "biography": "", "notes": "1_1_5"}
 {"id": 15, "name": "", "name_images": ["book1/names/15.png"], "generation": -1, "parent": 14, "children": [17, 18], "biography": "", "notes": "1_1_6/2_2_0"}
-{"id": 17, "name": "", "name_images": ["book1/names/17.png"], "generation": -1, "parent": 16, "children": [], "biography": "", "notes": "2_2_1"}
-{"id": 18, "name": "", "name_images": ["book1/names/18.png"], "generation": -1, "parent": 16, "children": [19], "biography": "", "notes": "2_2_2"}
+{"id": 17, "name": "", "name_images": ["book1/names/17.png"], "generation": -1, "parent": 15, "children": [], "biography": "", "notes": "2_2_1"}
+{"id": 18, "name": "", "name_images": ["book1/names/18.png"], "generation": -1, "parent": 15, "children": [19], "biography": "", "notes": "2_2_2"}
 {"id": 19, "name": "", "name_images": ["book1/names/19.png"], "generation": -1, "parent": 18, "children": [20, 21], "biography": "", "notes": "2_2_3"}
 {"id": 20, "name": "", "name_images": ["book1/names/20.png"], "generation": -1, "parent": 19, "children": [], "biography": "", "notes": "2_2_4"}
 {"id": 21, "name": "", "name_images": ["book1/names/21.png"], "generation": -1, "parent": 19, "children": [22], "biography": "", "notes": "2_2_5"}
 {"id": 22, "name": "", "name_images": ["book1/names/22.png"], "generation": -1, "parent": 21, "children": [23], "biography": "", "notes": "2_2_6"}
 {"id": 23, "name": "", "name_images": ["book1/names/23.png"], "generation": -1, "parent": 22, "children": [25, 26], "biography": "", "notes": "2_2_7/3_3_0"}
-{"id": 25, "name": "", "name_images": ["book1/names/25.png"], "generation": -1, "parent": 24, "children": [27], "biography": "", "notes": "3_3_1"}
-{"id": 26, "name": "", "name_images": ["book1/names/26.png"], "generation": -1, "parent": 24, "children": [28], "biography": "", "notes": "3_3_2"}
+{"id": 25, "name": "", "name_images": ["book1/names/25.png"], "generation": -1, "parent": 23, "children": [27], "biography": "", "notes": "3_3_1"}
+{"id": 26, "name": "", "name_images": ["book1/names/26.png"], "generation": -1, "parent": 23, "children": [28], "biography": "", "notes": "3_3_2"}
 {"id": 27, "name": "", "name_images": ["book1/names/27.png"], "generation": -1, "parent": 25, "children": [29, 30], "biography": "", "notes": "3_3_3"}
 {"id": 28, "name": "", "name_images": ["book1/names/28.png"], "generation": -1, "parent": 26, "children": [31], "biography": "", "notes": "3_3_4"}
 {"id": 29, "name": "", "name_images": ["book1/names/29.png"], "generation": -1, "parent": 27, "children": [32, 33], "biography": "", "notes": "3_3_5"}
@@ -35,21 +35,21 @@
 {"id": 38, "name": "", "name_images": ["book1/names/38.png"], "generation": -1, "parent": 33, "children": [], "biography": "", "notes": "3_3_14"}
 {"id": 39, "name": "", "name_images": ["book1/names/39.png"], "generation": -1, "parent": 34, "children": [], "biography": "", "notes": "3_3_15"}
 {"id": 40, "name": "", "name_images": ["book1/names/40.png"], "generation": -1, "parent": 35, "children": [], "biography": "", "notes": "3_3_16"}
-{"id": 42, "name": "", "name_images": ["book1/names/42.png"], "generation": -1, "parent": 41, "children": [], "biography": "", "notes": "4_4_1"}
-{"id": 43, "name": "", "name_images": ["book1/names/43.png"], "generation": -1, "parent": 41, "children": [44], "biography": "", "notes": "4_4_2"}
-{"id": 44, "name": "", "name_images": ["book1/names/44.png"], "generation": -1, "parent": 43, "children": [45, 46], "biography": "", "notes": "4_4_3"}
+{"id": 42, "name": "", "name_images": ["book1/names/42.png"], "generation": -1, "parent": 37, "children": [], "biography": "", "notes": "4_4_1"}
+{"id": 43, "name": "", "name_images": ["book1/names/43.png"], "generation": -1, "parent": 37, "children": [44], "biography": "", "notes": "4_4_2"}
+{"id": 44, "name": "", "name_images": ["book1/names/44.png"], "generation": -1, "parent": 37, "children": [45, 46], "biography": "", "notes": "4_4_3"}
 {"id": 45, "name": "", "name_images": ["book1/names/45.png"], "generation": -1, "parent": 44, "children": [], "biography": "", "notes": "4_4_4"}
 {"id": 46, "name": "", "name_images": ["book1/names/46.png"], "generation": -1, "parent": 44, "children": [47], "biography": "", "notes": "4_4_5"}
 {"id": 47, "name": "", "name_images": ["book1/names/47.png"], "generation": -1, "parent": 46, "children": [48], "biography": "", "notes": "4_4_6"}
 {"id": 48, "name": "", "name_images": ["book1/names/48.png"], "generation": -1, "parent": 47, "children": [50], "biography": "", "notes": "4_4_7/5_5_0"}
-{"id": 50, "name": "", "name_images": ["book1/names/50.png"], "generation": -1, "parent": 49, "children": [51], "biography": "", "notes": "5_5_1"}
+{"id": 50, "name": "", "name_images": ["book1/names/50.png"], "generation": -1, "parent": 48, "children": [51], "biography": "", "notes": "5_5_1"}
 {"id": 51, "name": "", "name_images": ["book1/names/51.png"], "generation": -1, "parent": 50, "children": [52], "biography": "", "notes": "5_5_2"}
 {"id": 52, "name": "", "name_images": ["book1/names/52.png"], "generation": -1, "parent": 51, "children": [53, 54], "biography": "", "notes": "5_5_3"}
 {"id": 53, "name": "", "name_images": ["book1/names/53.png"], "generation": -1, "parent": 52, "children": [55, 56], "biography": "", "notes": "5_5_4"}
 {"id": 54, "name": "", "name_images": ["book1/names/54.png"], "generation": -1, "parent": 52, "children": [], "biography": "", "notes": "5_5_5"}
 {"id": 55, "name": "", "name_images": ["book1/names/55.png"], "generation": -1, "parent": 53, "children": [58], "biography": "", "notes": "5_5_6/6_6_0"}
 {"id": 56, "name": "", "name_images": ["book1/names/56.png"], "generation": -1, "parent": 53, "children": [], "biography": "", "notes": "5_5_7"}
-{"id": 58, "name": "", "name_images": ["book1/names/58.png"], "generation": -1, "parent": 57, "children": [59], "biography": "", "notes": "6_6_1"}
+{"id": 58, "name": "", "name_images": ["book1/names/58.png"], "generation": -1, "parent": 55, "children": [59], "biography": "", "notes": "6_6_1"}
 {"id": 59, "name": "", "name_images": ["book1/names/59.png"], "generation": -1, "parent": 58, "children": [60, 61], "biography": "", "notes": "6_6_2"}
 {"id": 60, "name": "", "name_images": ["book1/names/60.png"], "generation": -1, "parent": 59, "children": [62, 63], "biography": "", "notes": "6_6_3"}
 {"id": 61, "name": "", "name_images": ["book1/names/61.png"], "generation": -1, "parent": 59, "children": [], "biography": "", "notes": "6_6_4"}
@@ -57,7 +57,7 @@
 {"id": 63, "name": "", "name_images": ["book1/names/63.png"], "generation": -1, "parent": 60, "children": [64, 65], "biography": "", "notes": "6_6_6"}
 {"id": 64, "name": "", "name_images": ["book1/names/64.png"], "generation": -1, "parent": 63, "children": [67], "biography": "", "notes": "6_6_7/7_7_0"}
 {"id": 65, "name": "", "name_images": ["book1/names/65.png"], "generation": -1, "parent": 63, "children": [], "biography": "", "notes": "6_6_8"}
-{"id": 67, "name": "", "name_images": ["book1/names/67.png"], "generation": -1, "parent": 66, "children": [68, 69, 70], "biography": "", "notes": "7_7_1"}
+{"id": 67, "name": "", "name_images": ["book1/names/67.png"], "generation": -1, "parent": 64, "children": [68, 69, 70], "biography": "", "notes": "7_7_1"}
 {"id": 68, "name": "", "name_images": ["book1/names/68.png"], "generation": -1, "parent": 67, "children": [], "biography": "", "notes": "7_7_2"}
 {"id": 69, "name": "", "name_images": ["book1/names/69.png"], "generation": -1, "parent": 67, "children": [71], "biography": "", "notes": "7_7_3"}
 {"id": 70, "name": "", "name_images": ["book1/names/70.png"], "generation": -1, "parent": 67, "children": [], "biography": "", "notes": "7_7_4"}
@@ -65,11 +65,11 @@
 {"id": 72, "name": "", "name_images": ["book1/names/72.png"], "generation": -1, "parent": 71, "children": [74], "biography": "", "notes": "7_7_6"}
 {"id": 73, "name": "", "name_images": ["book1/names/73.png"], "generation": -1, "parent": 71, "children": [], "biography": "", "notes": "7_7_7"}
 {"id": 74, "name": "", "name_images": ["book1/names/74.png"], "generation": -1, "parent": 72, "children": [76, 77, 78, 79, 80], "biography": "", "notes": "7_7_8/8_8_0"}
-{"id": 76, "name": "", "name_images": ["book1/names/76.png"], "generation": -1, "parent": 75, "children": [], "biography": "", "notes": "8_8_1"}
-{"id": 77, "name": "", "name_images": ["book1/names/77.png"], "generation": -1, "parent": 75, "children": [], "biography": "", "notes": "8_8_2"}
-{"id": 78, "name": "", "name_images": ["book1/names/78.png"], "generation": -1, "parent": 75, "children": [], "biography": "", "notes": "8_8_3"}
-{"id": 79, "name": "", "name_images": ["book1/names/79.png"], "generation": -1, "parent": 75, "children": [], "biography": "", "notes": "8_8_4"}
-{"id": 80, "name": "", "name_images": ["book1/names/80.png"], "generation": -1, "parent": 75, "children": [81], "biography": "", "notes": "8_8_5"}
+{"id": 76, "name": "", "name_images": ["book1/names/76.png"], "generation": -1, "parent": 74, "children": [], "biography": "", "notes": "8_8_1"}
+{"id": 77, "name": "", "name_images": ["book1/names/77.png"], "generation": -1, "parent": 74, "children": [], "biography": "", "notes": "8_8_2"}
+{"id": 78, "name": "", "name_images": ["book1/names/78.png"], "generation": -1, "parent": 74, "children": [], "biography": "", "notes": "8_8_3"}
+{"id": 79, "name": "", "name_images": ["book1/names/79.png"], "generation": -1, "parent": 74, "children": [], "biography": "", "notes": "8_8_4"}
+{"id": 80, "name": "", "name_images": ["book1/names/80.png"], "generation": -1, "parent": 74, "children": [81], "biography": "", "notes": "8_8_5"}
 {"id": 81, "name": "", "name_images": ["book1/names/81.png"], "generation": -1, "parent": 80, "children": [82, 83], "biography": "", "notes": "8_8_6"}
 {"id": 82, "name": "", "name_images": ["book1/names/82.png"], "generation": -1, "parent": 81, "children": [84, 85], "biography": "", "notes": "8_8_7"}
 {"id": 83, "name": "", "name_images": ["book1/names/83.png"], "generation": -1, "parent": 81, "children": [86, 87], "biography": "", "notes": "8_8_8"}
@@ -83,18 +83,18 @@
 {"id": 91, "name": "", "name_images": ["book1/names/91.png"], "generation": -1, "parent": 86, "children": [], "biography": "", "notes": "8_8_16"}
 {"id": 92, "name": "", "name_images": ["book1/names/92.png"], "generation": -1, "parent": 86, "children": [97], "biography": "", "notes": "8_8_17/10_10_0"}
 {"id": 93, "name": "", "name_images": ["book1/names/93.png"], "generation": -1, "parent": 87, "children": [95], "biography": "", "notes": "8_8_18/9_9_0"}
-{"id": 95, "name": "", "name_images": ["book1/names/95.png"], "generation": -1, "parent": 94, "children": [], "biography": "", "notes": "9_9_1"}
-{"id": 97, "name": "", "name_images": ["book1/names/97.png"], "generation": -1, "parent": 96, "children": [], "biography": "", "notes": "10_10_1"}
-{"id": 99, "name": "", "name_images": ["book1/names/99.png"], "generation": -1, "parent": 98, "children": [], "biography": "", "notes": "11_11_1"}
-{"id": 100, "name": "", "name_images": ["book1/names/100.png"], "generation": -1, "parent": 98, "children": [], "biography": "", "notes": "11_11_2"}
-{"id": 102, "name": "", "name_images": ["book1/names/102.png"], "generation": -1, "parent": 101, "children": [103], "biography": "", "notes": "12_12_1"}
+{"id": 95, "name": "", "name_images": ["book1/names/95.png"], "generation": -1, "parent": 93, "children": [], "biography": "", "notes": "9_9_1"}
+{"id": 97, "name": "", "name_images": ["book1/names/97.png"], "generation": -1, "parent": 92, "children": [], "biography": "", "notes": "10_10_1"}
+{"id": 99, "name": "", "name_images": ["book1/names/99.png"], "generation": -1, "parent": 89, "children": [], "biography": "", "notes": "11_11_1"}
+{"id": 100, "name": "", "name_images": ["book1/names/100.png"], "generation": -1, "parent": 89, "children": [], "biography": "", "notes": "11_11_2"}
+{"id": 102, "name": "", "name_images": ["book1/names/102.png"], "generation": -1, "parent": 88, "children": [103], "biography": "", "notes": "12_12_1"}
 {"id": 103, "name": "", "name_images": ["book1/names/103.png"], "generation": -1, "parent": 102, "children": [104], "biography": "", "notes": "12_12_2"}
 {"id": 104, "name": "", "name_images": ["book1/names/104.png"], "generation": -1, "parent": 103, "children": [105], "biography": "", "notes": "12_12_3"}
 {"id": 105, "name": "", "name_images": ["book1/names/105.png"], "generation": -1, "parent": 104, "children": [106, 107, 108], "biography": "", "notes": "12_12_4"}
 {"id": 106, "name": "", "name_images": ["book1/names/106.png"], "generation": -1, "parent": 105, "children": [], "biography": "", "notes": "12_12_5"}
 {"id": 107, "name": "", "name_images": ["book1/names/107.png"], "generation": -1, "parent": 105, "children": [], "biography": "", "notes": "12_12_6"}
 {"id": 108, "name": "", "name_images": ["book1/names/108.png"], "generation": -1, "parent": 105, "children": [110], "biography": "", "notes": "12_12_7/13_16_0"}
-{"id": 110, "name": "", "name_images": ["book1/names/110.png"], "generation": -1, "parent": 109, "children": [111, 112], "biography": "", "notes": "13_16_1"}
+{"id": 110, "name": "", "name_images": ["book1/names/110.png"], "generation": -1, "parent": 108, "children": [111, 112], "biography": "", "notes": "13_16_1"}
 {"id": 111, "name": "", "name_images": ["book1/names/111.png"], "generation": -1, "parent": 110, "children": [113, 114, 115, 116], "biography": "", "notes": "13_16_2"}
 {"id": 112, "name": "", "name_images": ["book1/names/112.png"], "generation": -1, "parent": 110, "children": [117, 118], "biography": "", "notes": "13_16_3"}
 {"id": 113, "name": "", "name_images": ["book1/names/113.png"], "generation": -1, "parent": 111, "children": [119, 120], "biography": "", "notes": "13_16_4"}
