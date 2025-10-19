@@ -16,7 +16,7 @@ import cv2
 
 def get_image(filepath):
     """Get the image from the filepath and return a binary array."""
-    image = Image.open(filepath)
+    image = Image.open(filepath).convert("RGB")
     data = np.asarray(image)
     # filters out red color, and turns into binary array
     if len(data.shape) == 3:
@@ -37,6 +37,34 @@ def show_image(a):
     # a = 255 - a
     out = Image.fromarray(np.uint8(a))
     out.show()
+
+
+def print_trees(nodes):
+  def print_tree(n, indent):
+    print("  " * indent + str(n))
+    for c in n.children:
+      print_tree(c, indent + 1)
+
+  children = []
+  for n in nodes:
+    for c in n.children:
+      children.append(c)
+  for n in nodes:
+    if n not in children:
+      print_tree(n, 0)
+
+
+def pad_image(a, directions: str, padding: int=20):
+    """Pads all sides of an image with whitespace"""
+    if "u" in directions:
+        a = np.vstack([a, np.ones((padding, a.shape[1])).astype(np.uint8)])
+    if "d" in directions:
+        a = np.vstack([np.ones((padding, a.shape[1])).astype(np.uint8), a])
+    if "l" in directions:
+        a = np.hstack([np.ones((a.shape[0], padding)).astype(np.uint8), a])
+    if "r" in directions:
+        a = np.hstack([a, np.ones((a.shape[0], padding)).astype(np.uint8)])
+    return a
 
 
 ###############################################################################
@@ -268,6 +296,19 @@ def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str
     return best_orphans, "left" if not flip else "right"
 
 
+def find_best_alignment(left: list[int], right: list[int]):
+    print("Finding best alignment", left, right)
+    best_alignment = None
+    best_alignment_score = None
+    for i in range(-100, 100):
+        new_left = [l + i for l in left]
+        score = sum([abs(x - y) for x, y in zip(new_left, right)])
+        if best_alignment_score is None or score < best_alignment_score:
+            best_alignment_score = score
+            best_alignment = i
+    return best_alignment
+
+
 # TODO: Account for case where orphan could be top edge. Set padding after finding orphan
 # Find orphan, remove it, then add padding to minimize line distance
 # When finding orphan, normalize distances somehow?
@@ -276,22 +317,22 @@ def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str
 def merge_graphs(g1, g2):
     """Connect the two graphs, g1 on the left."""
     g1_edge = np.sum(1 - g1[:, -5:], axis=1)
-    left_x = remove_adjacent([x for x in range(len(g1_edge)) if g1_edge[x] > 0])
+    left_y = remove_adjacent([x for x in range(len(g1_edge)) if g1_edge[x] > 0])
     g2_edge = np.sum(1 - g2[:, :5], axis=1)
-    right_x = remove_adjacent([x for x in range(len(g2_edge)) if g2_edge[x] > 0])
+    right_y = remove_adjacent([x for x in range(len(g2_edge)) if g2_edge[x] > 0])
     print("Left x, right x")
-    print(left_x, right_x)
+    print(left_y, right_y)
 
     # Try matching at top
-    if left_x[0] < right_x[0]:
+    if left_y[0] < right_y[0]:
         # Add rows to top of g1 to align with g2
-        padding = right_x[0] - left_x[0]
-        left_x = [x + padding for x in left_x]
+        padding = right_y[0] - left_y[0]
+        left_y = [x + padding for x in left_y]
         g1 = np.vstack([np.ones((padding, g1.shape[1])).astype(np.uint8), g1])
-    elif left_x[0] > right_x[0]:
+    elif left_y[0] > right_y[0]:
         # Add rows to top of g2 to align with g1
-        padding = left_x[0] - right_x[0]
-        right_x = [x + padding for x in right_x]
+        padding = left_y[0] - right_y[0]
+        right_y = [x + padding for x in right_y]
         g2 = np.vstack([np.ones((padding, g2.shape[1])).astype(np.uint8), g2])
 
     # Make heights equal by padding bottom of shorter array with 1's
@@ -303,22 +344,33 @@ def merge_graphs(g1, g2):
         g2 = np.vstack([g2, np.ones((padding, g2.shape[1])).astype(np.uint8)])
 
     # Horizontally concatenate the arrays
-    orphan_idxs, side = find_best_orphans(left_x, right_x)
+    orphan_idxs, side = find_best_orphans(left_y, right_y)
     print("Adjusted left x, right x")
-    print(left_x, right_x)
+    print(left_y, right_y)
     if side == "left":
-        orphans = [left_x[i] for i in orphan_idxs]
-        left_x = [left_x[i] for i in range(len(left_x)) if i not in orphan_idxs]
+        orphans = [left_y[i] for i in orphan_idxs]
+        left_y = [left_y[i] for i in range(len(left_y)) if i not in orphan_idxs]
     else:
-        orphans = [right_x[i] for i in orphan_idxs]
-        right_x = [right_x[i] for i in range(len(right_x)) if i not in orphan_idxs]
+        orphans = [right_y[i] for i in orphan_idxs]
+        right_y = [right_y[i] for i in range(len(right_y)) if i not in orphan_idxs]
     if len(orphan_idxs) > 0:
         print(f"!!!!!!!!!!!!!!!!!!Orphans {orphans} on {side} side")
-    for left, right in zip(left_x, right_x):
+
+    best_alignment = find_best_alignment(left_y, right_y)
+    print("Best alignment", best_alignment)
+    if best_alignment > 0:
+        g1 = np.vstack([np.ones((best_alignment, g1.shape[1])).astype(np.uint8), g1])
+        g2 = np.vstack([g2, np.ones((best_alignment, g2.shape[1])).astype(np.uint8)])
+    else:
+        g1 = np.vstack([g1, np.ones((best_alignment, g1.shape[1])).astype(np.uint8)])
+        g2 = np.vstack([np.ones((-best_alignment, g2.shape[1])).astype(np.uint8), g2])
+    left_y = [x + best_alignment for x in left_y]
+    for left, right in zip(left_y, right_y):
         low, high = min(left, right), max(left, right)
         g1[low : high + 1, -1:] = 0
         g2[low : high + 1, :1] = 0
-    return np.hstack([g1, g2])
+    g = np.hstack([g1, g2])
+    return np.vstack([np.ones((100, g.shape[1])).astype(np.uint8), g, np.ones((100, g.shape[1])).astype(np.uint8)])
 
 
 ###############################################################################
@@ -497,38 +549,27 @@ def verify_nodes(nodes):
             print("node looks sus:", str(n))
 
 
-def print_trees(nodes):
-  def print_tree(n, indent):
-    print("  " * indent + str(n))
-    for c in n.children:
-      print_tree(c, indent + 1)
-
-  children = []
-  for n in nodes:
-    for c in n.children:
-      children.append(c)
-  for n in nodes:
-    if n not in children:
-      print_tree(n, 0)
-
-
 def get_name_image(node, a):
     """Get the image of the name of a node."""
     y = node.top[1]
+    # Grab name image, with padding
     name = a[node.top[0]+5:node.bot[0]-5, max(0, y-40):min(a.shape[1], y+40)]
+    name = pad_image(name, "udlr")
 
+    # Trim left/right
     col_present = np.sum(1 - name, axis=0)
     min_y = 0
     while min_y < len(col_present) and not col_present[min_y]:
         min_y += 1
     min_y = max(min_y - 10, 0)
     max_y = len(col_present) - 1
-    while max_y > 0 and not col_present[max_y]:
+    while max_y > min_y and not col_present[max_y]:
         max_y -= 1
     max_y = min(max_y + 10, len(col_present) - 1)
     name = name[:, min_y:max_y]
     print("min_y", min_y, "max_y", max_y)
 
+    # Trim top/bottom
     row_present = np.sum(1 - name, axis=1)
     min_x = 0
     while min_x < len(row_present) and not row_present[min_x]:
@@ -538,6 +579,6 @@ def get_name_image(node, a):
     while max_x > 0 and not row_present[max_x]:
         max_x -= 1
     max_x = min(max_x + 10, len(row_present) - 1)
-    name = name[min_x:max_x, :]
     print("min_x", min_x, "max_x", max_x)
+    name = name[min_x:max_x, :]
     return name
