@@ -2,6 +2,8 @@
 
 May 23, 2025
 
+TODO: Look into d3.js, plotly
+
 # 1\) Scan book
 
 **Status:** book 1 scanned: [book1](https://drive.google.com/drive/folders/1sc8DNkmQs1mHApdG_d3b-h264wRuQcoe)
