@@ -54,7 +54,22 @@ left-to-right.
 Old helpers: `find_lines`, `find_line_ends`, `sort_nodes`, `infer_ends`,
 `get_name_image`.
 
-## Stage 3.5 — OCR (not yet built)
+## Stage 3.5 — Cross-graph stitching (`src/stitch.py`)
+
+**In:** `data/bookN.jsonl` (a forest — one subtree per Stage-2 graph)
+**Out:** `data/bookN_stitched.jsonl` (one connected tree, absolute generations).
+
+Each graph's root (`{graph}_0`) is a **duplicate** of a person who appears as a
+*leaf* in an earlier graph (the subtree-start page repeats the parent name).
+Merging each duplicate into its canonical leaf connects the forest into one
+lineage, then recomputes absolute generations (root=1) and reassigns BFS/RTL ids.
+
+**Matching is unsolved automatically** (name-crop pixel-matching ≈ 4/13 on Book
+1). Merges are an explicit per-book list (`BOOK_MERGES`, Book 1's done by hand);
+`find_merges()` is where an automated matcher will plug in. Verified against
+`data/oracles/book1_merged.jsonl` via `scripts/verify_stitch.py`.
+
+## Stage 3.6 — OCR (not yet built)
 
 **In:** `books/bookN/names/*.png`
 **Out:** Unicode `name` field on each node.
