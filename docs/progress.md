@@ -28,8 +28,9 @@ Objectives: reproduce Book 1 (match golden modulo RTL) → parse Book 2 → webs
 - [x] `src/build_tree.py` — stage 3 (connectedComponentsWithStats, RTL/BFS, grid check)
 - [x] **Reproduce Book 1 → 100% topology match to old parse, RTL-fixed** ✅ checkpoint
 - [ ] Cross-graph stitching (see discrepancy #1 — the one real gap vs golden)
-- [ ] Parse Book 2
-- [ ] Website (Next.js + d3-in-React)
+- [x] **Parse Book 2** → 1763 nodes, parses where old code crashed ✅
+- [x] **Website (Next.js 16 + React 19 + d3-in-React)** → `web-app/`, builds
+      clean, all features verified live ✅ (see Website result below)
 
 _(Updated as work lands. Discrepancies logged below.)_
 
@@ -92,6 +93,29 @@ verification, so the flagged items are the safety net.
   graphs, byte-identical pixels vs HEAD (`git diff` empty). `src/build_tree
   --book book1` → 163 nodes, topology byte-identical to HEAD, identical
   name-crop hashes. Book 2 generalization did not leak into Book 1.
+
+### Website result (committed `7fa6cf8`)
+
+Static-website milestone DONE. `web-app/` — Next.js 16 + React 19 + TypeScript +
+Tailwind v4 + Biome + next-themes, d3 for layout. Mirrors the mckloset stack.
+
+- **Architecture** (the web-dev concept): d3 computes the layout math
+  (`d3.hierarchy`/`d3.tree`), React renders the SVG via JSX. Only d3-zoom touches
+  the DOM (bound to the svg ref), writing transform into React state.
+- **Three datasets**, switchable: golden (59 nodes, 1 lineage, real Unicode
+  names — default) / book1 (163, 14 roots) / book2 (1763, 181 roots). Renders a
+  forest honestly when >1 root (virtual super-root, no faked links); shows the
+  name-image crop when Unicode name is empty.
+- **Features**: click → path-to-root highlight (survives pan/zoom, stops at the
+  node's own sub-root); detail panel (father/children eldest-first, ancestor
+  chain, biography/notes); RTL eldest-on-the-right; dark mode; keyboard-accessible.
+- **Verified live** (Playwright): build + Biome lint clean; screenshots in
+  `scratchpad/web-shots/`. Fixed a real ThemeToggle hydration mismatch.
+- `public/data` + `public/names` are gitignored generated artifacts
+  (`bun run export-data` regenerates from `data/` + `books/*/names/`).
+- Known limits: no pan-to-selection; parsed data is fragmented (pending
+  stitching); parsed-book names are image crops (pending OCR). Old
+  `web/index.html` kept as reference.
 
 ### Discrepancies / notes for William
 
