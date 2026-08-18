@@ -180,12 +180,12 @@ def normalize_page(a, page_corners, width=1300, height=1950):
 def trim_borders(a):
     """Trim the borders of the page."""
     rows, cols = a.shape
-    a = a[50 : rows - 50, :]
+    a = a[30 : rows - 30, :]
     col_present = np.sum(1 - a, axis=0)
-    if np.sum(col_present[:150]) > np.sum(col_present[-150:]):
-        return a[:, 150 : cols - 50]
+    if np.sum(col_present[:120]) > np.sum(col_present[-120:]):
+        return a[:, 120 : cols - 30]
     else:
-        return a[:, 50 : cols - 150]
+        return a[:, 30 : cols - 120]
 
 
 def shrink_page(a):
@@ -194,13 +194,21 @@ def shrink_page(a):
 
     def find_shrink_start(arr):
         mid = int(len(arr) / 2)
-        search_range = arr[mid - 150 : mid + 150]
-        max_idx = np.argmax(search_range)
-        return mid - 150 + max_idx
+        search_radius = 150
+        while True:
+            search_range = arr[mid - search_radius : mid + search_radius]
+            max_idx = np.argmax(search_range)
+            if search_range[max_idx] > 20:
+                return mid - search_radius + max_idx
+            else:
+                search_radius += 100
+                if search_radius >= mid:
+                    raise ValueError("Could not find graph when trying to shrink page")
 
     # Cut left/right
     col_present = np.sum(1 - a, axis=0)
-    min_col = find_shrink_start(col_present)
+    min_col = np.argmax(col_present)
+    # min_col = find_shrink_start(col_present)
     max_col = min_col
     while min_col > 0 and col_present[min_col]:
         min_col -= 1
@@ -227,6 +235,10 @@ def shrink_page(a):
 
 
 def is_tree_start_page(a):
+    """Returns if this page is the start of a subtree.
+    
+    Checks if there's a label on the upper right side.
+    """
     col_sums = np.sum(1 - a, axis=0)
     end = col_sums.shape[0] - 1
     while end > 0 and col_sums[end] == 0:
@@ -234,10 +246,11 @@ def is_tree_start_page(a):
     start = end
     while start > 0 and col_sums[start] > 0:
         start -= 1
-    # print("col Start and end")
-    # print(start, end)
-    if not (50 < end - start < 100):
-        return False
+    print("col Start and end")
+    print(start, end)
+    if not ((950 < start < 1050) and (50 < end - start < 100) and (1030 < end < 1100)):
+        return -1
+    start_x = start
 
     row_sums = np.sum(1 - a[:, start:end], axis=1)
     end = row_sums.shape[0] - 1
@@ -248,7 +261,9 @@ def is_tree_start_page(a):
         start += 1
     # print("row Start and end")
     # print(start, end)
-    return (0 < start < 200) and (250 < end < 650) and (200 < end - start < 600)
+    if not ((0 < start < 200) and (250 < end < 650) and (200 < end - start < 600)):
+        return -1
+    return start_x
 
 
 def remove_adjacent(numbers, threshold=30):
@@ -312,8 +327,6 @@ def find_best_alignment(left: list[int], right: list[int]):
 # TODO: Account for case where orphan could be top edge. Set padding after finding orphan
 # Find orphan, remove it, then add padding to minimize line distance
 # When finding orphan, normalize distances somehow?
-# TODO: Retrim graph
-# TODO: Add more border padding
 def merge_graphs(g1, g2):
     """Connect the two graphs, g1 on the left."""
     g1_edge = np.sum(1 - g1[:, -5:], axis=1)
@@ -362,7 +375,7 @@ def merge_graphs(g1, g2):
         g1 = np.vstack([np.ones((best_alignment, g1.shape[1])).astype(np.uint8), g1])
         g2 = np.vstack([g2, np.ones((best_alignment, g2.shape[1])).astype(np.uint8)])
     else:
-        g1 = np.vstack([g1, np.ones((best_alignment, g1.shape[1])).astype(np.uint8)])
+        g1 = np.vstack([g1, np.ones((-best_alignment, g1.shape[1])).astype(np.uint8)])
         g2 = np.vstack([np.ones((-best_alignment, g2.shape[1])).astype(np.uint8), g2])
     left_y = [x + best_alignment for x in left_y]
     for left, right in zip(left_y, right_y):
