@@ -1,0 +1,22 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated data snapshot — regenerate with `bun run export-data`
+# (source of truth is ../data/*.jsonl and ../books/*/names/)
+/public/data
+/public/names

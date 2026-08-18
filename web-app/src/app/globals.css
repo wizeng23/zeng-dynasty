@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode so next-themes (attribute="class") can toggle it. */
+@custom-variant dark (&:is(.dark *));
+
+/* Map our CSS variables into Tailwind's theme so `bg-background`, `text-foreground`,
+   etc. become available as utility classes. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --font-sans: var(--font-sans);
+}
+
+/* Light theme (default). Warm paper + ink, echoing a printed genealogy book. */
+:root {
+  --background: oklch(0.98 0.008 85); /* warm off-white paper */
+  --foreground: oklch(0.28 0.02 40); /* dark ink */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.28 0.02 40);
+  --muted: oklch(0.94 0.01 85);
+  --muted-foreground: oklch(0.52 0.02 55);
+  --primary: oklch(0.52 0.14 25); /* seal red */
+  --primary-foreground: oklch(0.98 0.008 85);
+  --accent: oklch(0.7 0.09 55);
+  --border: oklch(0.89 0.012 80);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+/* Dark theme — applied when next-themes adds `.dark` to <html>. */
+.dark {
+  --background: oklch(0.2 0.01 60);
+  --foreground: oklch(0.92 0.008 85);
+  --card: oklch(0.24 0.012 60);
+  --card-foreground: oklch(0.92 0.008 85);
+  --muted: oklch(0.28 0.012 60);
+  --muted-foreground: oklch(0.68 0.015 70);
+  --primary: oklch(0.62 0.15 25);
+  --primary-foreground: oklch(0.98 0.008 85);
+  --accent: oklch(0.72 0.1 55);
+  --border: oklch(0.34 0.012 60);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
