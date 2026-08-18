@@ -73,8 +73,8 @@
         }
 
         function buildTree(nodes) {
-            // Find root node (parent === -1)
-            const root = nodes.find(n => n.parent === -1);
+            // Find root node (father === -1)
+            const root = nodes.find(n => n.father === -1);
             if (!root) {
                 throw new Error("No root node found");
             }
@@ -205,7 +205,7 @@
         }
 
         // Load the JSONL file automatically
-        fetch('data/book1_merged.jsonl')
+        fetch('../data/book1_golden.jsonl')
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Failed to load data file');

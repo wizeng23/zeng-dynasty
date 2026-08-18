@@ -1,0 +1,71 @@
+# Pipeline
+
+How raw scans become a structured family tree. Four stages (the current
+`src/` rewrite reproduces the working Book 1 result from the old
+`old/book_parser.ipynb` + `old/utils.py`, then fixes known bugs).
+
+## Stage 1 — Spreads → pages
+
+**In:** `books/bookN/original/*.png` — two-page camera scans (each image is a
+left + right page spread).
+**Out:** `books/bookN/pages/{i}.png` — single deskewed pages.
+
+Detects the page-border corners on each half of the spread and applies a
+perspective normalization. Some per-book fudging exists for which half-page to
+skip at the start (Book 1 skips the first spread's right page; Book 2 skips
+page 0's right side). The rewrite makes these explicit config, not inline
+constants.
+
+Old helpers: `remove_small_islands`, `get_corners`, `normalize_page`.
+
+## Stage 2 — Pages → merged graph images
+
+**In:** `books/bookN/pages/*.png`
+**Out:** `books/bookN/graphs/{start}_{end}.png` — one image per subtree,
+stitched across the pages it spans.
+
+A subtree's line-graph often runs across several pages. This stage detects
+subtree start pages (a label on the upper-right), trims/shrinks each page to
+its graph, and merges consecutive pages into a single graph image by aligning
+the line endpoints at the page seam.
+
+Old helpers: `trim_borders`, `is_tree_start_page`, `shrink_page`, `merge_graphs`.
+
+**Bugs to fix:** `merge_graphs` vstack sign bug (else-branch); the old Book 2
+run wrote merged graphs to `book1/graphs/` (copy-paste); `shrink_page` has an
+unresolved commented-out experiment.
+
+## Stage 3 — Graph images → tree + name crops
+
+**In:** `books/bookN/graphs/*.png`
+**Out:** `data/bookN.jsonl` (tree, names still as image pointers),
+`books/bookN/names/{id}.png`, `books/bookN/trees/*.json`.
+
+Finds the graph's lines as connected components (BFS), identifies each line's
+parent/child endpoints, merges line segments into nodes across the graph,
+infers missing endpoints, assigns globally-unique IDs, and crops each node's
+name image from the page.
+
+**Ordering (bug fix):** nodes must be sorted **right-to-left / eldest-first**
+and IDs assigned **BFS-by-generation, right-to-left** — the book reads
+right-to-left with older siblings on the right. The old `sort_nodes` was
+left-to-right.
+
+Old helpers: `find_lines`, `find_line_ends`, `sort_nodes`, `infer_ends`,
+`get_name_image`.
+
+## Stage 3.5 — OCR (not yet built)
+
+**In:** `books/bookN/names/*.png`
+**Out:** Unicode `name` field on each node.
+
+Convert name-character images to Unicode. Challenge: some characters are
+ancient / not in modern Chinese. Candidate engines (from old notes): Google
+Document AI OCR, Mistral OCR.
+
+## Golden data (separate, manual — verification)
+
+Book 1 was also hand-typed into a Google Sheet → exported to
+`data/zeng_google_sheet.csv` → `data/book1_golden.jsonl`. This verified data
+is the ground truth used to check the algorithmic Stage-3 output (tree
+topology + generations; names pending OCR).

@@ -17,11 +17,15 @@ class Node:
     generation: int = -1
     """Which generation this person belongs to in the family tree. 1 for the root, -1 if not known."""
 
-    parent: int = -1
-    """ID of the parent node. Root node has parent -1."""
+    father: int = -1
+    """ID of the father node. Root node has father -1.
+
+    The book currently records only men, so parentage is father-only.
+    Mothers/daughters are a later schema evolution.
+    """
 
     children: list[int] = dataclasses.field(default_factory=list)
-    """List of child node IDs."""
+    """List of child node IDs, ordered eldest first (right-to-left in the book)."""
 
     biography: str = ""
     """Biographical text about the person."""
