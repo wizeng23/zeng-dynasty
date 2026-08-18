@@ -86,10 +86,18 @@ class BookConfig:
 
 
 # Book 1's Stage-1 output is pages -1..16; the old notebook processed indices
-# 0..16 (range(17)), skipping the -1 half page. Book 2 is added when its
-# Stage-2 is generalized.
+# 0..16 (range(17)), skipping the -1 half page.
+#
+# Book 2 keeps every structural default. Its trimmed page width (1150) matches
+# Book 1's, and measuring all 135 pages shows the label geometry lands squarely
+# inside the shared bounds (label span 55-58px, end/width 0.83-0.92, right
+# margin 95-192px, vertical extent vstart~75-82 / vend~488-509 / vspan~412-428),
+# well separated from continuation pages whose graph line reaches the edge
+# (span ~1149, right margin 0). Only ``num_pages`` differs, confirming the
+# design spec's thesis that the label thresholds are structural, not per-book.
 BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(num_pages=17),
+    "book2": BookConfig(num_pages=135),
 }
 
 
@@ -301,6 +309,37 @@ def find_best_alignment(left: list[int], right: list[int]) -> int:
     return best_alignment
 
 
+def _concat_top_aligned(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
+    """Stack two graph slices side by side (``g1`` left) with no seam line.
+
+    Top-aligns the two slices, pads the shorter one's bottom so heights match,
+    horizontally concatenates, and pads 100px top and bottom to match
+    :func:`merge_graphs`'s framing. Used when a seam exposes no endpoint on one
+    side, so there is no dangling line to connect across it.
+
+    Args:
+        g1: Left graph slice.
+        g2: Right graph slice.
+
+    Returns:
+        The concatenated graph.
+    """
+    if g1.shape[0] < g2.shape[0]:
+        padding = g2.shape[0] - g1.shape[0]
+        g1 = np.vstack([g1, np.ones((padding, g1.shape[1])).astype(np.uint8)])
+    elif g2.shape[0] < g1.shape[0]:
+        padding = g1.shape[0] - g2.shape[0]
+        g2 = np.vstack([g2, np.ones((padding, g2.shape[1])).astype(np.uint8)])
+    g = np.hstack([g1, g2])
+    return np.vstack(
+        [
+            np.ones((100, g.shape[1])).astype(np.uint8),
+            g,
+            np.ones((100, g.shape[1])).astype(np.uint8),
+        ]
+    )
+
+
 def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     """Stitch two subtree-graph slices side by side, ``g1`` on the left.
 
@@ -321,6 +360,22 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     g2_edge = np.sum(1 - g2[:, :5], axis=1)
     right_y = remove_adjacent([x for x in range(len(g2_edge)) if g2_edge[x] > 0])
     logger.debug("seam endpoints: left=%s right=%s", left_y, right_y)
+
+    # A seam needs a dangling line exposed on *both* sides to connect. When a
+    # line runs off a page edge without reaching it on the neighbour (Book 2's
+    # scans have this — a parent line stops short of the page border while its
+    # child continues on the next page), one side exposes no endpoint. There is
+    # nothing to align or draw, so stack the slices top-aligned and let Stage 3's
+    # connected-component parser keep the fragments separate. Book 1's scans
+    # never hit this, so its output is unaffected.
+    if not left_y or not right_y:
+        logger.warning(
+            "empty seam (left=%d right=%d endpoints); concatenating without a "
+            "connecting line",
+            len(left_y),
+            len(right_y),
+        )
+        return _concat_top_aligned(g1, g2)
 
     # Align the topmost endpoints by padding the top of the higher-starting side.
     if left_y[0] < right_y[0]:

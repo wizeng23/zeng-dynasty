@@ -87,9 +87,23 @@ class BookConfig:
     gen_row_max: int = 260
 
 
-# Book 1 uses the defaults. Book 2 is added when its Stage-3 is generalized.
+# Book 1 uses the defaults. Book 2 shares the same scan geometry (trimmed width
+# 1150) so the segment-level thresholds transfer, but its names are two
+# characters stacked vertically, which makes every generation-row about twice as
+# tall as Book 1's single-character rows. Measured across all 45 Book 2 graphs:
+# a real node's line height clusters at ~120-176px (vs Book 1's ~63-186) and a
+# parent->child drop clusters tightly at ~300-332px -- one full stacked-name
+# generation row. The diagnostic bands are widened to that measured geometry so
+# ``verify_nodes`` / ``check_grid_consistency`` still flag genuine mis-merges
+# (short degenerate stubs, half-row drops) rather than every normal edge.
 BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(),
+    "book2": BookConfig(
+        node_min_height=60,
+        node_max_height=250,
+        gen_row_min=280,
+        gen_row_max=345,
+    ),
 }
 
 
@@ -164,9 +178,19 @@ def find_line_ends(
     within ``threshold`` rows of the maximum row, each near-adjacent run
     collapsed to a single representative column.
 
+    Two-character stacked names (Book 2) push the horizontal fan-out bar right
+    up to the top of the component, with no vertical hang-line rising above it.
+    The bar is then flush with ``min_x``, so its two slightly-taller end corners
+    read as *two* isolated top columns rather than the single hang-point the
+    caller expects (Book 1's vertical hang-line always rose to one point). When
+    the strict ``min_x`` top yields more than one endpoint, the whole top band --
+    within ``threshold`` rows of ``min_x``, mirroring the bottom logic -- is
+    collapsed to a single representative: the parent connection of a bare
+    fan-out bar. Single-top segments (Book 1) are untouched.
+
     Args:
         points: The ``(row, col)`` pixels of one connected component.
-        threshold: Rows within this distance of the bottom count as bottom ends.
+        threshold: Rows within this distance of the top/bottom count as ends.
 
     Returns:
         ``(top_points, bottom_points)``, each a list of ``(row, col)`` tuples
@@ -178,6 +202,10 @@ def find_line_ends(
     min_x = min(x for x, _y in points)
     top_ys = {y for x, y in points if x == min_x}
     top_ys_filtered = remove_adjacent(top_ys)
+    if len(top_ys_filtered) > 1:
+        # Fan-out bar flush with the top: collapse the top band to one point.
+        top_band = {y for x, y in points if abs(x - min_x) <= threshold}
+        top_ys_filtered = remove_adjacent(top_band)
 
     max_x = max(x for x, _y in points)
     bottom_ys = {y for x, y in points if abs(x - max_x) <= threshold}
@@ -440,41 +468,55 @@ def get_name_image(node: LineNode, a: np.ndarray) -> np.ndarray:
     column, pads it, then trims the surrounding whitespace to a tight box around
     the name ink.
 
+    A degenerate node (a short broken-line fragment near a page seam, height
+    ``bot - top`` only ~10px) has no name band and no ink to trim to. Rather than
+    crash the save on a zero-size crop -- and rather than silently drop the node,
+    which would hide a real mis-parse -- this returns whatever padded band it has
+    and never collapses either dimension below one pixel. Such nodes are already
+    surfaced by :func:`verify_nodes` (their height falls outside the band).
+
     Args:
         node: The line node whose name to crop (``top`` and ``bot`` set).
         a: The graph's binary ink grid.
 
     Returns:
-        The cropped, tightly-trimmed name image (binary ink grid).
+        The cropped, tightly-trimmed name image (binary ink grid); never empty.
     """
     assert node.top is not None and node.bot is not None
     y = node.top[1]
-    name = a[node.top[0] + 5 : node.bot[0] - 5, max(0, y - 40) : min(a.shape[1], y + 40)]
+    # Clamp the vertical band so a fragment shorter than the 5px insets still
+    # yields a non-empty slice before padding.
+    top_row = node.top[0] + 5
+    bot_row = max(node.bot[0] - 5, top_row + 1)
+    name = a[top_row:bot_row, max(0, y - 40) : min(a.shape[1], y + 40)]
     name = pad_image(name, "udlr")
 
-    # Trim left/right whitespace.
+    # Trim left/right whitespace. If the band is all background (a degenerate
+    # fragment), keep the padded image rather than collapsing to zero width.
     col_present = np.sum(1 - name, axis=0)
-    min_y = 0
-    while min_y < len(col_present) and not col_present[min_y]:
-        min_y += 1
-    min_y = max(min_y - 10, 0)
-    max_y = len(col_present) - 1
-    while max_y > min_y and not col_present[max_y]:
-        max_y -= 1
-    max_y = min(max_y + 10, len(col_present) - 1)
-    name = name[:, min_y:max_y]
+    if np.any(col_present):
+        min_y = 0
+        while min_y < len(col_present) and not col_present[min_y]:
+            min_y += 1
+        min_y = max(min_y - 10, 0)
+        max_y = len(col_present) - 1
+        while max_y > min_y and not col_present[max_y]:
+            max_y -= 1
+        max_y = min(max_y + 10, len(col_present) - 1)
+        name = name[:, min_y:max_y]
 
-    # Trim top/bottom whitespace.
+    # Trim top/bottom whitespace, with the same empty-band guard.
     row_present = np.sum(1 - name, axis=1)
-    min_x = 0
-    while min_x < len(row_present) and not row_present[min_x]:
-        min_x += 1
-    min_x = max(min_x - 10, 0)
-    max_x = len(row_present) - 1
-    while max_x > 0 and not row_present[max_x]:
-        max_x -= 1
-    max_x = min(max_x + 10, len(row_present) - 1)
-    name = name[min_x:max_x, :]
+    if np.any(row_present):
+        min_x = 0
+        while min_x < len(row_present) and not row_present[min_x]:
+            min_x += 1
+        min_x = max(min_x - 10, 0)
+        max_x = len(row_present) - 1
+        while max_x > 0 and not row_present[max_x]:
+            max_x -= 1
+        max_x = min(max_x + 10, len(row_present) - 1)
+        name = name[min_x:max_x, :]
     return name
 
 
@@ -565,9 +607,12 @@ def build_tree(
     domain_nodes: list[Node] = []
     father_of: dict[int, int] = {}
     children_of: dict[int, list[int]] = {}
-    # Each entry: (node_id, graph binary grid, LineNode) so we can crop names
-    # after every node has an ID and infer generations tree-wide.
-    node_records: list[tuple[int, np.ndarray, LineNode]] = []
+    # Each entry: (node_id, graph binary grid, LineNode, provenance) so we can
+    # crop names after every node has an ID and infer generations tree-wide.
+    # ``provenance`` is "{graph}_{local_index}" (e.g. "13_16_54"), recording which
+    # Stage-2 graph and within-graph position a node came from -- invaluable for
+    # tracing a suspect node back to its source graph when debugging mis-merges.
+    node_records: list[tuple[int, np.ndarray, LineNode, str]] = []
 
     node_idx = 1
     total_sus = 0
@@ -608,15 +653,16 @@ def build_tree(
             n.id = node_idx
             node_idx += 1
 
-        # Record parent/child relations by ID.
-        for n in nodes:
+        # Record parent/child relations by ID. ``local_index`` is the node's
+        # position within this graph (post-sort, so RTL/eldest-first order).
+        for local_index, n in enumerate(nodes):
             assert n.id is not None
             child_ids = [c.id for c in n.children]
             children_of[n.id] = child_ids
             for c in n.children:
                 assert c.id is not None
                 father_of[c.id] = n.id
-            node_records.append((n.id, a, n))
+            node_records.append((n.id, a, n, f"{filename}_{local_index}"))
 
     # Infer generations: each root (no father) is generation 1; every child is
     # one generation deeper. Nodes unreachable from any root keep -1.
@@ -625,7 +671,7 @@ def build_tree(
     # Emit domain nodes and crop name images.
     data_path = os.path.join(data_dir, f"{book}.jsonl")
     with open(data_path, "w") as data_file:
-        for node_id, grid, line_node in node_records:
+        for node_id, grid, line_node, provenance in node_records:
             name_img = get_name_image(line_node, grid)
             name_path = os.path.join(names_dir, f"{node_id}.png")
             save_image(name_img, name_path)
@@ -636,6 +682,7 @@ def build_tree(
                 generation=generation_of.get(node_id, -1),
                 father=father_of.get(node_id, -1),
                 children=children_of.get(node_id, []),
+                notes=provenance,
             )
             data_file.write(json.dumps(dataclasses.asdict(node), ensure_ascii=False) + "\n")
             domain_nodes.append(node)
