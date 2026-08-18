@@ -3,3 +3,10 @@ numpy
 opencv-python
 pandas
 pillow
+
+# OCR stage (src/ocr.py) — optional, install as needed:
+#   PaddleOCR PP-OCRv5 is the chosen engine (Chinese-specialized, local, free).
+# paddlepaddle
+# paddleocr
+#   OpenAI vision engine (for comparison / second-opinion on hard chars):
+# openai
