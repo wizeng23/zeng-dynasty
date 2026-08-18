@@ -134,13 +134,17 @@ verification, so the flagged items are the safety net.
    but **Stage 3 must not weld this fragment to a wrong parent** — worth a human
    eyeball since there's no oracle. All three pages correctly grouped; no subtree
    split or dropped.
-8. **Book 2 warnings are dominated by benign seam-fragment artifacts, EXCEPT 6.**
+8. **Book 2 warnings all benign — the 6 suspect ones VERIFIED (eyeballed).**
    All 169 sus-node warnings are height 10–35px broken-line stubs (none
    too-tall); 221/227 grid warnings are short drops (<280px) tied to those
-   stubs. **The 6 exceptions are long drops (~400px), all in `114_120.png`** —
-   the only candidates for a genuine wrong-parent mis-merge. **Eyeball
-   `books/book2/graphs/114_120.png`** to confirm those 6 aren't real topology
-   errors.
+   stubs. The 6 long drops (~402px) are all in `114_120.png` and I visually
+   inspected them: they share **one parent** (row ~1869) with **6 evenly-spaced
+   sibling children** (row ~2271) — the exact signature of a *correct* fanout,
+   not a mis-merge (which would link a misaligned wrong node). The 402px gap is
+   simply a legitimate generation row ~100px taller than Book 2's typical
+   ~300px, tripping `gen_row_max=345`. The graph renders as a clean regular
+   multi-generation tree (贞年 root → 尚敩/尚恵/尚忠 → …). **No topology error.**
+   Optional: widen Book 2 `gen_row_max` to ~410 to silence these 6.
 9. **Book 2 two-char stacked-name crops — spot-checked OK, not exhaustively
    verified.** `get_name_image` was extended for the 2-char vertical stacks
    (克宣, 龙润 style). Spot-checked 克庄, 行佑, 尚洪, 传绵, 克庄 across 4 graphs —
