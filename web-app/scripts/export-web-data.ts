@@ -28,6 +28,9 @@ const PUBLIC_NAMES = join(WEB_APP, "public", "names");
 const BOOKS = [
   { jsonl: "data/book1_golden.jsonl", book: null }, // golden: real names, no image rewrite
   { jsonl: "data/book1.jsonl", book: "book1" },
+  // Stitched Book 1: the 14 parsed subtrees cross-graph-merged into one connected
+  // lineage (see src/stitch.py). Reuses book1's name crops, so rewrite as book1.
+  { jsonl: "data/book1_stitched.jsonl", book: "book1" },
   { jsonl: "data/book2.jsonl", book: "book2" },
 ] as const;
 

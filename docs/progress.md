@@ -117,6 +117,36 @@ Tailwind v4 + Biome + next-themes, d3 for layout. Mirrors the mckloset stack.
   stitching); parsed-book names are image crops (pending OCR). Old
   `web/index.html` kept as reference.
 
+### Cross-graph stitching — Stage 3.5 (`src/stitch.py`)
+
+William DID stitch Book 1 originally (by hand) — recovered `data/book1_merged.jsonl`
+(150 nodes, 1 root) from git history (commit `d544cd8`) and archived it as
+`data/oracles/book1_merged.jsonl`. The stitch code was never committed (only its
+output), and Cell 12 of the old notebook is the literal `# TODO`.
+
+- **What stitching does:** each Stage-2 graph's root (`{graph}_0`) is a *duplicate*
+  of a person who appears as a *leaf* in an earlier graph (the subtree-start page
+  repeats the parent name). Merging each duplicate into its canonical leaf
+  collapses the 14-subtree forest into one connected lineage (163 → 150 nodes),
+  then recomputes absolute generations (root=1, max 56) and reassigns BFS/RTL ids.
+- **Matching is unsolved automatically.** Pure name-crop pixel-matching recovers
+  only ~4/13 merges (graph 8_8's children rank as bad as 39th); no simple
+  positional rule. William did the 13 merges by hand. So `src/stitch.py` uses an
+  explicit per-book merge list (`BOOK_MERGES`), with `find_merges()` as the seam
+  where an automated matcher plugs in later.
+- **Verified (`scripts/verify_stitch.py`, AHU tree-isomorphism):**
+  `old parse + 13 merges == oracle` ✅ (stitch logic is correct) and
+  `stitch.py output == new parse + 13 merges` ✅ (faithful). The one expected
+  diff: `new parse + 13 merges != oracle` — a **within-graph parse nuance**
+  between the rewrite and the archived old run that only surfaces once connected
+  (the new parse is AHU-identical to old as a *forest*). Not a stitch bug — see #12.
+- **Website:** added a "Book 1 (stitched)" dataset — renders as **150 people / 1
+  lineage**, the connected tree (scanned names, pending OCR). Screenshot
+  `scratchpad/web-shots/6-book1-stitched.png`.
+- **Next (experiment):** a real automated matcher — combine name-crop similarity
+  + reading-order prior (canonical is in a recent graph) + grid column, or OCR
+  the ~14 root names first. Then generalize stitching to Book 2 (181 → ~1 tree).
+
 ### Discrepancies / notes for William
 
 1. **Cross-graph stitching is unimplemented (the one real gap).** The pipeline
@@ -193,6 +223,18 @@ Tailwind v4 + Biome + next-themes, d3 for layout. Mirrors the mckloset stack.
    Book 1's real row geometry, **not** mis-merges. Left as-is rather than
    retuned overnight — a threshold nudge (`gen_row_max` ~340) would silence them
    but is a judgment call for William. The `bf5c03e` message wrongly said "zero".
+
+
+12. **New rewrite parse vs the merged-oracle parse: a within-graph nuance.**
+   `data/book1.jsonl` (rewrite) is AHU-identical to `old/data/book1.jsonl` as a
+   *forest*, and `old + 13 merges == book1_merged` oracle exactly. Yet
+   `new + 13 merges != oracle` (AHU differs at one spot ~depth 19). Since every
+   merge's subtree size/out-degree/depth matches, the difference is a
+   within-a-graph node arrangement that only becomes distinguishable once the
+   subtrees are connected — a parse nuance between the rewrite and the archived
+   old run, NOT a stitch bug (proven by `scripts/verify_stitch.py`). Worth a
+   look if we later want the stitched tree to match the old merged artifact
+   byte-for-byte, but the rewrite's parse is the one that reproduces old 100%.
 
 ## Next up (original plan)
 

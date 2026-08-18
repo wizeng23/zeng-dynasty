@@ -55,13 +55,19 @@ export interface LoadedTree {
   byId: Map<number, FamilyNode>;
 }
 
-export type DatasetName = "book1_golden" | "book1" | "book2";
+export type DatasetName = "book1_golden" | "book1_stitched" | "book1" | "book2";
 
 export const DATASETS: { name: DatasetName; label: string; blurb: string }[] = [
   {
     name: "book1_golden",
     label: "Golden (Book 1)",
     blurb: "One verified lineage with real Unicode names — the showcase dataset.",
+  },
+  {
+    name: "book1_stitched",
+    label: "Book 1 (stitched)",
+    blurb:
+      "The parsed subtrees cross-graph-merged into one connected lineage — scanned names, pending OCR.",
   },
   {
     name: "book1",
