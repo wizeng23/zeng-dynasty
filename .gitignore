@@ -211,3 +211,9 @@ __marimo__/
 # Playwright MCP session artifacts
 .playwright-mcp/
 scratchpad/
+
+# The web app (web-app/) is a JavaScript/Next.js project; the Python-oriented
+# rules above (lib/, build/, dist/, target/, *.log, ...) must NOT reach into it.
+# Un-ignore the whole subtree here — web-app/.gitignore handles its own build
+# output (node_modules, .next, out, public/data, public/names).
+!/web-app/**

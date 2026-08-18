@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#a8342a"/>
+  <!-- A minimal family tree: one root fanning to three children. -->
+  <g stroke="#fff" stroke-width="1.6" fill="#fff">
+    <circle cx="16" cy="8" r="2.6"/>
+    <circle cx="8" cy="24" r="2.6"/>
+    <circle cx="16" cy="24" r="2.6"/>
+    <circle cx="24" cy="24" r="2.6"/>
+    <path d="M16 10.6 V16 M8 21.4 V16 H24 V21.4 M16 16 V21.4" fill="none"/>
+  </g>
+</svg>

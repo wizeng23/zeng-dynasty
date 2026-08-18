@@ -1,0 +1,68 @@
+name: Deploy website to GitHub Pages
+
+# Builds the Next.js app in web-app/ into a static site and publishes it to
+# GitHub Pages. Runs on every push to main that touches the site or the data it
+# renders, and can be triggered manually from the Actions tab.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web-app/**"
+      - "data/**"
+      - "books/book1/names/**"
+      - "books/book2/names/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+# Allow the workflow to publish to Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; a newer push cancels an in-flight run.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Export data snapshot (jsonl + name crops -> public/)
+        run: bun run export-data
+
+      - name: Build static site
+        env:
+          GITHUB_PAGES: "true"
+        run: bun run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # next.config sets output:'export', which writes the static site here.
+          path: web-app/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
