@@ -10,19 +10,34 @@ each stage does.
 | 3    | not started      | —               | —              | —        | Interleaves biography + tree pages |
 | 4    | not started      | —               | —              | —        | Same as Book 3 |
 
-## Current state (post-restructure, 2026-08-17)
+## Comparison oracles for the rewrite
 
-- Repo restructured: everything pre-restructure archived in `old/`; survivors
-  promoted (raw scans, golden data, Node schema → `src/model.py`, web viewer).
-  See `specs/2026-08-17-repo-restructure-design.md`.
-- **Golden Book 1 data corrected**: RTL age-order renumber (BFS-by-generation),
-  `children` eldest-first, `father` field populated + renamed from `parent`,
-  generations 1-indexed.
+- `data/book1_golden.jsonl` — hand-typed, ~100% correct, **59 nodes** (verified subset only, first ~gen 36). RTL/age-ordered, `father` field. **Primary correctness oracle.**
+- `old/data/book1.jsonl` — old script's output, ~95% correct, **163 nodes** (full book 1). LTR-ordered, `parent`, empty names. **Full-pipeline oracle** — expect RTL-vs-LTR ordering diffs plus ~5% real errors.
 
-## Next up
+Note: golden (59) is a subset of the full book (163). Match golden on its 59 for correctness; match old jsonl's 163-node topology (modulo RTL/LTR) for full-pipeline reproduction.
 
-1. Rewrite the pipeline into `src/` scripts (`extract_pages.py`, `segment.py`,
-   `build_tree.py`), reproducing the Book 1 result, then applying the RTL fix.
+## Autonomous session log (2026-08-18, overnight)
+
+Rewriting the pipeline into `src/` per `specs/2026-08-18-pipeline-rewrite-design.md`.
+Objectives: reproduce Book 1 (match golden modulo RTL) → parse Book 2 → website if time.
+
+- [ ] `src/extract_pages.py` — stage 1
+- [ ] `src/segment.py` — stage 2 (structural label detection, seam-merge)
+- [ ] `src/build_tree.py` — stage 3 (connectedComponentsWithStats, RTL/BFS, grid check)
+- [ ] Reproduce Book 1 → verify vs golden
+- [ ] Parse Book 2
+- [ ] Website (Next.js + d3-in-React)
+
+_(Updated as work lands. Discrepancies logged below.)_
+
+### Discrepancies / notes for William
+
+_(none yet)_
+
+## Next up (original plan)
+
+1. Rewrite the pipeline into `src/` scripts, reproducing the Book 1 result, then applying the RTL fix.
 2. Verify rewritten Book 1 output against `data/book1_golden.jsonl`.
 3. Finish Book 2 (stages 2–3).
 4. OCR (stage 3.5).
