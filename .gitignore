@@ -217,3 +217,6 @@ scratchpad/
 # Un-ignore the whole subtree here — web-app/.gitignore handles its own build
 # output (node_modules, .next, out, public/data, public/names).
 !/web-app/**
+
+# QA overlay output (regenerate: python -m scripts.qa_overlay --book bookN)
+books/*/qa/
