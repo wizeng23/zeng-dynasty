@@ -395,14 +395,7 @@ def _concat_top_aligned(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     elif g2.shape[0] < g1.shape[0]:
         padding = g1.shape[0] - g2.shape[0]
         g2 = np.vstack([g2, np.ones((padding, g2.shape[1])).astype(np.uint8)])
-    g = np.hstack([g1, g2])
-    return np.vstack(
-        [
-            np.ones((100, g.shape[1])).astype(np.uint8),
-            g,
-            np.ones((100, g.shape[1])).astype(np.uint8),
-        ]
-    )
+    return np.hstack([g1, g2])
 
 
 def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
@@ -497,14 +490,7 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
         g1[low : high + 1, -1:] = 0
         g2[low : high + 1, :1] = 0
 
-    g = np.hstack([g1, g2])
-    return np.vstack(
-        [
-            np.ones((100, g.shape[1])).astype(np.uint8),
-            g,
-            np.ones((100, g.shape[1])).astype(np.uint8),
-        ]
-    )
+    return np.hstack([g1, g2])
 
 
 # --- Orphan bridging -------------------------------------------------------
@@ -643,6 +629,37 @@ def _bridge_candidates(
         idx += 1
     if len(segs) > 1:  # a single-segment close is already candidate 1
         candidates.append(segs)
+
+    # 3. Full-bar span: close every gap between the row's leftmost and rightmost
+    #    substantial runs, skipping only gaps a vertical branch crosses. A whole
+    #    generation bar is often broken in several places by the missing-line page(s)
+    #    it spans -- its parent riser sits at the far end, so nothing short of
+    #    reuniting the entire bar connects the children to it (e.g. 11_17's root bar
+    #    runs the full width from 貞榮 to 尚嵩). Ordered last: it is the widest edit, so
+    #    the self-verify gate prefers a tighter candidate when one suffices.
+    big = [r for r in runs if r[1] - r[0] > 30]
+    if len(big) >= 2:
+        lo, hi = big[0][0], big[-1][1]  # bar's full extent at this row
+        # Only when no vertical branch crosses the interior (a vertical would mean
+        # the span runs through an unrelated subtree). If clear, redraw the whole
+        # bar as ONE solid run: this both bridges the page-gaps AND erases the notches
+        # the children-drops cut into the top row, which a gap-only fill leaves behind
+        # for find_line_ends to misread as extra parent hang-points.
+        interior_clear = True
+        prev_end = None
+        for r in runs:
+            if r[1] < lo or r[0] > hi:
+                continue
+            if prev_end is not None:
+                gap = r[0] - prev_end
+                if gap >= MIN_ORPHAN_GAP and _gap_has_vertical(a, row, prev_end, r[0]):
+                    interior_clear = False
+                    break
+            prev_end = r[1]
+        if interior_clear:
+            span = [(row, lo, hi)]
+            if span not in candidates:
+                candidates.append(span)
 
     return candidates
 
@@ -794,6 +811,21 @@ def segment(
             logger.info("Merging page %d into subtree started at %d", i, start_i)
             graph = merge_graphs(pages[i], graph)
             i += 1
+
+        # Frame the assembled graph once (100px top/bottom margin for the parser and
+        # orphan-bridging). merge_graphs no longer frames each intermediate step --
+        # doing so re-padded the accumulated graph's top by 100px every merge, so its
+        # content crept ~100px lower per page and left multi-page graphs skewed a
+        # generation or more off their grid (Book 2's 11_17: 尚嵩 on the last page ended
+        # ~600px above the root bar it hangs from). Framing once keeps every page on
+        # the same generation rows.
+        graph = np.vstack(
+            [
+                np.ones((100, graph.shape[1])).astype(np.uint8),
+                graph,
+                np.ones((100, graph.shape[1])).astype(np.uint8),
+            ]
+        )
 
         # Repair page-gap orphans (missing-line pages) on the assembled graph, and
         # record every synthetic connector to a sidecar for QA (green overlay).
