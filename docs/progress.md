@@ -211,6 +211,30 @@ This is the main Book 2 parse defect and the top fix target. Options:
     line continuing across the seam.
 Book 1 is unaffected (all single-page graphs; 0 empty nodes).
 
+### Seam-merge coordinate bug FIXED (2026-08-20, William-diagnosed)
+
+Root cause (found from William's zoomed seam image showing the connector going UP
+from the left line's tip, leaving the two lines unjoined): `merge_graphs` applied
+`best_alignment` by padding one side's top (sliding its ink down) and the other's
+bottom, but the endpoint bookkeeping was wrong — it shifted `left_y` while g1's
+ink stayed put and never moved `right_y`. So both endpoint lists pointed a few px
+ABOVE their real lines; the seam fill drew a stray up-stub instead of joining
+them. Stage 3 read the stub tip as a parent hang-point → nameless phantom node.
+
+Fix (commit `fc0fdc9`): move each endpoint list by exactly its own side's ink
+shift. **Book 2 empty nodes 165 → 89.** Verified on `4_5`: seam now shows a clean
+2px bridge joining the lines. Book 1 byte-identical (only nonzero-alignment seams
+affected).
+
+**~89 empties remain — a SECOND, distinct cause** (not the alignment bug):
+- 2 are in SINGLE-page graphs (`133_133`, `134_134`) — no seam at all. Cause: a
+  wide fan-out bar whose parent hang-line rises off the top; `find_line_ends`
+  picks the bar's left corner as a spurious top endpoint (a parse edge case in
+  the 2-char-name / bare-fan-out-bar handling, not a merge issue).
+- The rest are residual seam cases in the big graphs (`69_82`:22, `126_128`:18,
+  `36_52`:15) — likely multiple seams per line or larger residuals.
+Lower-value long tail; the systematic bug is fixed. Revisit if needed.
+
 ### Discrepancies / notes for William
 
 1. **Cross-graph stitching is unimplemented (the one real gap).** The pipeline
