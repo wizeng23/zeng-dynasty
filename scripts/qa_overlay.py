@@ -146,6 +146,40 @@ def assemble_with_seams(
     return graph, seams
 
 
+def raw_pages_strip(book: str, start: int, end: int, books_dir: str) -> Image.Image:
+    """Join the RAW Stage-1 pages (before any trim/shrink) left-to-right.
+
+    This is the "nothing got lost" check: it shows the full deskewed scan of each
+    page, *before* trim_borders / shrink_page removed the frame and whitespace. If
+    a name or line sits outside the tight box that shrink_page kept, it is still
+    visible here, so comparing this strip against the parse overlay reveals any ink
+    the cropping discarded. Pages are laid out in the same order as the assembly
+    (right-to-left: end..start, so page numbers ascend right->left), with a blue
+    boundary + page label per page.
+    """
+    pages_dir = os.path.join(books_dir, book, "pages")
+    order = list(range(start, end + 1))[::-1]  # left-to-right = end..start
+    imgs = [
+        _to_rgb(get_image(os.path.join(pages_dir, f"{i}.png"))) for i in order
+    ]
+    h = max(im.height for im in imgs)
+    strip = Image.new("RGB", (sum(im.width for im in imgs), h), (255, 255, 255))
+    draw = ImageDraw.Draw(strip)
+    font = _font(28)
+    x = 0
+    for page_i, im in zip(order, imgs):
+        strip.paste(im, (x, 0))
+        draw.line([(x, 0), (x, h)], fill=BLUE, width=3)
+        label = f"p{page_i}"
+        tb = draw.textbbox((0, 0), label, font=font)
+        tw = tb[2] - tb[0]
+        cx = x + im.width // 2
+        draw.rectangle([cx - tw // 2 - 6, 6, cx + tw // 2 + 6, 44], fill=BLUE)
+        draw.text((cx - tw // 2, 8), label, fill=(255, 255, 255), font=font)
+        x += im.width
+    return strip
+
+
 def draw_assembly_overlay(
     a: np.ndarray, seams: list[tuple[int, int]]
 ) -> Image.Image:
@@ -196,7 +230,11 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         pages_name = f"{stem}_pages.png"
         pages_img.save(os.path.join(qa_dir, pages_name))
 
-        rows.append((stem, parse_name, pages_name, len(nodes)))
+        raw_img = raw_pages_strip(book, start, end, books_dir)
+        raw_name = f"{stem}_raw.png"
+        raw_img.save(os.path.join(qa_dir, raw_name))
+
+        rows.append((stem, parse_name, pages_name, raw_name, len(nodes)))
         logger.info("%s: %d nodes, pages %d-%d", stem, len(nodes), start, end)
 
     index_path = os.path.join(qa_dir, "index.html")
@@ -205,8 +243,10 @@ def qa_book(book: str, books_dir: str = "books") -> str:
     return index_path
 
 
-def _write_index(path: str, book: str, rows: list[tuple[str, str, str, int]]) -> None:
-    total_nodes = sum(r[3] for r in rows)
+def _write_index(
+    path: str, book: str, rows: list[tuple[str, str, str, str, int]]
+) -> None:
+    total_nodes = sum(r[4] for r in rows)
     cards = "\n".join(
         f"""
     <section class="graph">
@@ -216,9 +256,11 @@ def _write_index(path: str, book: str, rows: list[tuple[str, str, str, int]]) ->
           <img src="{parse}" loading="lazy"></figure>
         <figure><figcaption>assembly: blue = page seams (numbers ascend right→left)</figcaption>
           <img src="{pages}" loading="lazy"></figure>
+        <figure><figcaption>raw pages: full scan before trim/shrink (nothing lost?)</figcaption>
+          <img src="{raw}" loading="lazy"></figure>
       </div>
     </section>"""
-        for stem, parse, pages, n in rows
+        for stem, parse, pages, raw, n in rows
     )
     html = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>Parse QA — {book}</title>
