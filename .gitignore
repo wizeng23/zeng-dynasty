@@ -220,3 +220,4 @@ scratchpad/
 
 # QA overlay output (regenerate: python -m scripts.qa_overlay --book bookN)
 books/*/qa/
+worklog/

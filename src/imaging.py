@@ -11,6 +11,11 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
+# The widest multi-page graph (Book 2's 36_52) spans ~90M px, above PIL's
+# 89M-px decompression-bomb guard. These are known-safe local scans, so lift the
+# limit here -- every loader routes through get_image, so one place suffices.
+Image.MAX_IMAGE_PIXELS = None
+
 # Directions used by the binary-ink convention.
 INK = 0
 BACKGROUND = 1

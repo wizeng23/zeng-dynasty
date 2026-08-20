@@ -251,6 +251,14 @@ def remove_adjacent(numbers: list[int], threshold: int = 30) -> list[int]:
     return result
 
 
+# Weight of the shift-magnitude tie-breaker in find_best_orphans' scoring. Small
+# enough that a clear shape signal (a tight offset cluster, even at a large Δ) still
+# wins on its own, but nonzero so the degenerate single-pair case -- where offset
+# spread is always zero -- resolves toward the physically nearer line rather than
+# an arbitrary combinations() order. Calibrated against both books' seams.
+SHIFT_PENALTY_WEIGHT = 0.1
+
+
 def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str]:
     """Choose which endpoints on the longer side have no partner at the seam.
 
@@ -258,6 +266,24 @@ def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str
     lines on the longer side are "orphans" (a line that starts on this page and
     has no continuation across the seam). Picks the orphan set that minimizes
     the summed |offset| between the remaining matched endpoints.
+
+    Scoring balances two signals that together pin down the right pairing across
+    both books' geometries:
+
+    * **Shape agreement (shift-invariant).** Correctly matched lines share one
+      whole-page vertical offset ``Δ``, so their per-pair offsets cluster tightly;
+      a wrong pairing scatters them. Scoring the spread *around the mean offset*
+      (not the absolute rows) lets an honest whole-page shift cost nothing -- vital
+      because consecutive pages can sit a full generation-row apart (Book 1's tree
+      descends across pages, so p15's lines are ~100px below p14's).
+    * **Shift magnitude (mild penalty).** Spread alone is degenerate when only one
+      pair survives (a single offset always has zero spread), so every candidate
+      ties. Physically adjacent pages are at most about one generation-row apart,
+      so a pairing implying a huge ``|Δ|`` is wrong: Book 1 p16 must match its lone
+      line to the *nearer* accumulated line (Δ≈186), not the far one (Δ≈559); Book
+      2 p13's lone line must match Δ≈12, not the top-align's old Δ≈841. A small
+      per-px penalty on ``|median Δ|`` breaks the tie toward the physically sane
+      pairing without overriding a clear shape signal.
 
     Args:
         left: Endpoint rows on the left graph's right edge.
@@ -273,31 +299,69 @@ def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str
         left, right = right, left
     num_orphans = len(left) - len(right)
     best_orphans: tuple[int, ...] = ()
-    best_orphan_score: int | None = None
+    best_orphan_score: float | None = None
 
     for orphans in combinations(range(len(left)), num_orphans):
         new_left = [left[i] for i in range(len(left)) if i not in orphans]
-        score = sum(abs(x - y) for x, y in zip(new_left, right))
+        if new_left:
+            offsets = [y - x for x, y in zip(new_left, right)]
+            mean_off = sum(offsets) / len(offsets)
+            spread = sum(abs(o - mean_off) for o in offsets)
+            # Mild tie-breaker toward the smaller whole-page shift. The weight is
+            # small so a clear shape signal (a tight cluster at a large Δ) still
+            # wins, but it decisively separates the single-pair case where spread
+            # is always zero.
+            shift_penalty = SHIFT_PENALTY_WEIGHT * abs(mean_off)
+            score = spread + shift_penalty
+        else:
+            score = 0.0
         if best_orphan_score is None or score < best_orphan_score:
             best_orphan_score = score
             best_orphans = orphans
     return list(best_orphans), "left" if not flip else "right"
 
 
-def find_best_alignment(left: list[int], right: list[int]) -> int:
-    """Find the vertical shift of ``left`` that best lines its endpoints up.
+def matched_shift(left: list[int], right: list[int]) -> int:
+    """The vertical shift to apply to ``left`` so its endpoints meet ``right``.
 
-    Searches shifts in ``[-100, 100)`` and returns the one minimizing the summed
-    |offset| between paired endpoints.
+    ``left`` and ``right`` are the *matched* seam endpoints (equal length, orphans
+    already removed), paired positionally. Returns the median pairwise offset --
+    the whole-page vertical shift that best lines the two pages up. The median (not
+    the mean) resists a single noisy endpoint. A blank input yields ``0``.
+
+    This replaces the old two-step "top-align to left_y[0]==right_y[0] then refine
+    within +-100px". Top-aligning on the topmost pair silently assumed that pair
+    was the same line; when a missing-line page exposed a different top endpoint it
+    force-matched the wrong lines and padded the whole page hundreds of px off its
+    grid (Book 2's 11_17: p13 shoved ~841px, cascading down every later page).
+    Matching first (:func:`find_best_orphans`, shift-invariant) then shifting by the
+    matched pairs' median offset aligns by lines that truly correspond, so a
+    missing-line page just yields orphans instead of dragging the merge off-grid.
 
     Args:
-        left: Endpoint rows on the left graph's right edge.
-        right: Endpoint rows on the right graph's left edge.
+        left: Matched endpoint rows on the left graph's right edge.
+        right: Matched endpoint rows on the right graph's left edge.
 
     Returns:
-        The best vertical shift to apply to ``left`` (may be negative).
+        The vertical shift to apply to ``left`` (may be negative); ``0`` if empty.
     """
-    logger.debug("finding best alignment: left=%s right=%s", left, right)
+    if not left or not right:
+        return 0
+    offsets = sorted(y - x for x, y in zip(left, right))
+    mid = len(offsets) // 2
+    if len(offsets) % 2:
+        return offsets[mid]
+    # Even count: average the two middle offsets, rounding toward zero.
+    return int((offsets[mid - 1] + offsets[mid]) / 2)
+
+
+def find_best_alignment(left: list[int], right: list[int]) -> int:
+    """Deprecated: superseded by :func:`matched_shift` (kept for reference/tests).
+
+    Returned the shift in ``[-100, 100)`` minimizing the summed |offset| between
+    positionally-paired endpoints. :func:`merge_graphs` now derives the shift from
+    the matched pairs' median offset instead (see :func:`matched_shift`).
+    """
     best_alignment = 0
     best_alignment_score: int | None = None
     for i in range(-100, 100):
@@ -377,27 +441,12 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
         )
         return _concat_top_aligned(g1, g2)
 
-    # Align the topmost endpoints by padding the top of the higher-starting side.
-    if left_y[0] < right_y[0]:
-        padding = right_y[0] - left_y[0]
-        left_y = [x + padding for x in left_y]
-        g1 = np.vstack([np.ones((padding, g1.shape[1])).astype(np.uint8), g1])
-    elif left_y[0] > right_y[0]:
-        padding = left_y[0] - right_y[0]
-        right_y = [x + padding for x in right_y]
-        g2 = np.vstack([np.ones((padding, g2.shape[1])).astype(np.uint8), g2])
-
-    # Pad the shorter graph's bottom so heights match.
-    if g1.shape[0] < g2.shape[0]:
-        padding = g2.shape[0] - g1.shape[0]
-        g1 = np.vstack([g1, np.ones((padding, g1.shape[1])).astype(np.uint8)])
-    elif g2.shape[0] < g1.shape[0]:
-        padding = g1.shape[0] - g2.shape[0]
-        g2 = np.vstack([g2, np.ones((padding, g2.shape[1])).astype(np.uint8)])
-
-    # Drop orphan endpoints (lines with no partner across the seam).
+    # Match endpoints across the seam on their NATURAL rows (no prior top-align).
+    # find_best_orphans is shift-invariant, so it identifies which lines truly
+    # correspond even when the whole page sits a generation-row higher/lower, and
+    # drops the extras on the longer side as orphans.
     orphan_idxs, side = find_best_orphans(left_y, right_y)
-    logger.debug("adjusted seam endpoints: left=%s right=%s", left_y, right_y)
+    logger.debug("seam endpoints (natural rows): left=%s right=%s", left_y, right_y)
     if side == "left":
         orphans = [left_y[i] for i in orphan_idxs]
         left_y = [left_y[i] for i in range(len(left_y)) if i not in orphan_idxs]
@@ -407,25 +456,36 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     if orphan_idxs:
         logger.warning("orphan endpoints %s on %s side of seam", orphans, side)
 
-    best_alignment = find_best_alignment(left_y, right_y)
-    logger.debug("best alignment shift: %d", best_alignment)
-    # `best_alignment` is the shift that best lines g1's endpoints up with g2's.
-    # We realize it by padding one side's TOP (which slides that side's ink DOWN)
-    # and the other's BOTTOM (ink unmoved). The endpoint lists must move by exactly
-    # the same amount as the ink on their own side, or the seam fill lands off the
-    # real lines (the old code shifted left_y and left g1's ink unmoved, and never
-    # moved right_y at all -- so both lists pointed a few px above their lines,
-    # drawing a stray up-tick instead of joining them: the Book 2 empty-node bug).
+    # Shift g1 by the matched pairs' median offset so the corresponding lines meet.
+    # This single, match-derived shift replaces the old top-align + best_alignment:
+    # aligning by lines that truly correspond means a missing-line page (which now
+    # just contributes orphans) can no longer drag the whole page off its grid.
+    #
+    # Realize the shift by top-padding ONLY the side whose ink must slide down, then
+    # bottom-pad whichever is now shorter to square the heights. Crucially we do NOT
+    # also bottom-pad the *other* side by the shift: that redundant pad added the
+    # shift to the canvas height every merge, so across a wide multi-page graph the
+    # per-seam generation offsets accumulated into a runaway-tall image (Book 2's
+    # 36_52 ballooned 5k -> 17k px). Top-pad-then-square keeps height at
+    # max(h1+shift, h2), not max(h1, h2) + shift.
+    best_alignment = matched_shift(left_y, right_y)
+    logger.debug("matched-pair shift: %d", best_alignment)
     if best_alignment > 0:
-        # g1 top-padded -> g1 ink slides down by best_alignment; g2 bottom-padded.
+        # g1's ink slides down by best_alignment; its endpoints move with it.
         g1 = np.vstack([np.ones((best_alignment, g1.shape[1])).astype(np.uint8), g1])
-        g2 = np.vstack([g2, np.ones((best_alignment, g2.shape[1])).astype(np.uint8)])
         left_y = [x + best_alignment for x in left_y]
-    else:
-        # g2 top-padded -> g2 ink slides down by -best_alignment; g1 bottom-padded.
-        g1 = np.vstack([g1, np.ones((-best_alignment, g1.shape[1])).astype(np.uint8)])
+    elif best_alignment < 0:
+        # g2's ink slides down by -best_alignment; its endpoints move with it.
         g2 = np.vstack([np.ones((-best_alignment, g2.shape[1])).astype(np.uint8), g2])
         right_y = [x - best_alignment for x in right_y]
+
+    # Square the heights by bottom-padding the shorter side (never moves ink).
+    if g1.shape[0] < g2.shape[0]:
+        padding = g2.shape[0] - g1.shape[0]
+        g1 = np.vstack([g1, np.ones((padding, g1.shape[1])).astype(np.uint8)])
+    elif g2.shape[0] < g1.shape[0]:
+        padding = g1.shape[0] - g2.shape[0]
+        g2 = np.vstack([g2, np.ones((padding, g2.shape[1])).astype(np.uint8)])
 
     # Bridge each matched pair. The endpoints now coincide with their real lines,
     # so a short vertical run in the two seam columns joins them cleanly. To avoid
