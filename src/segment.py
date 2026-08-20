@@ -584,6 +584,69 @@ def _empty_count(nodes, a: np.ndarray) -> int:
     return n
 
 
+# A multi-gap close walks right closing bar-row gaps no wider than this. Real
+# element spacing is >=~50px, so 25px only rejoins a broken bar, never two names.
+MULTI_GAP_MAX = 25
+
+
+def _bridge_candidates(
+    a: np.ndarray, row: int, col: int
+) -> list[list[tuple[int, int, int]]]:
+    """Candidate bridge segment-sets for the orphan bar at ``(row, col)``.
+
+    Each candidate is a list of ``(row, c0, c1)`` horizontal fills. Ordered
+    tightest-first; :func:`bridge_orphans` accepts the first that self-verifies.
+
+    Two candidate shapes cover the repairable orphans:
+
+    1. **Single gap** -- bridge the bar-run's right end to the next run. Fixes the
+       page-gap orphans (a missing-line page cuts the bar) and the simplest weave
+       orphans (a few-px wobble gap).
+    2. **Multi-gap close** -- walk rightward from the bar run, closing every gap up
+       to :data:`MULTI_GAP_MAX`, stopping at the first larger gap. Fixes riser-weave
+       orphans, where a 1px bar wobbles across two rows and shatters into many small
+       runs between the children and the parent riser, so a single-gap bridge only
+       closes the first shard.
+
+    A candidate is skipped if a vertical branch crosses its gap (the trace would
+    cross an unrelated subtree). Empty list -> nothing safe to try.
+    """
+    runs = _bar_row_runs(a, row)
+    bar_run = next((r for r in runs if r[0] - 5 <= col <= r[1] + 5), None)
+    if bar_run is None:
+        return []
+    right_runs = [r for r in runs if r[0] > bar_run[1] + 2]
+    if not right_runs:
+        return []  # bar runs to the edge -> parent off-page (left/right-edge orphan)
+
+    candidates: list[list[tuple[int, int, int]]] = []
+
+    # 1. Single gap to the immediate next run.
+    g0_start, g0_end = bar_run[1], right_runs[0][0]
+    if (g0_end - g0_start) >= MIN_ORPHAN_GAP and not _gap_has_vertical(
+        a, row, g0_start, g0_end
+    ):
+        candidates.append([(row, g0_start, g0_end)])
+
+    # 2. Multi-gap close: chain small gaps rightward until a big one.
+    segs: list[tuple[int, int, int]] = []
+    idx = runs.index(bar_run)
+    while idx + 1 < len(runs):
+        cur_end, nxt_start = runs[idx][1], runs[idx + 1][0]
+        gap = nxt_start - cur_end
+        if gap > MULTI_GAP_MAX:
+            break
+        if gap >= MIN_ORPHAN_GAP and _gap_has_vertical(a, row, cur_end, nxt_start):
+            break
+        if gap >= 2:
+            segs.append((row, cur_end, nxt_start))
+        idx += 1
+    if len(segs) > 1:  # a single-segment close is already candidate 1
+        candidates.append(segs)
+
+    return candidates
+
+
 def bridge_orphans(
     graph: np.ndarray, bt_config
 ) -> tuple[np.ndarray, list[list[int]]]:
@@ -621,33 +684,33 @@ def bridge_orphans(
             if int((1 - bt.get_name_image(node, out)).sum()) >= 30:
                 continue  # not empty -> not an orphan
             row, col = node.bot[0], node.top[1]
-            runs = _bar_row_runs(out, row)
-            bar_run = next((r for r in runs if r[0] - 5 <= col <= r[1] + 5), None)
-            if bar_run is None:
-                continue
-            right_runs = [r for r in runs if r[0] > bar_run[1] + 2]
-            if not right_runs:
-                continue  # bar runs to the edge -> parent is off-page (left-edge)
-            gap_start, gap_end = bar_run[1], right_runs[0][0]
-            if gap_end - gap_start < MIN_ORPHAN_GAP:
-                continue  # within-bar hairline, not a page-gap
-            if _gap_has_vertical(out, row, gap_start, gap_end):
-                continue  # a branch crosses the gap -> unsafe
+            candidates = _bridge_candidates(out, row, col)
 
-            # Draw the candidate bridge on a trial copy and self-verify.
-            trial = out.copy()
-            r0, r1 = max(0, row - 2), min(out.shape[0], row + 3)
-            trial[r0:r1, gap_start : gap_end + 1] = 0
-            try:
-                trial_nodes = bt.parse_graph(trial, bt_config)
-            except ValueError:
-                continue  # would weld a two-parent component -> reject
-            if _empty_count(trial_nodes, trial) < base_empties:
-                out = trial
-                imaginary.append([int(row), int(gap_start), int(row), int(gap_end)])
+            # Try each candidate (cheapest/tightest first); accept the first that
+            # self-verifies: parse still succeeds AND the empty count strictly
+            # drops. This gate is what makes the pass safe regardless of how the
+            # candidates are generated -- a wrong bridge either raises (two-parent
+            # weld) or fails to reduce empties, and is discarded.
+            accepted = None
+            for segs in candidates:
+                trial = out.copy()
+                for r, c0, c1 in segs:
+                    trial[max(0, r - 2) : min(out.shape[0], r + 3), c0 : c1 + 1] = 0
+                try:
+                    trial_nodes = bt.parse_graph(trial, bt_config)
+                except ValueError:
+                    continue  # two-parent weld -> reject
+                if _empty_count(trial_nodes, trial) < base_empties:
+                    accepted = (trial, segs)
+                    break
+
+            if accepted is not None:
+                out, segs = accepted
+                for r, c0, c1 in segs:
+                    imaginary.append([int(r), int(c0), int(r), int(c1)])
                 logger.info(
-                    "orphan-bridge: row=%d cols %d..%d (gap %d)",
-                    row, gap_start, gap_end, gap_end - gap_start,
+                    "orphan-bridge: row=%d %d segment(s) %s",
+                    row, len(segs), [(c0, c1) for _r, c0, c1 in segs],
                 )
                 made_progress = True
                 break  # re-parse fresh before looking for the next orphan
