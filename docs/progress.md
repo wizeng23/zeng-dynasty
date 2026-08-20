@@ -186,6 +186,31 @@ spot-checking:
   band [280,345] no longer fires on normal edges (the Book 1 false-positive fix
   applies to Book 2 too).
 
+### Book 2 seam-break defect — QUANTIFIED (2026-08-20)
+
+The QA overlay (William spotted it on `0_3`/`4_5`) surfaced a systematic Book 2
+defect: **163 empty phantom nodes** across the 19 multi-page graphs (0 in
+single-page graphs — purely a seam issue). Concentrated in the big graphs:
+`69_82` (40), `36_52` (29), `126_128` (22), `106_113` (16), `11_17` (11),
+`58_62` (11), `83_87` (10). ~9% of Book 2's 1763 nodes.
+
+**Root cause (confirmed by zooming the seam of `4_5` at col 1061 = page-5 width):**
+a horizontal connector line that CROSSES a page seam is not re-aligned by
+`merge_graphs`. The merge aligns the dangling *vertical* lines at the seam, but a
+long horizontal through-line ends up offset a few px vertically across the
+boundary and disconnected. The broken left end leaves a small downward tick that
+`find_line_ends` reads as a *parent* endpoint — an empty node (no name sits
+there) — and the real children attach to it instead of their true cross-page
+parent. Children are always correctly detected/named; only the parent-link is
+phantom.
+
+This is the main Book 2 parse defect and the top fix target. Options:
+(a) in `merge_graphs`, detect a horizontal line crossing the seam and align on
+    it (not just vertical danglers) / bridge the small gap;
+(b) post-process: drop empty (ink<30) nodes and re-attach their children to the
+    line continuing across the seam.
+Book 1 is unaffected (all single-page graphs; 0 empty nodes).
+
 ### Discrepancies / notes for William
 
 1. **Cross-graph stitching is unimplemented (the one real gap).** The pipeline
