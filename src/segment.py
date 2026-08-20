@@ -322,12 +322,6 @@ def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str
     return list(best_orphans), "left" if not flip else "right"
 
 
-# Hard cap on the per-seam vertical shift. Adjacent pages align to ~10-21px of scan
-# wobble once normalized (measured raw page-to-page in both books); anything larger
-# is a mis-match against a drifted accumulated edge, so we clamp rather than trust it.
-MAX_SEAM_SHIFT = 25
-
-
 def matched_shift(left: list[int], right: list[int]) -> int:
     """The vertical shift to apply to ``left`` so its endpoints meet ``right``.
 
@@ -357,19 +351,9 @@ def matched_shift(left: list[int], right: list[int]) -> int:
     offsets = sorted(y - x for x, y in zip(left, right))
     mid = len(offsets) // 2
     if len(offsets) % 2:
-        shift = offsets[mid]
-    else:
-        # Even count: average the two middle offsets, rounding toward zero.
-        shift = int((offsets[mid - 1] + offsets[mid]) / 2)
-    # Hard cap. Physically-adjacent pages, once normalized, have their seam lines
-    # aligned to within a handful of px of scan wobble (measured ~10-21px in BOTH
-    # books, raw page-to-page). A larger computed shift means the endpoints were
-    # matched against the wrong (drifted) lines -- so clamping both prevents a
-    # single bad seam from dragging a page off its grid AND stops the shift from
-    # accumulating into a generation-sized drift across a multi-page graph. The
-    # real generation offset between pages is encoded by where each line sits in
-    # the page, not by shifting whole pages at the seam.
-    return max(-MAX_SEAM_SHIFT, min(MAX_SEAM_SHIFT, shift))
+        return offsets[mid]
+    # Even count: average the two middle offsets, rounding toward zero.
+    return int((offsets[mid - 1] + offsets[mid]) / 2)
 
 
 def find_best_alignment(left: list[int], right: list[int]) -> int:
