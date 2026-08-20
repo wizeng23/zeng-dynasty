@@ -109,101 +109,61 @@ def draw_parse_overlay(a: np.ndarray, nodes: list[bt.LineNode]) -> Image.Image:
     return img
 
 
-def assemble_with_seams(
+def stacked_compare(
     book: str, start: int, end: int, config: seg.BookConfig, books_dir: str
-) -> tuple[np.ndarray, list[tuple[int, int]]]:
-    """Rebuild a graph the way segment() does, recording each page's x-span.
+) -> Image.Image:
+    """Raw pages (top) stacked over the cropped pages (bottom), SAME scale.
 
-    Returns the merged grid and a list of (page_index, right_edge_x) seams. Because
-    merge_graphs puts the newer page on the LEFT, we track widths as we go and
-    report each page's right boundary in final-image coordinates.
+    The "nothing lost in the crop" check made easy to read: each page occupies the
+    same horizontal column in both rows, at identical scale, so you scan straight
+    down one column to compare the full raw scan against what the crop kept. The
+    cropped page is left-aligned in its column and is naturally narrower/shorter —
+    that shrinkage is exactly the whitespace the crop removed; any *name or line*
+    missing from the bottom half that's present up top is real lost data.
+
+    Pages run right-to-left (page numbers ascend right→left), matching the graph.
     """
     pages_dir = os.path.join(books_dir, book, "pages")
-    grids: list[tuple[int, np.ndarray]] = []
-    for i in range(start, end + 1):
+    order = list(range(start, end + 1))[::-1]  # left-to-right = end..start
+
+    raw_cols: list[Image.Image] = []
+    crop_cols: list[Image.Image] = []
+    for i in order:
         a = get_image(os.path.join(pages_dir, f"{i}.png"))
+        raw_cols.append(_to_rgb(a))
+        # Apply the same crop the pipeline does (trim, label-strip, shrink).
         a = seg.trim_borders(a)
         x = seg.is_tree_start_page(a, config)
         if x != -1:
             a = a[:, :x]
-        grids.append((i, seg.shrink_page(a)))
+        crop_cols.append(_to_rgb(seg.shrink_page(a)))
 
-    # Reproduce merge order: start page is the base (rightmost); each later page is
-    # stacked to its LEFT. So the final left-to-right page order is end..start.
-    merged = grids[0][1]
-    graph = merged
-    for _, page in grids[1:]:
-        graph = seg.merge_graphs(page, graph)
+    col_w = max(im.width for im in raw_cols)  # uniform raw page width
+    raw_h = max(im.height for im in raw_cols)
+    crop_h = max(im.height for im in crop_cols)
 
-    # Compute each page's right-edge x in the final image. The final width may
-    # differ slightly from the sum of page widths (merge trims/pads at seams), so
-    # scale the cumulative page widths to the final width for an approximate marker.
-    order = [i for i, _ in grids][::-1]  # left-to-right = end..start
-    widths = {i: g.shape[1] for i, g in grids}
-    total = sum(widths.values())
-    final_w = graph.shape[1]
-    seams: list[tuple[int, int]] = []
-    cum = 0
-    for i in order:
-        cum += widths[i]
-        seams.append((i, int(cum / total * final_w)))
-    return graph, seams
-
-
-def raw_pages_strip(book: str, start: int, end: int, books_dir: str) -> Image.Image:
-    """Join the RAW Stage-1 pages (before any trim/shrink) left-to-right.
-
-    This is the "nothing got lost" check: it shows the full deskewed scan of each
-    page, *before* trim_borders / shrink_page removed the frame and whitespace. If
-    a name or line sits outside the tight box that shrink_page kept, it is still
-    visible here, so comparing this strip against the parse overlay reveals any ink
-    the cropping discarded. Pages are laid out in the same order as the assembly
-    (right-to-left: end..start, so page numbers ascend right->left), with a blue
-    boundary + page label per page.
-    """
-    pages_dir = os.path.join(books_dir, book, "pages")
-    order = list(range(start, end + 1))[::-1]  # left-to-right = end..start
-    imgs = [
-        _to_rgb(get_image(os.path.join(pages_dir, f"{i}.png"))) for i in order
-    ]
-    h = max(im.height for im in imgs)
-    strip = Image.new("RGB", (sum(im.width for im in imgs), h), (255, 255, 255))
-    draw = ImageDraw.Draw(strip)
-    font = _font(28)
-    x = 0
-    for page_i, im in zip(order, imgs):
-        strip.paste(im, (x, 0))
-        draw.line([(x, 0), (x, h)], fill=BLUE, width=3)
+    gap = 20  # blue divider band between the two rows
+    W = col_w * len(order)
+    H = raw_h + gap + crop_h
+    canvas = Image.new("RGB", (W, H), (255, 255, 255))
+    draw = ImageDraw.Draw(canvas)
+    font = _font(30)
+    for idx, page_i in enumerate(order):
+        x0 = idx * col_w
+        # Same scale, both left-aligned in the column. Cropped sits below the gap.
+        canvas.paste(raw_cols[idx], (x0, 0))
+        canvas.paste(crop_cols[idx], (x0, raw_h + gap))
+        draw.line([(x0, 0), (x0, H)], fill=BLUE, width=3)
         label = f"p{page_i}"
         tb = draw.textbbox((0, 0), label, font=font)
         tw = tb[2] - tb[0]
-        cx = x + im.width // 2
-        draw.rectangle([cx - tw // 2 - 6, 6, cx + tw // 2 + 6, 44], fill=BLUE)
+        cx = x0 + col_w // 2
+        draw.rectangle([cx - tw // 2 - 7, 6, cx + tw // 2 + 7, 48], fill=BLUE)
         draw.text((cx - tw // 2, 8), label, fill=(255, 255, 255), font=font)
-        x += im.width
-    return strip
+    draw.rectangle([0, raw_h, W, raw_h + gap], fill=BLUE)
+    draw.text((8, raw_h + gap + 2), "▲ raw scan   ▼ kept after crop", fill=(255, 255, 255), font=_font(22))
+    return canvas
 
-
-def draw_assembly_overlay(
-    a: np.ndarray, seams: list[tuple[int, int]]
-) -> Image.Image:
-    """Blue page-boundary lines + page-number labels over the graph image."""
-    img = _to_rgb(a)
-    draw = ImageDraw.Draw(img)
-    font = _font(28)
-    prev_x = 0
-    for page_i, right_x in seams:
-        # boundary line at the right edge of this page's band
-        draw.line([(right_x, 0), (right_x, a.shape[0])], fill=BLUE, width=3)
-        # page label centered in the band
-        cx = (prev_x + right_x) // 2
-        label = f"p{page_i}"
-        tb = draw.textbbox((0, 0), label, font=font)
-        tw = tb[2] - tb[0]
-        draw.rectangle([cx - tw // 2 - 6, 6, cx + tw // 2 + 6, 44], fill=BLUE)
-        draw.text((cx - tw // 2, 8), label, fill=(255, 255, 255), font=font)
-        prev_x = right_x
-    return img
 
 
 def qa_book(book: str, books_dir: str = "books") -> str:
@@ -218,7 +178,7 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         (f for f in os.listdir(graphs_dir) if f.endswith(".png")),
         key=lambda f: int(f.split("_")[0]),
     )
-    rows: list[tuple[str, str, str, int]] = []
+    rows: list[tuple[str, str, str, int]] = []  # (stem, parse, compare, n)
     for fname in files:
         stem = os.path.splitext(fname)[0]
         start, end = (int(x) for x in stem.split("_"))
@@ -229,16 +189,11 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         parse_name = f"{stem}_parse.png"
         parse_img.save(os.path.join(qa_dir, parse_name))
 
-        merged, seams = assemble_with_seams(book, start, end, seg_cfg, books_dir)
-        pages_img = draw_assembly_overlay(merged, seams)
-        pages_name = f"{stem}_pages.png"
-        pages_img.save(os.path.join(qa_dir, pages_name))
+        compare_img = stacked_compare(book, start, end, seg_cfg, books_dir)
+        compare_name = f"{stem}_compare.png"
+        compare_img.save(os.path.join(qa_dir, compare_name))
 
-        raw_img = raw_pages_strip(book, start, end, books_dir)
-        raw_name = f"{stem}_raw.png"
-        raw_img.save(os.path.join(qa_dir, raw_name))
-
-        rows.append((stem, parse_name, pages_name, raw_name, len(nodes)))
+        rows.append((stem, parse_name, compare_name, len(nodes)))
         logger.info("%s: %d nodes, pages %d-%d", stem, len(nodes), start, end)
 
     index_path = os.path.join(qa_dir, "index.html")
@@ -248,23 +203,19 @@ def qa_book(book: str, books_dir: str = "books") -> str:
 
 
 def _write_index(
-    path: str, book: str, rows: list[tuple[str, str, str, str, int]]
+    path: str, book: str, rows: list[tuple[str, str, str, int]]
 ) -> None:
-    total_nodes = sum(r[4] for r in rows)
+    total_nodes = sum(r[3] for r in rows)
     cards = "\n".join(
         f"""
     <section class="graph">
       <h2>{stem} <span class="count">{n} nodes</span></h2>
-      <div class="pair">
-        <figure><figcaption>parse: red = detected names + edges</figcaption>
-          <img src="{parse}" loading="lazy"></figure>
-        <figure><figcaption>assembly: blue = page seams (numbers ascend right→left)</figcaption>
-          <img src="{pages}" loading="lazy"></figure>
-        <figure><figcaption>raw pages: full scan before trim/shrink (nothing lost?)</figcaption>
-          <img src="{raw}" loading="lazy"></figure>
-      </div>
+      <figure><figcaption>parse: red = detected names + edges</figcaption>
+        <img class="parse" src="{parse}" loading="lazy"></figure>
+      <figure><figcaption>raw scan (top) vs kept-after-crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
+        <img class="compare" src="{compare}" loading="lazy"></figure>
     </section>"""
-        for stem, parse, pages, raw, n in rows
+        for stem, parse, compare, n in rows
     )
     html = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>Parse QA — {book}</title>
@@ -275,14 +226,15 @@ def _write_index(
   .graph {{ padding: 16px 20px; border-bottom: 1px solid #d6d3d1; }}
   .graph h2 {{ margin: 0 0 8px; font-size: 18px; }}
   .count {{ color: #78716c; font-weight: normal; font-size: 14px; }}
-  .pair {{ display: flex; gap: 24px; overflow-x: auto; }}
-  figure {{ margin: 0; }}
+  figure {{ margin: 0 0 16px; overflow-x: auto; }}
   figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
-  img {{ max-height: 78vh; border: 1px solid #a8a29e; background: #fff; }}
+  img {{ border: 1px solid #a8a29e; background: #fff; display: block; }}
+  img.parse {{ max-height: 80vh; }}
+  img.compare {{ max-width: none; height: 88vh; }}
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
-  <span style="color:#93c5fd">blue</span> = page seams</header>
+  <span style="color:#93c5fd">blue</span> = raw-vs-cropped page columns</header>
 {cards}
 </body></html>"""
     open(path, "w").write(html)
