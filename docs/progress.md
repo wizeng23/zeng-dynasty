@@ -147,6 +147,21 @@ output), and Cell 12 of the old notebook is the literal `# TODO`.
   + reading-order prior (canonical is in a recent graph) + grid column, or OCR
   the ~14 root names first. Then generalize stitching to Book 2 (181 → ~1 tree).
 
+### Parse QA tool + grid-check recalibration (2026-08-20)
+
+`scripts/qa_overlay.py` — visual parse verification. Per graph, overlays on the
+graph image: RED name-boxes + RED parent->child edges (verify detection), and
+BLUE page-seam lines + page numbers (verify assembly; numbers ascend right->left
+per RTL). HTML index at `books/bookN/qa/index.html`. Output gitignored.
+
+**It immediately caught a real issue:** Book 1's 149 grid-check warnings
+(discrepancies #8/#11) were **100% false positives**. The grid check bounds the
+parent->child generation *drop* (child.top - parent.top ~ one grid row), which is
+~300-332px in BOTH books (scanner geometry, not name height). Book 1's old band
+[60,260] measured the wrong quantity and flagged every real edge. Fixed: shared
+default band [280,345] (commit `ec7ac89`); Book 1 -> 0 warnings, both jsonl
+byte-identical. Real mis-merges now stand out.
+
 ### Discrepancies / notes for William
 
 1. **Cross-graph stitching is unimplemented (the one real gap).** The pipeline
@@ -216,7 +231,7 @@ output), and Cell 12 of the old notebook is the literal `# TODO`.
    `notes` populated across all 45 source graphs. Provenance is genuinely useful
    for tracing a suspect node back to its source graph during stitching work.
 
-11. **Book 1: 149 grid-consistency warnings, all 300–332px drops (benign).**
+11. **[RESOLVED — see QA tool note above] Book 1: 149 grid-consistency warnings, all 300–332px drops (benign).**
    The default grid band is `gen_row_max=260`; 149 Book 1 edges drop 300–332px,
    just over it. Topology matches old 100%, and the drops cluster tightly (not
    scattered outliers), so this is the default band being marginally tight for
