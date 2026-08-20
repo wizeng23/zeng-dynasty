@@ -162,6 +162,30 @@ parent->child generation *drop* (child.top - parent.top ~ one grid row), which i
 default band [280,345] (commit `ec7ac89`); Book 1 -> 0 warnings, both jsonl
 byte-identical. Real mis-merges now stand out.
 
+### Book 2 QA overlays (2026-08-20)
+
+Generated 3-panel QA for all 45 Book 2 graphs (`python -m scripts.qa_overlay
+--book book2`; no oracle exists, so visual QA matters most here). Findings from
+spot-checking:
+
+- **Parse is fundamentally sound.** 2-char stacked names (克太, 龙滚, 兴渊…) are each
+  boxed as one tall unit; every real name is captured. The 17-page `36_52`
+  assembly flows unbroken across all 17 seams (root 贞雄 far right, branching
+  left, page numbers ascending right→left) — the seam-stitch approach verified at
+  max scale.
+- **~5 cross-seam connector stubs (contained imperfection).** In graphs like
+  `114_120`, a long horizontal connector line broken at a page seam leaves a tiny
+  (~10-35px) phantom "joint" node that some children attach to instead of their
+  true parent on the adjacent page. The CHILDREN are correctly detected and named;
+  only their immediate parent-link routes through a stub. Not lost data — the
+  known seam-fragment issue (#7-9), now visually confirmed and localized. A future
+  fix would rejoin the broken connector across the seam (like stitching, but
+  intra-graph).
+- **Grid warnings are the intended signal now:** stub-fragment drops (<280px,
+  below floor) + 6 legit tall-gen drops (402px in 114_120, verified benign). The
+  band [280,345] no longer fires on normal edges (the Book 1 false-positive fix
+  applies to Book 2 too).
+
 ### Discrepancies / notes for William
 
 1. **Cross-graph stitching is unimplemented (the one real gap).** The pipeline

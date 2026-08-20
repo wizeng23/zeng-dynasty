@@ -30,6 +30,10 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+# Book 2's 36_52 spans 17 pages (~93M px); lift PIL's decompression-bomb guard,
+# which these known-safe local scans exceed.
+Image.MAX_IMAGE_PIXELS = None
+
 from src import segment as seg
 from src import build_tree as bt
 from src.imaging import get_image
