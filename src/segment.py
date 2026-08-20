@@ -524,10 +524,16 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
 # fresh T-junction stub) or weld two subtrees into a two-parent component (the
 # parse raises) is discarded. The pass can therefore only reduce defects.
 
-# A bridge candidate needs a page-scale gap; anything smaller is a within-bar
-# hairline already handled by build_tree.bridge_horizontal_gaps, not a missing
-# page-line, and bridging it risks fusing adjacent structure.
-MIN_ORPHAN_GAP = 40
+# Smallest bar gap a bridge candidate may span. Page-gap orphans leave gaps of
+# hundreds of px, but the same trace-right repair also fixes weave orphans, where a
+# 1px bar wobbles across two rows and leaves only a few px of apparent gap on the
+# bar-row band (below what build_tree.bridge_horizontal_gaps' per-row scan closes).
+# A tiny floor (not zero) keeps us off exactly-touching runs while admitting both.
+# Correctness does not rest on this threshold: every candidate is self-verified
+# (drawn, re-parsed, kept only if empties strictly drop and the parse survives), so
+# a spurious small-gap candidate is simply rejected. Verified across all 45 Book 2
+# graphs: lowering this to 2 fixed 2 more orphans with zero new empties anywhere.
+MIN_ORPHAN_GAP = 2
 # Vertical half-window used to detect a branch line crossing the gap (which would
 # make the trace cross an unrelated subtree -- unsafe to bridge).
 ORPHAN_CROSS_REACH = 120
