@@ -123,6 +123,47 @@ class LineNode:
         return f"LineNode(id={self.id}, top={self.top}, bot={self.bot})"
 
 
+def bridge_horizontal_gaps(foreground: np.ndarray, max_gap: int = 9) -> np.ndarray:
+    """Fill short horizontal gaps in a binary ink mask (ink == 1).
+
+    The scans' long horizontal connector lines carry occasional tiny breaks
+    (faint ink / where a vertical crosses), which split one line into two
+    connected components. The broken-off end then reads as a parent hang-point
+    with no name above it -- a phantom empty node the real children mis-attach to.
+
+    A background pixel is filled only when it lies in a horizontal gap of at most
+    ``max_gap`` columns with ink on BOTH sides in the SAME row -- i.e. a break in
+    a continuing horizontal line. This is safe because distinct elements in the
+    grid are spaced far apart: measured across Book 2, real horizontal separations
+    are >=~50px while line-breaks are <=~19px, a clean valley. Bridging <10px thus
+    can only rejoin a broken line -- it never connects two characters (>=50px
+    apart) and never touches vertical strokes (this scans row-wise only), so the
+    name glyphs are left intact.
+
+    Args:
+        foreground: Binary mask, 1 == ink, 0 == background.
+        max_gap: Maximum gap width (columns) to bridge.
+
+    Returns:
+        A copy of ``foreground`` with qualifying short horizontal gaps filled.
+    """
+    out = foreground.copy()
+    h, w = foreground.shape
+    for r in range(h):
+        row = foreground[r]
+        ink_cols = np.flatnonzero(row)
+        if ink_cols.size < 2:
+            continue
+        # Between consecutive ink pixels, fill the gap if it is short enough.
+        prev = ink_cols[0]
+        for c in ink_cols[1:]:
+            gap = c - prev - 1
+            if 0 < gap <= max_gap:
+                out[r, prev + 1 : c] = 1
+            prev = c
+    return out
+
+
 def find_lines(
     image: np.ndarray, threshold: int = 70
 ) -> list[set[tuple[int, int]]]:
@@ -147,6 +188,7 @@ def find_lines(
 
     # cv2 labels the nonzero foreground; our ink is 0, so invert to make ink 1.
     foreground = (1 - image).astype(np.uint8)
+    foreground = bridge_horizontal_gaps(foreground)
     num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(
         foreground, connectivity=4
     )
