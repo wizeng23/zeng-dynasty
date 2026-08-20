@@ -83,27 +83,23 @@ class BookConfig:
     merge_max_shift: int = 20
     node_min_height: int = 60
     node_max_height: int = 250
-    gen_row_min: int = 60
-    gen_row_max: int = 260
+    gen_row_min: int = 280
+    gen_row_max: int = 345
 
 
-# Book 1 uses the defaults. Book 2 shares the same scan geometry (trimmed width
-# 1150) so the segment-level thresholds transfer, but its names are two
-# characters stacked vertically, which makes every generation-row about twice as
-# tall as Book 1's single-character rows. Measured across all 45 Book 2 graphs:
-# a real node's line height clusters at ~120-176px (vs Book 1's ~63-186) and a
-# parent->child drop clusters tightly at ~300-332px -- one full stacked-name
-# generation row. The diagnostic bands are widened to that measured geometry so
-# ``verify_nodes`` / ``check_grid_consistency`` still flag genuine mis-merges
-# (short degenerate stubs, half-row drops) rather than every normal edge.
+# ``gen_row_min/max`` bound the parent->child *generation drop* (child.top row
+# minus parent.top row) -- one full row of vertical grid spacing. That spacing is
+# set by the scanner geometry, not the name height, so it is the SAME in both
+# books: measured drops cluster tightly at ~300-332px in Book 1 (all 149 edges)
+# and Book 2 alike. Hence the band is a shared default. (An earlier default of
+# [60,260] was miscalibrated -- it matched a node's own line height, not the
+# generation drop -- so it flagged 100% of Book 1's real edges as "possible
+# mis-merge"; the QA overlay confirmed the parse was correct and the band wrong.)
+# Both books share the scan geometry (trimmed width 1150); Book 2's names are two
+# characters stacked, taller per node, but the row-to-row drop is unchanged.
 BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(),
-    "book2": BookConfig(
-        node_min_height=60,
-        node_max_height=250,
-        gen_row_min=280,
-        gen_row_max=345,
-    ),
+    "book2": BookConfig(),
 }
 
 
