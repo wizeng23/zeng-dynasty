@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import json
 import logging
 import os
 from itertools import combinations
@@ -506,6 +507,150 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     )
 
 
+# --- Orphan bridging -------------------------------------------------------
+#
+# Some Book 2 pages are missing a horizontal connector line (a real gap in the
+# printed book). When such a page sits mid-graph, a sibling bar is cut in two:
+# its children hang off the left fragment while its parent riser sits at the far
+# right end, across a page-wide gap. Stage 3 then reads the left fragment as a
+# nameless "empty" parent -- an orphan. We repair it by tracing the bar's row
+# rightward across the gap and drawing the missing connector (William's
+# trace-right algorithm), so the two fragments become one component with a single
+# parent. See docs/specs/2026-08-20-orphan-bridging-design.md.
+#
+# Every candidate bridge is SELF-VERIFIED: it is drawn, the graph re-parsed, and
+# the bridge kept only if the empty-node count strictly drops and the parse still
+# succeeds. A bridge that would relocate the defect (a horizontal fill can spawn a
+# fresh T-junction stub) or weld two subtrees into a two-parent component (the
+# parse raises) is discarded. The pass can therefore only reduce defects.
+
+# A bridge candidate needs a page-scale gap; anything smaller is a within-bar
+# hairline already handled by build_tree.bridge_horizontal_gaps, not a missing
+# page-line, and bridging it risks fusing adjacent structure.
+MIN_ORPHAN_GAP = 40
+# Vertical half-window used to detect a branch line crossing the gap (which would
+# make the trace cross an unrelated subtree -- unsafe to bridge).
+ORPHAN_CROSS_REACH = 120
+
+
+def _bar_row_runs(a: np.ndarray, row: int, half: int = 8) -> list[tuple[int, int]]:
+    """Horizontal ink runs in the +-``half`` band around ``row`` (weave-tolerant)."""
+    lo, hi = max(0, row - half), min(a.shape[0], row + half + 1)
+    present = (1 - a[lo:hi, :]).sum(axis=0) > 0
+    runs: list[tuple[int, int]] = []
+    c, n = 0, len(present)
+    while c < n:
+        if present[c]:
+            s = c
+            while c < n and present[c]:
+                c += 1
+            runs.append((s, c - 1))
+        else:
+            c += 1
+    return runs
+
+
+def _gap_has_vertical(a: np.ndarray, row: int, c0: int, c1: int) -> bool:
+    """True if a tall vertical line crosses the bar row inside ``(c0, c1)``.
+
+    A genuine missing-line page-gap is empty; a vertical inside it means the trace
+    would cross another branch, so the bridge is unsafe.
+    """
+    reach = ORPHAN_CROSS_REACH
+    lo, hi = max(0, row - reach), min(a.shape[0], row + reach)
+    seg = a[lo:hi, c0 + 1 : c1]
+    if seg.size == 0:
+        return False
+    col_ink = (1 - seg).sum(axis=0)
+    return bool((col_ink > reach).any())
+
+
+def _empty_count(nodes, a: np.ndarray) -> int:
+    """Number of parse nodes whose name crop is blank (phantom orphans)."""
+    from src import build_tree as bt  # local import avoids a module cycle
+
+    n = 0
+    for node in nodes:
+        if node.top is None or node.bot is None:
+            n += 1
+        elif int((1 - bt.get_name_image(node, a)).sum()) < 30:
+            n += 1
+    return n
+
+
+def bridge_orphans(
+    graph: np.ndarray, bt_config
+) -> tuple[np.ndarray, list[list[int]]]:
+    """Repair page-gap orphans in a merged graph by tracing bars right.
+
+    For each orphan (an empty node that still has children), trace its sibling-bar
+    row rightward to the next ink after a page-scale gap and draw the missing
+    connector. Each candidate is applied only if it is self-verified to strictly
+    reduce the graph's empty-node count without breaking the parse (see the module
+    note above), so the pass is monotonic.
+
+    Args:
+        graph: The merged subtree-graph binary grid (0 == ink).
+        bt_config: The book's Stage-3 :class:`build_tree.BookConfig` (parse geometry).
+
+    Returns:
+        ``(bridged_graph, imaginary)`` where ``imaginary`` lists the connectors
+        actually drawn, each ``[r0, c0, r1, c1]`` in final-graph coordinates -- the
+        synthetic ("green") segments the QA overlay renders for inspection.
+    """
+    from src import build_tree as bt  # local import avoids a module cycle
+
+    out = graph.copy()
+    imaginary: list[list[int]] = []
+
+    # Re-derive orphans after each accepted bridge: fixing one can change indices.
+    while True:
+        nodes = bt.parse_graph(out, bt_config)
+        base_empties = _empty_count(nodes, out)
+        made_progress = False
+
+        for node in nodes:
+            if node.top is None or node.bot is None or not node.children:
+                continue
+            if int((1 - bt.get_name_image(node, out)).sum()) >= 30:
+                continue  # not empty -> not an orphan
+            row, col = node.bot[0], node.top[1]
+            runs = _bar_row_runs(out, row)
+            bar_run = next((r for r in runs if r[0] - 5 <= col <= r[1] + 5), None)
+            if bar_run is None:
+                continue
+            right_runs = [r for r in runs if r[0] > bar_run[1] + 2]
+            if not right_runs:
+                continue  # bar runs to the edge -> parent is off-page (left-edge)
+            gap_start, gap_end = bar_run[1], right_runs[0][0]
+            if gap_end - gap_start < MIN_ORPHAN_GAP:
+                continue  # within-bar hairline, not a page-gap
+            if _gap_has_vertical(out, row, gap_start, gap_end):
+                continue  # a branch crosses the gap -> unsafe
+
+            # Draw the candidate bridge on a trial copy and self-verify.
+            trial = out.copy()
+            r0, r1 = max(0, row - 2), min(out.shape[0], row + 3)
+            trial[r0:r1, gap_start : gap_end + 1] = 0
+            try:
+                trial_nodes = bt.parse_graph(trial, bt_config)
+            except ValueError:
+                continue  # would weld a two-parent component -> reject
+            if _empty_count(trial_nodes, trial) < base_empties:
+                out = trial
+                imaginary.append([int(row), int(gap_start), int(row), int(gap_end)])
+                logger.info(
+                    "orphan-bridge: row=%d cols %d..%d (gap %d)",
+                    row, gap_start, gap_end, gap_end - gap_start,
+                )
+                made_progress = True
+                break  # re-parse fresh before looking for the next orphan
+
+        if not made_progress:
+            break
+    return out, imaginary
+
+
 def segment(
     book: str,
     books_dir: str = "books",
@@ -561,6 +706,13 @@ def segment(
         is_page_tree_start.append(tree_start_x != -1)
         pages.append(shrink_page(a))
 
+    # The orphan-bridge pass re-parses each graph, so it needs the Stage-3 config.
+    # Import build_tree lazily: it pulls in cv2, and callers that only stitch pages
+    # (never bridge) should not pay that import cost.
+    from src import build_tree as bt
+
+    bt_config = bt.BOOK_CONFIGS.get(book, bt.BookConfig())
+
     # Merge each run of continuation pages onto the page that started the subtree.
     logger.info("Merging and saving graphs")
     written: list[str] = []
@@ -573,8 +725,21 @@ def segment(
             logger.info("Merging page %d into subtree started at %d", i, start_i)
             graph = merge_graphs(pages[i], graph)
             i += 1
-        out_path = os.path.join(graphs_dir, f"{start_i}_{i - 1}.png")
+
+        # Repair page-gap orphans (missing-line pages) on the assembled graph, and
+        # record every synthetic connector to a sidecar for QA (green overlay).
+        graph, imaginary = bridge_orphans(graph, bt_config)
+
+        stem = f"{start_i}_{i - 1}"
+        out_path = os.path.join(graphs_dir, f"{stem}.png")
         save_image(graph, out_path)
+        sidecar = os.path.join(graphs_dir, f"{stem}.imaginary.json")
+        if imaginary:
+            with open(sidecar, "w") as fh:
+                json.dump(imaginary, fh)
+            logger.info("  bridged %d orphan(s) -> %s", len(imaginary), sidecar)
+        elif os.path.exists(sidecar):
+            os.remove(sidecar)  # stale from a previous run with different output
         logger.info("Wrote subtree %d..%d -> %s", start_i, i - 1, out_path)
         written.append(out_path)
 

@@ -24,6 +24,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 RED = (220, 30, 30)
 BLUE = (40, 90, 220)
+GREEN = (20, 170, 60)
 
 
 def _to_rgb(a: np.ndarray) -> Image.Image:
@@ -90,15 +92,30 @@ def _is_empty_node(node: bt.LineNode, a: np.ndarray) -> bool:
     return int((1 - bt.get_name_image(node, a)).sum()) < 30
 
 
-def draw_parse_overlay(a: np.ndarray, nodes: list[bt.LineNode]) -> Image.Image:
-    """Overlay the parse: red = real names + edges, ORANGE = empty phantom nodes.
+def draw_parse_overlay(
+    a: np.ndarray,
+    nodes: list[bt.LineNode],
+    imaginary: list[list[int]] | None = None,
+) -> Image.Image:
+    """Overlay the parse: red = names + edges, ORANGE = empty phantoms, GREEN = bridges.
 
-    Empty nodes (blank name crop) are circled in orange — they are the seam-break
-    artifacts where a cross-page connector failed to join, so a child mis-attaches
-    to a nameless endpoint instead of its true cross-page parent.
+    Empty nodes (blank name crop) are circled in orange — the seam-break artifacts
+    where a cross-page connector failed to join, so a child mis-attaches to a
+    nameless endpoint instead of its true cross-page parent.
+
+    ``imaginary`` (from the graph's ``{stem}.imaginary.json`` sidecar) lists the
+    synthetic connectors the orphan-bridge pass drew, each ``[r0, c0, r1, c1]``.
+    They are drawn in GREEN so a human can confirm every invented line joins the
+    right two fragments.
     """
     img = _to_rgb(a)
     draw = ImageDraw.Draw(img)
+
+    # Green synthetic bridges first, so red edges/boxes sit on top where they meet.
+    for r0, c0, r1, c1 in imaginary or []:
+        draw.line([(c0, r0), (c1, r1)], fill=GREEN, width=6)
+        draw.ellipse([c1 - 13, r1 - 13, c1 + 13, r1 + 13], outline=GREEN, width=4)
+        draw.ellipse([c0 - 13, r0 - 13, c0 + 13, r0 + 13], outline=GREEN, width=4)
 
     # Edges: from each parent's fan-out point (bot) to each child's top, drawn as
     # the book's actual routing — down from the parent to the sibling bar, across
@@ -133,11 +150,16 @@ def draw_parse_overlay(a: np.ndarray, nodes: list[bt.LineNode]) -> Image.Image:
         else:
             draw.rectangle([left, top, right, bottom], outline=RED, width=3)
 
+    parts = []
     if empty_count:
+        parts.append(f"{empty_count} empty (orphan) node(s)")
+    if imaginary:
+        parts.append(f"{len(imaginary)} green bridge(s)")
+    if parts:
         draw.text(
             (10, 10),
-            f"{empty_count} empty (seam-break) node(s)",
-            fill=ORANGE,
+            "   ".join(parts),
+            fill=ORANGE if empty_count else GREEN,
             font=_font(34),
         )
     return img
@@ -219,7 +241,9 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         a = get_image(os.path.join(graphs_dir, fname))
 
         nodes = bt.parse_graph(a, bt_cfg)
-        parse_img = draw_parse_overlay(a, nodes)
+        sidecar = os.path.join(graphs_dir, f"{stem}.imaginary.json")
+        imaginary = json.load(open(sidecar)) if os.path.exists(sidecar) else None
+        parse_img = draw_parse_overlay(a, nodes, imaginary)
         parse_name = f"{stem}_parse.png"
         parse_img.save(os.path.join(qa_dir, parse_name))
 
@@ -268,7 +292,8 @@ def _write_index(
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
-  <span style="color:#f08c00">orange</span> = empty seam-break node,
+  <span style="color:#f08c00">orange</span> = empty orphan node,
+  <span style="color:#22c55e">green</span> = synthetic orphan-bridge,
   <span style="color:#93c5fd">blue</span> = raw-vs-cropped page columns</header>
 {cards}
 </body></html>"""

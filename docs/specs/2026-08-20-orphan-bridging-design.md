@@ -1,7 +1,30 @@
 # Orphan-bridging in the seam merge — design
 
 **Date:** 2026-08-20
-**Status:** implementing (William-specified, then autonomous)
+**Status:** IMPLEMENTED (see `bridge_orphans` in `src/segment.py`). The final
+implementation differs from the original per-seam plan below in two ways, both
+learned from failed attempts (see `worklog/2026-08-20/`):
+
+1. **Runs on the assembled graph, not per-seam.** The gaps span a full missing-line
+   page and are only visible once the whole subtree is stitched, so `bridge_orphans`
+   is a post-merge pass over the final graph image (called at the end of the merge
+   loop in `segment()`), not a step inside `merge_graphs`.
+2. **Self-verifying, so it can only reduce defects.** Each candidate bridge is drawn
+   on a trial copy, the graph re-parsed, and the bridge kept ONLY if the empty-node
+   count strictly drops and the parse still succeeds (no two-parent weld). This
+   makes the pass monotonic and immune to the two earlier failure modes: a bridge
+   that merely *relocates* an empty into a fresh T-junction stub, and a bridge that
+   welds two subtrees into a two-parent component. Guards (page-scale gap only, no
+   vertical crossing the gap) prune candidates cheaply before the trial re-parse.
+
+Result: Book 2 empty phantom nodes 21 → 12 (8 orphans bridged: 11_17, 22_23, 28_30,
+31_35, 36_52×4, 58_62), grid violations 53 → 31. Book 1 byte-identical. The
+remaining 12 are INTACT-BAR / LEFT-EDGE / STUB orphans (a different cause — see
+`worklog/2026-08-20/ANALYSIS_orphans.md`), left for a later pass.
+
+---
+
+## Original plan (William-specified)
 
 ## Problem
 
