@@ -75,8 +75,28 @@ def name_box(node: bt.LineNode, width: int) -> tuple[int, int, int, int]:
     return (left, top_row, right, bot_row)
 
 
+ORANGE = (240, 140, 0)
+
+
+def _is_empty_node(node: bt.LineNode, a: np.ndarray) -> bool:
+    """True if the node's name crop is essentially blank — a phantom node.
+
+    These are the seam-break artifacts: a horizontal connector line broken across
+    a page seam leaves a tiny endpoint that reads as a node, but no name sits
+    there. We flag them so the merge failures are visible at a glance.
+    """
+    if node.top is None or node.bot is None:
+        return True
+    return int((1 - bt.get_name_image(node, a)).sum()) < 30
+
+
 def draw_parse_overlay(a: np.ndarray, nodes: list[bt.LineNode]) -> Image.Image:
-    """Red name boxes + red parent->child edges over the graph image."""
+    """Overlay the parse: red = real names + edges, ORANGE = empty phantom nodes.
+
+    Empty nodes (blank name crop) are circled in orange — they are the seam-break
+    artifacts where a cross-page connector failed to join, so a child mis-attaches
+    to a nameless endpoint instead of its true cross-page parent.
+    """
     img = _to_rgb(a)
     draw = ImageDraw.Draw(img)
 
@@ -99,13 +119,27 @@ def draw_parse_overlay(a: np.ndarray, nodes: list[bt.LineNode]) -> Image.Image:
             draw.line([(pc, bar_row), (cc, bar_row)], fill=RED, width=3)
             draw.line([(cc, bar_row), (cc, cr)], fill=RED, width=3)
 
-    # Name boxes.
+    # Name boxes (red) for real names; empty phantom nodes circled in orange.
+    empty_count = 0
     for n in nodes:
         if n.top is None or n.bot is None:
             continue
         left, top, right, bottom = name_box(n, a.shape[1])
-        draw.rectangle([left, top, right, bottom], outline=RED, width=3)
+        if _is_empty_node(n, a):
+            empty_count += 1
+            r = 34
+            cx, cy = n.top[1], (n.top[0] + n.bot[0]) // 2
+            draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=ORANGE, width=5)
+        else:
+            draw.rectangle([left, top, right, bottom], outline=RED, width=3)
 
+    if empty_count:
+        draw.text(
+            (10, 10),
+            f"{empty_count} empty (seam-break) node(s)",
+            fill=ORANGE,
+            font=_font(34),
+        )
     return img
 
 
@@ -210,10 +244,10 @@ def _write_index(
         f"""
     <section class="graph">
       <h2>{stem} <span class="count">{n} nodes</span></h2>
-      <figure><figcaption>parse: red = detected names + edges</figcaption>
-        <img class="parse" src="{parse}" loading="lazy"></figure>
-      <figure><figcaption>raw scan (top) vs kept-after-crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
+      <figure><figcaption>① raw scan (top) → ② kept after crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
         <img class="compare" src="{compare}" loading="lazy"></figure>
+      <figure><figcaption>③ parse: red = detected names + edges</figcaption>
+        <img class="parse" src="{parse}" loading="lazy"></figure>
     </section>"""
         for stem, parse, compare, n in rows
     )
@@ -234,6 +268,7 @@ def _write_index(
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
+  <span style="color:#f08c00">orange</span> = empty seam-break node,
   <span style="color:#93c5fd">blue</span> = raw-vs-cropped page columns</header>
 {cards}
 </body></html>"""
