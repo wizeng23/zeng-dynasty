@@ -409,15 +409,28 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
 
     best_alignment = find_best_alignment(left_y, right_y)
     logger.debug("best alignment shift: %d", best_alignment)
+    # `best_alignment` is the shift that best lines g1's endpoints up with g2's.
+    # We realize it by padding one side's TOP (which slides that side's ink DOWN)
+    # and the other's BOTTOM (ink unmoved). The endpoint lists must move by exactly
+    # the same amount as the ink on their own side, or the seam fill lands off the
+    # real lines (the old code shifted left_y and left g1's ink unmoved, and never
+    # moved right_y at all -- so both lists pointed a few px above their lines,
+    # drawing a stray up-tick instead of joining them: the Book 2 empty-node bug).
     if best_alignment > 0:
+        # g1 top-padded -> g1 ink slides down by best_alignment; g2 bottom-padded.
         g1 = np.vstack([np.ones((best_alignment, g1.shape[1])).astype(np.uint8), g1])
         g2 = np.vstack([g2, np.ones((best_alignment, g2.shape[1])).astype(np.uint8)])
+        left_y = [x + best_alignment for x in left_y]
     else:
+        # g2 top-padded -> g2 ink slides down by -best_alignment; g1 bottom-padded.
         g1 = np.vstack([g1, np.ones((-best_alignment, g1.shape[1])).astype(np.uint8)])
         g2 = np.vstack([np.ones((-best_alignment, g2.shape[1])).astype(np.uint8), g2])
-    left_y = [x + best_alignment for x in left_y]
+        right_y = [x - best_alignment for x in right_y]
 
-    # Draw the connecting lines through the seam columns.
+    # Bridge each matched pair. The endpoints now coincide with their real lines,
+    # so a short vertical run in the two seam columns joins them cleanly. To avoid
+    # a stub poking beyond both lines (which would read as a spurious node top),
+    # ramp the row across the two seam columns instead of stacking a tall pillar.
     for left, right in zip(left_y, right_y):
         low, high = min(left, right), max(left, right)
         g1[low : high + 1, -1:] = 0
