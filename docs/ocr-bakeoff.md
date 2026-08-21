@@ -37,6 +37,32 @@
 - The general vision LLMs (gpt-4o / gpt-4.1) are a useful *second opinion* for the
   handful Paddle misses, but not the primary engine.
 
+## Round 2 (2026-08-21): full 233-char split set, +Mistral +Google
+
+Rebuilt the eval to reflect real usage (William: simplified accuracy matters most,
+rare chars are the edge case). Hand-verified ground truth for **all 163 Book 1
+parse crops** (`data/oracles/book1_names_truth_full.json`), then split the 64
+stacked multi-char names into single-character crops (vertical gap split) →
+**233 single-char targets**. Ran four engines over the split set. Google auth via
+ADC (personal project `wizeng-dev`); Vision + Document AI APIs enabled; Doc AI
+Enterprise-OCR processor `zeng-ocr`. Mistral via `mistral-ocr-latest`.
+
+| Engine | Overall (233) | Common-only (216) | Notes |
+|--------|--------------|-------------------|-------|
+| **PaddleOCR PP-OCRv5** (`paddle`) | **225/233 = 96.6%** | **216/216 = 100%** | Perfect on common simplified chars. 8 misses all rare/ancient/variant (㝵, 羨/羡, 寳/寶, 遜, 迪, 與/舆, 尽/盡). |
+| Google Vision (`google:vision`) | 196/233 = 84.1% | 186/216 = 86.1% | Document engine — drops/mis-splits isolated glyphs even grid-packed; misses common chars (点,乐,嘉,安,心). 26 skipped. |
+| Google Document AI (`google:docai`) | 190/233 = 81.5% | 182/216 = 84.3% | Enterprise-OCR processor. Same document-engine mismatch + some cell-alignment drift. Slow (per-crop fallback = 233 calls). |
+| Mistral OCR (`mistral:mistral-ocr-latest`) | 20/233 = 8.6% | 20/216 = 9.3% | Layout engine, wrong tool. Adds markdown list markers, even hallucinated Arabic on one crop. Per-crop confirmed ~2/10; not an alignment artifact. |
+
+**Confirmed: PP-OCRv5 remains the winner, now decisively — 100% on common
+simplified characters.** The document/layout engines (Vision, Doc AI, Mistral)
+all underperform because they expect page context, not a grid of isolated glyphs;
+they drop or mis-read even easy simplified chars. This matches the research
+prediction: only a dedicated crop-in→char-out recognizer (PP-OCRv5's CRNN head)
+fits this task. Engines wired in `src/ocr_cloud.py` (`MistralOCREngine`,
+`GoogleVisionEngine`, `GoogleDocAIEngine`) + `src/ocr.py get_engine`. Vertical
+splitter + 233-char truth built for the eval.
+
 ## Not yet tested (future)
 
 - **Mistral OCR** — needs an API key. William flagged it; worth a run for

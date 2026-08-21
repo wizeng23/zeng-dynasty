@@ -69,14 +69,37 @@ lineage, then recomputes absolute generations (root=1) and reassigns BFS/RTL ids
 `find_merges()` is where an automated matcher will plug in. Verified against
 `data/oracles/book1_merged.jsonl` via `scripts/verify_stitch.py`.
 
-## Stage 3.6 — OCR (not yet built)
+## Stage 3.6 — OCR
 
-**In:** `books/bookN/names/*.png`
-**Out:** Unicode `name` field on each node.
+**In:** `books/bookN/names/*.png` + `data/bookN.jsonl` (node ids)
+**Out:** `data/bookN_names.json` (sidecar) → merged into `name` on each node.
 
-Convert name-character images to Unicode. Challenge: some characters are
-ancient / not in modern Chinese. Candidate engines (from old notes): Google
-Document AI OCR, Mistral OCR.
+Convert name-character images to Unicode. Engine: **PaddleOCR PP-OCRv5** —
+Chinese-specialized, local, free, and the bake-off winner (96.6% single-char /
+100% on common simplified; see `docs/ocr-bakeoff.md`). Its full detect+recognize
+pipeline reads multi-character *stacked* names in one pass, so no pre-splitting
+is needed for the write path.
+
+Run (after Stage 3, since it reads `bookN.jsonl` for ids and writes names into
+it):
+
+```
+python -m src.ocr --book bookN --populate
+```
+
+This writes a **sidecar** `data/bookN_names.json` (`{id: {name, confidence,
+low_conf}}`) and merges it into `data/bookN.jsonl` — setting `name` and appending
+`ocr_conf=<score>` (and `ocr_low_conf` when confidence < 0.90) to `notes`. The
+sidecar is the source of truth for names, so a Stage-3 re-parse never loses them:
+just re-run `--populate` (or `ocr.apply_names`) afterward. `write-all` policy —
+every node gets whatever PP-OCRv5 returns; low-confidence glyphs are flagged for
+review, not dropped. Nodes with a blank crop keep `name=""` so the website falls
+back to the image. For the stitched Book 1, `ocr.apply_names_by_crop` maps the
+book1 sidecar onto `book1_stitched.jsonl` by crop id.
+
+Cloud engines (Google Vision, Google Document AI, Mistral) are wired in
+`src/ocr_cloud.py` for comparison but lost the bake-off (document/layout engines,
+weak on isolated glyphs) — kept as optional second opinions, not the default.
 
 ## Golden data (separate, manual — verification)
 
