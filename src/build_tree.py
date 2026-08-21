@@ -75,6 +75,12 @@ class BookConfig:
         gen_row_min / gen_row_max: A child's name row should sit roughly one
             generation-row below its parent's; a vertical drop outside this band
             is flagged by :func:`check_grid_consistency` as a probable mis-merge.
+        ignore_regions: Per-graph rectangles of known NON-tree ink to blank
+            before parsing, keyed by graph stem (e.g. ``"8_10"``). Each rectangle
+            is ``(r0, c0, r1, c1)`` in graph pixel coordinates. Used for one-off
+            hand-drawn marks that would otherwise read as phantom lines -- e.g.
+            the ink stroke a family member drew in 8_10's margin. Kept explicit
+            and localized so it never suppresses real tree ink.
     """
 
     line_threshold: int = 70
@@ -85,6 +91,9 @@ class BookConfig:
     node_max_height: int = 250
     gen_row_min: int = 280
     gen_row_max: int = 345
+    ignore_regions: dict[str, list[tuple[int, int, int, int]]] = dataclasses.field(
+        default_factory=dict
+    )
 
 
 # ``gen_row_min/max`` bound the parent->child *generation drop* (child.top row
@@ -97,9 +106,31 @@ class BookConfig:
 # mis-merge"; the QA overlay confirmed the parse was correct and the band wrong.)
 # Both books share the scan geometry (trimmed width 1150); Book 2's names are two
 # characters stacked, taller per node, but the row-to-row drop is unchanged.
+# ``merge_max_shift`` bounds the column drift allowed when fusing a child stub
+# into the parent stub below it (same person, two line segments). Book 2's names
+# are two characters stacked, and the name-top column vs. the child-bar-hang
+# column can drift ~21-23px where the lower connector bar sits slightly off the
+# name's centre. At the old shared default of 20 those merges were rejected,
+# leaving TWO overlapping nodes per person (an inferred-top phantom up in the bar
+# plus a childless name node) -- visible in QA as overlapping boxes in 114_120.
+# 25 admits those; Book 2's smallest genuine non-merge shift is 35 (the 8_10
+# stray-ink vertical), and Book 1 has no near-miss merges in [15,30), so the
+# looser bound is safe and scoped to Book 2 only.
 BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(),
-    "book2": BookConfig(),
+    "book2": BookConfig(
+        merge_max_shift=25,
+        # A family member's handwritten ink in the margin of 8_10 (grandpa's)
+        # reads as phantom lines. Two rectangles, both clear of any printed name
+        # or connector: (1) a stray vertical stroke between 貞院 and 貞冠 -- cols
+        # 274-288, below the real bar at row ~1641; (2) the two-column brush note
+        # 祖祠對坟口 / 欽秀堂 to the LEFT of 聞詣 -- cols 550-728, stopping short of
+        # 聞詣's glyph/connector at col ~761. The note's text is recorded in
+        # docs/final_manual_steps.md for manual attachment to 聞詣 post-parse.
+        ignore_regions={
+            "8_10": [(1643, 274, 1865, 288), (1290, 550, 1580, 728)],
+        },
+    ),
 }
 
 
@@ -164,6 +195,46 @@ def bridge_horizontal_gaps(foreground: np.ndarray, max_gap: int = 9) -> np.ndarr
     return out
 
 
+def bridge_vertical_gaps(foreground: np.ndarray, max_gap: int = 3) -> np.ndarray:
+    """Fill short vertical gaps in a binary ink mask (ink == 1).
+
+    The mirror of :func:`bridge_horizontal_gaps` for the vertical strokes -- the
+    hang-lines that connect a name to the connector bar above and to the child
+    bar below. A faint 1-3px break in such a stroke (e.g. 114_120's col-6807
+    hang-line, broken at a single row) splits one line into two components: the
+    lower stub then reads as a childless phantom node overlapping the real one.
+
+    A background pixel is filled only when it lies in a vertical gap of at most
+    ``max_gap`` rows with ink on BOTH sides in the SAME column -- a break in a
+    continuing vertical line. ``max_gap`` is kept very small (3) on purpose:
+    unlike the horizontal case, name glyphs DO contain vertical strokes with
+    small internal gaps, so a large bound could weld a glyph to a line. At 3px it
+    only rejoins hairline breaks in the grid's own strokes; verified across both
+    books to leave every parse byte-identical except the intended 114_120 rejoin.
+
+    Args:
+        foreground: Binary mask, 1 == ink, 0 == background.
+        max_gap: Maximum gap height (rows) to bridge.
+
+    Returns:
+        A copy of ``foreground`` with qualifying short vertical gaps filled.
+    """
+    out = foreground.copy()
+    h, w = foreground.shape
+    for c in range(w):
+        col = foreground[:, c]
+        ink_rows = np.flatnonzero(col)
+        if ink_rows.size < 2:
+            continue
+        prev = ink_rows[0]
+        for r in ink_rows[1:]:
+            gap = r - prev - 1
+            if 0 < gap <= max_gap:
+                out[prev + 1 : r, c] = 1
+            prev = r
+    return out
+
+
 def find_lines(
     image: np.ndarray, threshold: int = 70
 ) -> list[set[tuple[int, int]]]:
@@ -189,6 +260,7 @@ def find_lines(
     # cv2 labels the nonzero foreground; our ink is 0, so invert to make ink 1.
     foreground = (1 - image).astype(np.uint8)
     foreground = bridge_horizontal_gaps(foreground)
+    foreground = bridge_vertical_gaps(foreground)
     num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(
         foreground, connectivity=4
     )
@@ -354,6 +426,70 @@ def merge_nodes(nodes: list[LineNode], config: BookConfig) -> list[LineNode]:
         if not made_progress:
             break
     return nodes
+
+
+def apply_ignore_regions(
+    a: np.ndarray, graph_stem: str, config: BookConfig
+) -> np.ndarray:
+    """Blank any configured non-tree ink rectangles for this graph.
+
+    Sets the pixels inside each ``config.ignore_regions[graph_stem]`` rectangle to
+    background (1), erasing known hand-drawn marks before they reach the line
+    finder. Returns ``a`` unchanged (same object) when the graph has no regions,
+    so the common path is free.
+
+    Args:
+        a: The graph's binary ink grid (0 == ink, 1 == background).
+        graph_stem: The graph's filename stem, e.g. ``"8_10"``.
+        config: The book config carrying :attr:`BookConfig.ignore_regions`.
+
+    Returns:
+        The grid with the configured rectangles blanked (a copy if any applied).
+    """
+    regions = config.ignore_regions.get(graph_stem)
+    if not regions:
+        return a
+    out = a.copy()
+    h, w = out.shape
+    for r0, c0, r1, c1 in regions:
+        out[max(0, r0) : min(h, r1), max(0, c0) : min(w, c1)] = 1
+    return out
+
+
+def drop_blank_leaf_nodes(
+    nodes: list[LineNode], a: np.ndarray
+) -> list[LineNode]:
+    """Drop phantom nodes: a blank name crop AND no children.
+
+    A real node carries information one of two ways: a name above its line, or a
+    subtree hanging below it (a cross-graph orphan whose own name/parent lives in
+    an adjacent graph still holds real children). A node with NEITHER -- blank
+    name, no children -- is noise: a stray ink stroke read as a short line (e.g.
+    the hand-drawn vertical in 8_10's margin). Such nodes have no place in the
+    tree and produce overlapping empty boxes in QA, so they are removed.
+
+    Nodes with children are kept even when their own name crop is blank, so the
+    genuine cross-graph orphans (e.g. 69_82's off-graph parent of 尚澜) survive.
+
+    Args:
+        nodes: The merged, end-inferred line nodes.
+        a: The graph's binary ink grid, to measure each node's name-crop ink.
+
+    Returns:
+        The list with blank childless leaves removed (a new list).
+    """
+    kept: list[LineNode] = []
+    for n in nodes:
+        blank = (
+            n.top is not None
+            and n.bot is not None
+            and int((1 - get_name_image(n, a)).sum()) < 30
+        )
+        if blank and not n.children:
+            logger.info("dropping blank childless phantom node: %s", n)
+            continue
+        kept.append(n)
+    return kept
 
 
 def infer_ends(nodes: list[LineNode], a: np.ndarray) -> None:
@@ -565,7 +701,7 @@ def _graph_files(graphs_dir: str) -> list[str]:
 
 
 def parse_graph(
-    a: np.ndarray, config: BookConfig
+    a: np.ndarray, config: BookConfig, graph_stem: str | None = None
 ) -> list[LineNode]:
     """Parse one graph image into ordered, ID-less line nodes.
 
@@ -577,10 +713,15 @@ def parse_graph(
     Args:
         a: The graph's binary ink grid.
         config: The book's Stage-3 config.
+        graph_stem: The graph's filename stem (e.g. ``"8_10"``), used to look up
+            any :attr:`BookConfig.ignore_regions` to blank first. Omit when the
+            graph has no configured ignore regions.
 
     Returns:
         The graph's line nodes, ordered eldest-first within each generation band.
     """
+    if graph_stem is not None:
+        a = apply_ignore_regions(a, graph_stem, config)
     raw_lines = find_lines(a, threshold=config.line_threshold)
     line_ends: list[tuple[tuple[int, int], list[tuple[int, int]]]] = []
     for component in raw_lines:
@@ -595,6 +736,7 @@ def parse_graph(
     logger.debug("nodes post-merge: %d", len(nodes))
 
     infer_ends(nodes, a)
+    nodes = drop_blank_leaf_nodes(nodes, a)
     verify_nodes(nodes, config)
     check_grid_consistency(nodes, config)
 
@@ -659,6 +801,7 @@ def build_tree(
     for filepath in graph_files:
         filename = os.path.splitext(filepath)[0]
         a = get_image(os.path.join(graphs_dir, filepath))
+        a = apply_ignore_regions(a, filename, config)
         logger.info("Parsing graph %s", filepath)
 
         raw_lines = find_lines(a, threshold=config.line_threshold)
@@ -679,6 +822,7 @@ def build_tree(
         logger.debug("%s: nodes post-merge %d", filepath, len(nodes))
 
         infer_ends(nodes, a)
+        nodes = drop_blank_leaf_nodes(nodes, a)
         total_sus += len(verify_nodes(nodes, config))
         total_grid += len(check_grid_consistency(nodes, config))
 

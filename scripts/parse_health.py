@@ -48,9 +48,11 @@ def _name_shape(node: bt.LineNode, a: np.ndarray) -> tuple[int, int, int]:
     return img.shape[0], img.shape[1], int((1 - img).sum())
 
 
-def graph_health(a: np.ndarray, cfg: bt.BookConfig) -> dict:
+def graph_health(a: np.ndarray, cfg: bt.BookConfig, stem: str | None = None) -> dict:
     """Parse one graph and return its defect metrics + per-node shape data."""
-    nodes = bt.parse_graph(a, cfg)
+    if stem is not None:
+        a = bt.apply_ignore_regions(a, stem, cfg)
+    nodes = bt.parse_graph(a, cfg, graph_stem=stem)
     sus = bt.verify_nodes(nodes, cfg)
     grid = bt.check_grid_consistency(nodes, cfg)
 
@@ -85,7 +87,7 @@ def book_health(book: str, books_dir: str = "books") -> dict:
     for f in files:
         stem = os.path.splitext(f)[0]
         a = get_image(os.path.join(graphs_dir, f))
-        h = graph_health(a, cfg)
+        h = graph_health(a, cfg, stem=stem)
         per_graph[stem] = {k: h[k] for k in ("n_nodes", "empty", "sus", "grid", "empty_idx")}
         for k in tot:
             tot[k] += h[k]

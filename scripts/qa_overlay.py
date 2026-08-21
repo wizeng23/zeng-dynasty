@@ -239,8 +239,9 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         stem = os.path.splitext(fname)[0]
         start, end = (int(x) for x in stem.split("_"))
         a = get_image(os.path.join(graphs_dir, fname))
+        a = bt.apply_ignore_regions(a, stem, bt_cfg)
 
-        nodes = bt.parse_graph(a, bt_cfg)
+        nodes = bt.parse_graph(a, bt_cfg, graph_stem=stem)
         sidecar = os.path.join(graphs_dir, f"{stem}.imaginary.json")
         imaginary = json.load(open(sidecar)) if os.path.exists(sidecar) else None
         parse_img = draw_parse_overlay(a, nodes, imaginary)
