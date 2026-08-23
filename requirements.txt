@@ -10,3 +10,4 @@ pillow
 # paddleocr
 #   OpenAI vision engine (for comparison / second-opinion on hard chars):
 # openai
+pypinyin  # OCR review tool: char->pinyin display

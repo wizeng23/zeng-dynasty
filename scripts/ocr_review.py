@@ -60,6 +60,21 @@ def _provenance(notes: str) -> str:
     return notes.split(" | ")[0] if notes else ""
 
 
+def pinyin_of(text: str) -> str:
+    """Tone-marked pinyin for a (short) Chinese string; '' if unavailable.
+
+    Uses pypinyin when present; degrades to empty string so the reviewer still
+    works without it.
+    """
+    if not text:
+        return ""
+    try:
+        from pypinyin import Style, pinyin
+    except ImportError:
+        return ""
+    return " ".join(p[0] for p in pinyin(text, style=Style.TONE))
+
+
 def char_count(image: Image.Image) -> int:
     """Estimate the number of stacked characters from the crop's aspect ratio.
 
@@ -222,6 +237,9 @@ PAGE = r"""<!doctype html>
   .cell.ovr .txt { border-color:var(--ovr); background:var(--ovr-bg); }
   .cell.mismatch .cropbox { box-shadow:0 0 0 2px var(--low) inset; }
   .tag { font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; height:14px; }
+  .py { font-size:13px; color:var(--muted); height:18px; letter-spacing:.02em;
+    font-family:ui-sans-serif,system-ui,sans-serif; }
+  .cell.focus .py { color:var(--fg); font-weight:600; }
   .footer { flex:0 0 auto; padding:10px 20px; border-top:1px solid var(--line);
     display:flex; justify-content:space-between; align-items:center; }
   .hint { color:var(--muted); font-size:13px; }
@@ -278,14 +296,16 @@ function render() {
     el.className = cellClasses(c, focused);
     const cur = c.override || c.ocr_char || "";
     el.innerHTML =
+      `<div class="tag">${focused ? (c.book+" #"+c.id+" ·"+(c.char_index+1)+"/"+c.n_chars) : "&nbsp;"}</div>` +
       `<div class="cropbox">${c.crop_url ? `<img src="${c.crop_url}">` : ""}</div>` +
       (focused
         ? `<input class="txt" id="focusInput" value="${cur.replace(/"/g,'&quot;')}"
              autocomplete="off" autocapitalize="off" spellcheck="false" lang="zh">`
         : `<div class="txt">${cur}</div>`) +
-      `<div class="tag">${focused ? (c.book+" #"+c.id+" ·"+(c.char_index+1)+"/"+c.n_chars) : ""}</div>`;
+      `<div class="py" data-char="${cur.replace(/"/g,'&quot;')}">&nbsp;</div>`;
     strip.appendChild(el);
   }
+  updatePinyin();
   // center the focused cell
   const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cw"));
   const cellPx = cw + 12;
@@ -298,10 +318,38 @@ function render() {
   localStorage.setItem(KEY, idx);
 }
 
+const pyCache = {};
+async function pinyinFor(ch) {
+  if (!ch) return "";
+  if (pyCache[ch] !== undefined) return pyCache[ch];
+  try {
+    const r = await fetch("/pinyin?c=" + encodeURIComponent(ch));
+    const d = await r.json();
+    pyCache[ch] = d.pinyin || "";
+  } catch { pyCache[ch] = ""; }
+  return pyCache[ch];
+}
+
+async function updatePinyin() {
+  // Fill every visible cell's pinyin line from its data-char.
+  for (const node of document.querySelectorAll(".py")) {
+    const ch = node.getAttribute("data-char") || "";
+    node.textContent = (await pinyinFor(ch)) || " ";
+  }
+}
+
+async function refreshFocusPinyin() {
+  const el = $("focusInput"); if (!el) return;
+  const py = el.closest(".cell").querySelector(".py");
+  if (py) { py.setAttribute("data-char", el.value.trim());
+    py.textContent = (await pinyinFor(el.value.trim())) || " "; }
+}
+
 function markDirty() {
   const el = $("focusInput"); if (!el) return;
   const c = cells[idx];
   el.parentElement.classList.toggle("ovr", el.value.trim() !== (c.ocr_char||""));
+  refreshFocusPinyin();
 }
 
 async function saveFocus() {
@@ -398,6 +446,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, _crop_band_png(book, fname, i, n), "image/png")
             except FileNotFoundError:
                 self._send(404, b"not found", "text/plain")
+        elif path == "/pinyin":
+            from urllib.parse import parse_qs, unquote
+            q = parse_qs(parsed.query)
+            text = unquote(q.get("c", [""])[0])
+            self._send(200, json.dumps({"pinyin": pinyin_of(text)}, ensure_ascii=False))
         else:
             self._send(404, b"not found", "text/plain")
 
