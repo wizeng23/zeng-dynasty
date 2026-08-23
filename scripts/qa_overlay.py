@@ -289,22 +289,15 @@ def _write_index(
   .graph {{ padding: 16px 20px; border-bottom: 1px solid #d6d3d1; }}
   .graph h2 {{ margin: 0 0 8px; font-size: 18px; }}
   .count {{ color: #78716c; font-weight: normal; font-size: 14px; }}
-  /* Right-align both rows so the root lineage (drawn on the RIGHT, matching the
-     book's right-to-left order) lines up vertically between the compare row and
-     the parse row for easy straight-down comparison. A right-aligned flex column
-     pins the image to the right edge; a wider-than-viewport image still scrolls. */
-  figure {{ margin: 0 0 16px; overflow-x: auto; display: flex; flex-direction: column;
-    align-items: flex-end; }}
-  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; align-self: flex-start; }}
+  figure {{ margin: 0 0 16px; overflow-x: auto; }}
+  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
   img {{ border: 1px solid #a8a29e; background: #fff; display: block; }}
-  /* Match the on-screen SCALE of the two rows, not just their box height. The
-     parse overlay is drawn at a larger intrinsic glyph size than the downscaled
-     page-compare, so equal CSS height would still render the parse row far
-     bigger. Scaling each row's height by its own intrinsic height (parse is
-     ~0.53x the compare's) makes a name character render at a comparable size in
-     both, so they sit side by side for easy visual comparison. */
-  img.compare {{ max-width: none; height: 80vh; }}
-  img.parse {{ max-width: none; height: 42vh; }}
+  /* Render BOTH rows at the same width (the figure/viewport width) so their
+     generation columns and the right-hand root lineage line up straight down for
+     comparison. Matching width (not height) is what aligns them: the two images
+     cover the same horizontal generation-span, so equal width => same columns.
+     Height follows from each image's own aspect ratio and the page scrolls. */
+  img.compare, img.parse {{ width: 100%; height: auto; }}
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
