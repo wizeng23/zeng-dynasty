@@ -173,8 +173,10 @@ def stacked_compare(
     The "nothing lost in the crop" check made easy to read: each page occupies the
     same horizontal column in both rows, at identical scale, so you scan straight
     down one column to compare the full raw scan against what the crop kept. The
-    cropped page is left-aligned in its column and is naturally narrower/shorter —
-    that shrinkage is exactly the whitespace the crop removed; any *name or line*
+    cropped page is RIGHT-aligned in its column (matching the right-to-left reading
+    direction, so the content edges line up for a straight-down comparison even
+    when a page's crop drifted or shrank) and is naturally narrower/shorter — that
+    shrinkage is exactly the whitespace the crop removed; any *name or line*
     missing from the bottom half that's present up top is real lost data.
 
     Pages run right-to-left (page numbers ascend right→left), matching the graph.
@@ -206,9 +208,11 @@ def stacked_compare(
     font = _font(30)
     for idx, page_i in enumerate(order):
         x0 = idx * col_w
-        # Same scale, both left-aligned in the column. Cropped sits below the gap.
-        canvas.paste(raw_cols[idx], (x0, 0))
-        canvas.paste(crop_cols[idx], (x0, raw_h + gap))
+        # Same scale. Raw is right-aligned in its column and the cropped page is
+        # right-aligned to match, so the content's right edge lines up in both
+        # rows (right-to-left reading direction) even when a page drifted/shrank.
+        canvas.paste(raw_cols[idx], (x0 + col_w - raw_cols[idx].width, 0))
+        canvas.paste(crop_cols[idx], (x0 + col_w - crop_cols[idx].width, raw_h + gap))
         draw.line([(x0, 0), (x0, H)], fill=BLUE, width=3)
         label = f"p{page_i}"
         tb = draw.textbbox((0, 0), label, font=font)
@@ -288,8 +292,14 @@ def _write_index(
   figure {{ margin: 0 0 16px; overflow-x: auto; }}
   figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
   img {{ border: 1px solid #a8a29e; background: #fff; display: block; }}
-  img.parse {{ max-height: 80vh; }}
-  img.compare {{ max-width: none; height: 88vh; }}
+  /* Match the on-screen SCALE of the two rows, not just their box height. The
+     parse overlay is drawn at a larger intrinsic glyph size than the downscaled
+     page-compare, so equal CSS height would still render the parse row far
+     bigger. Scaling each row's height by its own intrinsic height (parse is
+     ~0.53x the compare's) makes a name character render at a comparable size in
+     both, so they sit side by side for easy visual comparison. */
+  img.compare {{ max-width: none; height: 80vh; }}
+  img.parse {{ max-width: none; height: 42vh; }}
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,

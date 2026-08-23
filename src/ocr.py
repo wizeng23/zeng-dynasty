@@ -324,39 +324,102 @@ def populate_names(
     return sidecar
 
 
-def apply_names(book: str, data_dir: str = "data") -> int:
-    """Merge the OCR names sidecar into ``{book}.jsonl`` in place.
+def _provenance_of(notes: str) -> str:
+    """The stable ``{graph}_{localindex}`` key: the first ' | '-segment of notes."""
+    return notes.split(" | ")[0] if notes else ""
 
-    Sets each node's ``name`` from ``{book}_names.json`` and records the OCR
-    confidence in ``notes`` (appended after any existing provenance, as
-    ``ocr_conf=<score>``; low-confidence names are tagged ``ocr_low_conf``).
-    A node with no sidecar entry, or an empty OCR name, keeps ``name=""`` so the
-    website falls back to its crop image. Returns the count of names applied.
+
+def _strip_ocr_tags(notes: str) -> str:
+    """Drop any prior ``ocr_conf=``/``ocr_low_conf``/``ocr_override`` tags from notes.
+
+    Keeps the leading provenance and any other human notes, so :func:`apply_names`
+    is idempotent -- re-running never stacks duplicate ocr tags.
+    """
+    segs = [s for s in notes.split(" | ") if s]
+    kept = [s for s in segs if not s.startswith(("ocr_conf=", "ocr_low_conf", "ocr_override"))]
+    return " | ".join(kept)
+
+
+def _resolve_name(prov: str, ocr_name: str, overrides: dict[str, str]) -> tuple[str, bool]:
+    """Reassemble a node's name from per-character overrides over the OCR name.
+
+    Overrides are keyed ``{provenance}#{charIndex}`` (0-based) by the filmstrip
+    review tool. For each character position we take the override if present, else
+    the OCR character. The name length is the max of the OCR length and the
+    highest overridden index, so an override can also *extend* a name (e.g. when
+    OCR under-read a stacked glyph). Returns ``(name, had_override)``.
+    """
+    max_idx = len(ocr_name) - 1
+    char_overrides: dict[int, str] = {}
+    for key, val in overrides.items():
+        if "#" not in key:
+            continue
+        p, _, ci = key.rpartition("#")
+        if p != prov or not ci.isdigit():
+            continue
+        i = int(ci)
+        char_overrides[i] = val
+        max_idx = max(max_idx, i)
+    if not char_overrides:
+        return ocr_name, False
+    chars = []
+    for i in range(max_idx + 1):
+        if i in char_overrides:
+            chars.append(char_overrides[i])
+        elif i < len(ocr_name):
+            chars.append(ocr_name[i])
+    return "".join(chars), True
+
+
+def apply_names(book: str, data_dir: str = "data") -> int:
+    """Merge OCR names + manual per-character overrides into ``{book}.jsonl``.
+
+    Precedence: manual overrides in ``{book}_overrides.json`` (the human
+    ground-truth layer written by ``scripts/ocr_review.py``, keyed
+    ``{provenance}#{charIndex}``) win, character by character, over the OCR reading
+    in ``{book}_names.json``. Sets each node's ``name`` and rewrites the ``ocr_*``
+    tags in ``notes`` (idempotent): ``ocr_conf=<score>`` always, ``ocr_low_conf``
+    when confidence is low, ``ocr_override`` when any character came from the
+    override layer. A node with neither an override nor an OCR name keeps
+    ``name=""`` so the website falls back to its crop image. Returns the count of
+    non-empty names applied.
     """
     names_path = os.path.join(data_dir, f"{book}_names.json")
     if not os.path.exists(names_path):
         raise FileNotFoundError(f"no names sidecar: {names_path}; run populate_names")
     sidecar = json.load(open(names_path))
+    ov_path = os.path.join(data_dir, f"{book}_overrides.json")
+    overrides = json.load(open(ov_path)) if os.path.exists(ov_path) else {}
 
     jsonl = os.path.join(data_dir, f"{book}.jsonl")
     lines = [json.loads(line) for line in open(jsonl) if line.strip()]
     applied = 0
+    n_override_nodes = 0
     for node in lines:
-        entry = sidecar.get(str(node["id"]))
-        if not entry:
-            continue
-        node["name"] = entry["name"]
-        prov = node.get("notes", "")
-        tags = [f"ocr_conf={entry['confidence']}"]
-        if entry["low_conf"]:
-            tags.append("ocr_low_conf")
-        node["notes"] = " | ".join([prov, *tags]) if prov else " | ".join(tags)
-        if entry["name"]:
+        prov = _provenance_of(node.get("notes", ""))
+        entry = sidecar.get(str(node["id"]), {})
+        ocr_name = entry.get("name", "")
+        name, had_override = _resolve_name(prov, ocr_name, overrides)
+        node["name"] = name
+        n_override_nodes += int(had_override)
+
+        base = _strip_ocr_tags(node.get("notes", ""))
+        tags = []
+        if entry:
+            tags.append(f"ocr_conf={entry['confidence']}")
+            if entry.get("low_conf"):
+                tags.append("ocr_low_conf")
+        if had_override:
+            tags.append("ocr_override")
+        node["notes"] = " | ".join([base, *tags]) if base else " | ".join(tags)
+        if name:
             applied += 1
     with open(jsonl, "w") as f:
         for node in lines:
             f.write(json.dumps(node, ensure_ascii=False) + "\n")
-    logger.info("Applied %d names -> %s", applied, jsonl)
+    logger.info(
+        "Applied %d names -> %s (%d nodes with overrides)", applied, jsonl, n_override_nodes
+    )
     return applied
 
 
