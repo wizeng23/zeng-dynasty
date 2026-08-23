@@ -238,7 +238,8 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         (f for f in os.listdir(graphs_dir) if f.endswith(".png")),
         key=lambda f: int(f.split("_")[0]),
     )
-    rows: list[tuple[str, str, str, int]] = []  # (stem, parse, compare, n)
+    # (stem, parse, compare, n, parse_img_height, compare_img_height)
+    rows: list[tuple[str, str, str, int, int, int]] = []
     for fname in files:
         stem = os.path.splitext(fname)[0]
         start, end = (int(x) for x in stem.split("_"))
@@ -256,7 +257,9 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         compare_name = f"{stem}_compare.png"
         compare_img.save(os.path.join(qa_dir, compare_name))
 
-        rows.append((stem, parse_name, compare_name, len(nodes)))
+        rows.append(
+            (stem, parse_name, compare_name, len(nodes), parse_img.height, compare_img.height)
+        )
         logger.info("%s: %d nodes, pages %d-%d", stem, len(nodes), start, end)
 
     index_path = os.path.join(qa_dir, "index.html")
@@ -266,20 +269,28 @@ def qa_book(book: str, books_dir: str = "books") -> str:
 
 
 def _write_index(
-    path: str, book: str, rows: list[tuple[str, str, str, int]]
+    path: str, book: str, rows: list[tuple[str, str, str, int, int, int]]
 ) -> None:
     total_nodes = sum(r[3] for r in rows)
-    cards = "\n".join(
-        f"""
+    # The compare row is shown at a fixed height; the parse row is scaled to the
+    # SAME source-pixel-to-screen ratio so its tree renders the same size as the
+    # compare tree (both come from the same scans at the same DPI). Per card:
+    #   parse_h = COMPARE_H_VH * (parse_img_h / compare_img_h)
+    compare_h_vh = 80
+    card_parts = []
+    for stem, parse, compare, n, parse_ih, compare_ih in rows:
+        parse_h_vh = round(compare_h_vh * parse_ih / compare_ih, 1) if compare_ih else 40
+        card_parts.append(
+            f"""
     <section class="graph">
       <h2>{stem} <span class="count">{n} nodes</span></h2>
       <figure><figcaption>① raw scan (top) → ② kept after crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
-        <img class="compare" src="{compare}" loading="lazy"></figure>
-      <figure><figcaption>③ parse: red = detected names + edges</figcaption>
-        <img class="parse" src="{parse}" loading="lazy"></figure>
+        <img class="compare" src="{compare}" style="height:{compare_h_vh}vh" loading="lazy"></figure>
+      <figure><figcaption>③ parse: red = detected names + edges (same size as row ②)</figcaption>
+        <img class="parse" src="{parse}" style="height:{parse_h_vh}vh" loading="lazy"></figure>
     </section>"""
-        for stem, parse, compare, n in rows
-    )
+        )
+    cards = "\n".join(card_parts)
     html = f"""<!doctype html><html><head><meta charset="utf-8">
 <title>Parse QA — {book}</title>
 <style>
@@ -291,13 +302,12 @@ def _write_index(
   .count {{ color: #78716c; font-weight: normal; font-size: 14px; }}
   figure {{ margin: 0 0 16px; overflow-x: auto; }}
   figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
-  img {{ border: 1px solid #a8a29e; background: #fff; display: block; }}
-  /* Render BOTH rows at the same width (the figure/viewport width) so their
-     generation columns and the right-hand root lineage line up straight down for
-     comparison. Matching width (not height) is what aligns them: the two images
-     cover the same horizontal generation-span, so equal width => same columns.
-     Height follows from each image's own aspect ratio and the page scrolls. */
-  img.compare, img.parse {{ width: 100%; height: auto; }}
+  /* Both rows keep their natural width (height is set per-card inline). The parse
+     overlay and the page-compare derive from the same scans at the same DPI, so
+     showing them at the same source-pixel-to-screen scale makes a name glyph (and
+     the whole tree) render the same size in both — the per-card parse height is
+     compare_height x (parse_img_px / compare_img_px). See _write_index. */
+  img {{ border: 1px solid #a8a29e; background: #fff; display: block; max-width: none; }}
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
