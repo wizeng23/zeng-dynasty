@@ -289,8 +289,13 @@ def _write_index(
   .graph {{ padding: 16px 20px; border-bottom: 1px solid #d6d3d1; }}
   .graph h2 {{ margin: 0 0 8px; font-size: 18px; }}
   .count {{ color: #78716c; font-weight: normal; font-size: 14px; }}
-  figure {{ margin: 0 0 16px; overflow-x: auto; }}
-  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
+  /* Right-align both rows so the root lineage (drawn on the RIGHT, matching the
+     book's right-to-left order) lines up vertically between the compare row and
+     the parse row for easy straight-down comparison. A right-aligned flex column
+     pins the image to the right edge; a wider-than-viewport image still scrolls. */
+  figure {{ margin: 0 0 16px; overflow-x: auto; display: flex; flex-direction: column;
+    align-items: flex-end; }}
+  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; align-self: flex-start; }}
   img {{ border: 1px solid #a8a29e; background: #fff; display: block; }}
   /* Match the on-screen SCALE of the two rows, not just their box height. The
      parse overlay is drawn at a larger intrinsic glyph size than the downscaled
