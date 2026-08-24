@@ -300,8 +300,13 @@ def _write_index(
   .graph {{ padding: 16px 20px; border-bottom: 1px solid #d6d3d1; }}
   .graph h2 {{ margin: 0 0 8px; font-size: 18px; }}
   .count {{ color: #78716c; font-weight: normal; font-size: 14px; }}
-  figure {{ margin: 0 0 16px; overflow-x: auto; }}
-  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
+  /* Right-align both rows: the root spine sits at the right edge of both images
+     (the whitespace/page-margin is all on the LEFT), so pinning the images to the
+     right lines the trees up straight down. A right-aligned flex column does it;
+     the caption stays left; a wider-than-viewport image still scrolls. */
+  figure {{ margin: 0 0 16px; overflow-x: auto; display: flex; flex-direction: column;
+    align-items: flex-end; }}
+  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; align-self: flex-start; }}
   /* Both rows keep their natural width (height is set per-card inline). The parse
      overlay and the page-compare derive from the same scans at the same DPI, so
      showing them at the same source-pixel-to-screen scale makes a name glyph (and
