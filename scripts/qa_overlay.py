@@ -240,12 +240,113 @@ def stacked_compare(
         draw.line([(cx, cy), (cx, H)], fill=BLUE, width=div)
         cx += div
         canvas.paste(crop_cols[idx], (cx, cy))
+        # Page-number label at the top of this cropped column (matches the raw band
+        # above, so a page is identifiable in row 2 without counting seams).
+        page_i = order[idx]
+        label = f"p{page_i}"
+        tb = draw.textbbox((0, 0), label, font=font)
+        tw = tb[2] - tb[0]
+        lx = cx + crop_cols[idx].width // 2 - tw // 2
+        draw.rectangle([lx - 7, cy + 6, lx + tw + 7, cy + 48], fill=BLUE)
+        draw.text((lx, cy + 8), label, fill=(255, 255, 255), font=font)
         cx += crop_cols[idx].width
 
     draw.rectangle([0, raw_h, W, raw_h + gap], fill=BLUE)
     draw.text((8, raw_h + gap + 2), "▲ raw scan   ▼ kept after crop", fill=(255, 255, 255), font=_font(22))
     return canvas
 
+
+
+def _page_seams(
+    book: str, start: int, end: int, config: seg.BookConfig, books_dir: str
+) -> list[tuple[int, int]]:
+    """Page-seam left-x positions in graph coordinates: [(page, left_x), ...].
+
+    Mirrors :func:`src.segment.segment`'s assembly (pages stacked left-to-right in
+    the order end..start; each page cropped + shrunk), so the cumulative widths give
+    the same seam x-positions the graph image uses.
+    """
+    pages_dir = os.path.join(books_dir, book, "pages")
+    order = list(range(start, end + 1))[::-1]
+    seams: list[tuple[int, int]] = []
+    acc = 0
+    for p in order:
+        seams.append((p, acc))
+        a = get_image(os.path.join(pages_dir, f"{p}.png"))
+        a = seg.trim_borders(a)
+        cut = seg.is_tree_start_page(a, config)
+        if cut != -1:
+            a = a[:, :cut]
+        a = seg.shrink_page(a)
+        acc += a.shape[1]
+    return seams
+
+
+def _page_of(x: int, seam_pages: list[tuple[int, int]]) -> int:
+    """Page number whose column contains x (seam_pages = [(page, left_x), ...])."""
+    page = seam_pages[0][0] if seam_pages else -1
+    for p, sx in seam_pages:
+        if x >= sx:
+            page = p
+    return page
+
+
+def _generation_rows(nodes: list[bt.LineNode]) -> list[int]:
+    """Sorted distinct generation-bar y-rows (each node's top row), top-first.
+
+    Clusters node top-rows (a generation's names/bars sit at ~the same y) so a
+    bridge's y can be mapped to "gen N" (gen 1 = topmost bar).
+    """
+    tops = sorted({n.top[0] for n in nodes if n.top is not None})
+    rows: list[int] = []
+    for t in tops:
+        if not rows or t - rows[-1] > 60:  # new generation band
+            rows.append(t)
+    return rows
+
+
+def _gen_of(y: int, gen_rows: list[int]) -> int:
+    """1-indexed generation whose bar-row is nearest y (gen 1 = topmost)."""
+    if not gen_rows:
+        return -1
+    best = min(range(len(gen_rows)), key=lambda i: abs(gen_rows[i] - y))
+    return best + 1
+
+
+def _card_notes(
+    imaginary: list[list[int]] | None,
+    n_orphans: int = 0,
+    seam_pages: list[tuple[int, int]] | None = None,
+    gen_rows: list[int] | None = None,
+) -> str:
+    """Searchable plain-text status line for a card: green bridges + orphans.
+
+    Rendered as text (not only drawn on the image) so the QA page is greppable in a
+    browser. Two search keywords, each appearing AT MOST ONCE per card so one Cmd-F
+    Enter jumps one card:
+      * "green" -- only on cards with synthetic green bridges. Each bridge is
+        described by PAGE SPAN and GENERATION (interpretable) plus raw pixels: e.g.
+        "gen2 p13->p12 (x3677->4827)".
+      * "orphan" -- only on cards that still have >=1 orphan (empty
+        node-with-children), an unresolved connectivity issue to look at.
+    A clean card says neither word.
+    """
+    seam_pages = seam_pages or []
+    gen_rows = gen_rows or []
+    segs = []
+    if imaginary:
+        parts = []
+        for y1, x1, _y2, x2 in imaginary:
+            gen = _gen_of(y1, gen_rows)
+            p_l, p_r = _page_of(x1, seam_pages), _page_of(x2, seam_pages)
+            span = f"p{p_l}->p{p_r}" if p_l != p_r else f"p{p_l}"
+            parts.append(f"gen{gen} {span} (x{x1}->{x2})")
+        segs.append(f"green: {len(imaginary)} bridge(s) — " + ", ".join(parts))
+    else:
+        segs.append("no bridges")
+    if n_orphans:
+        segs.append(f"orphan: {n_orphans} unresolved")
+    return " · ".join(segs)
 
 
 def qa_book(book: str, books_dir: str = "books") -> str:
@@ -260,8 +361,8 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         (f for f in os.listdir(graphs_dir) if f.endswith(".png")),
         key=lambda f: int(f.split("_")[0]),
     )
-    # (stem, parse, compare, n, parse_img_height, compare_img_height)
-    rows: list[tuple[str, str, str, int, int, int]] = []
+    # (stem, parse, compare, n, parse_img_height, compare_img_height, notes)
+    rows: list[tuple[str, str, str, int, int, int, str]] = []
     for fname in files:
         stem = os.path.splitext(fname)[0]
         start, end = (int(x) for x in stem.split("_"))
@@ -279,8 +380,20 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         compare_name = f"{stem}_compare.png"
         compare_img.save(os.path.join(qa_dir, compare_name))
 
+        n_orphans = sum(
+            1
+            for n in nodes
+            if n.top is not None and n.bot is not None and n.children
+            and _is_empty_node(n, a)
+        )
+        # Page-seam x-positions (left->right = end..start) and generation-bar y-rows,
+        # so bridge notes can read "p13" and "gen 2" instead of raw pixels.
+        seam_pages = _page_seams(book, start, end, seg_cfg, books_dir)
+        gen_rows = _generation_rows(nodes)
+        notes = _card_notes(imaginary, n_orphans, seam_pages, gen_rows)
         rows.append(
-            (stem, parse_name, compare_name, len(nodes), parse_img.height, compare_img.height)
+            (stem, parse_name, compare_name, len(nodes), parse_img.height,
+             compare_img.height, notes)
         )
         logger.info("%s: %d nodes, pages %d-%d", stem, len(nodes), start, end)
 
@@ -291,7 +404,7 @@ def qa_book(book: str, books_dir: str = "books") -> str:
 
 
 def _write_index(
-    path: str, book: str, rows: list[tuple[str, str, str, int, int, int]]
+    path: str, book: str, rows: list[tuple[str, str, str, int, int, int, str]]
 ) -> None:
     total_nodes = sum(r[3] for r in rows)
     # The compare row is shown at a fixed height; the parse row is scaled to the
@@ -300,12 +413,13 @@ def _write_index(
     #   parse_h = COMPARE_H_VH * (parse_img_h / compare_img_h)
     compare_h_vh = 80
     card_parts = []
-    for stem, parse, compare, n, parse_ih, compare_ih in rows:
+    for stem, parse, compare, n, parse_ih, compare_ih, notes in rows:
         parse_h_vh = round(compare_h_vh * parse_ih / compare_ih, 1) if compare_ih else 40
         card_parts.append(
             f"""
     <section class="graph">
       <h2>{stem} <span class="count">{n} nodes</span></h2>
+      <p class="notes">{notes}</p>
       <figure><figcaption>① raw scan (top) → ② kept after crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
         <img class="compare" src="{compare}" style="height:{compare_h_vh}vh" loading="lazy"></figure>
       <figure><figcaption>③ parse: red = detected names + edges (same size as row ②)</figcaption>
@@ -322,19 +436,30 @@ def _write_index(
   .graph {{ padding: 16px 20px; border-bottom: 1px solid #d6d3d1; }}
   .graph h2 {{ margin: 0 0 8px; font-size: 18px; }}
   .count {{ color: #78716c; font-weight: normal; font-size: 14px; }}
+  /* Searchable text mirror of the green bridges drawn on the image, so the page is
+     greppable in-browser (Cmd-F "green" jumps between bridged graphs). */
+  .notes {{ margin: 0 0 10px; font-size: 13px; color: #166534; font-family:
+    ui-monospace, SFMono-Regular, Menlo, monospace; }}
   /* Right-align both rows: the root spine sits at the right edge of both images
      (the whitespace/page-margin is all on the LEFT), so pinning the images to the
-     right lines the trees up straight down. A right-aligned flex column does it;
-     the caption stays left; a wider-than-viewport image still scrolls. */
-  figure {{ margin: 0 0 16px; overflow-x: auto; display: flex; flex-direction: column;
-    align-items: flex-end; }}
-  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; align-self: flex-start; }}
+     right lines the trees up straight down. IMPORTANT: use `margin-left:auto` on
+     the image itself, NOT `align-items:flex-end` on the flex container — with an
+     overflowing item, flex-end alignment pushes the item's LEFT edge off the
+     scrollable area, so a wider-than-viewport graph (e.g. 36_52) cannot be
+     scrolled back to see its left side. A block figure with overflow-x:auto and
+     an auto left margin keeps the right-alignment AND leaves the full width
+     scrollable in both directions. */
+  figure {{ margin: 0 0 16px; overflow-x: auto; }}
+  figcaption {{ font-size: 12px; color: #57534e; margin-bottom: 4px; }}
   /* Both rows keep their natural width (height is set per-card inline). The parse
      overlay and the page-compare derive from the same scans at the same DPI, so
      showing them at the same source-pixel-to-screen scale makes a name glyph (and
      the whole tree) render the same size in both — the per-card parse height is
-     compare_height x (parse_img_px / compare_img_px). See _write_index. */
-  img {{ border: 1px solid #a8a29e; background: #fff; display: block; max-width: none; }}
+     compare_height x (parse_img_px / compare_img_px). See _write_index.
+     `margin-left:auto` right-aligns a narrower-than-viewport image while keeping a
+     wider one fully scrollable. */
+  img {{ border: 1px solid #a8a29e; background: #fff; display: block; max-width: none;
+    margin-left: auto; }}
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
