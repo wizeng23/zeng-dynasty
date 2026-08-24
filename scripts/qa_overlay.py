@@ -196,30 +196,52 @@ def stacked_compare(
             a = a[:, :x]
         crop_cols.append(_to_rgb(seg.shrink_page(a)))
 
-    col_w = max(im.width for im in raw_cols)  # uniform raw page width
     raw_h = max(im.height for im in raw_cols)
     crop_h = max(im.height for im in crop_cols)
 
+    # The two bands pack independently so the cropped band carries no horizontal
+    # column-whitespace (which would push its tree out of line with the parse
+    # row below). The RAW band keeps uniform-width columns (so it reads cleanly
+    # against the source and its own blue dividers), while the CROPPED band packs
+    # each page at its own width, edge to edge, with a blue divider between pages.
+    # Both bands are right-aligned to the composite's right edge, so the content's
+    # right edge (the root spine, right-to-left) lines up straight down -- band to
+    # band here, and onward to the parse row.
+    col_w = max(im.width for im in raw_cols)  # uniform raw page width
+    raw_band_w = col_w * len(order)
+    div = 3  # blue divider width between cropped pages
+    crop_band_w = sum(im.width for im in crop_cols) + div * len(order)
+    W = max(raw_band_w, crop_band_w)
+
     gap = 20  # blue divider band between the two rows
-    W = col_w * len(order)
     H = raw_h + gap + crop_h
     canvas = Image.new("RGB", (W, H), (255, 255, 255))
     draw = ImageDraw.Draw(canvas)
     font = _font(30)
+
+    # Raw band: uniform columns, right-aligned as a block to the composite edge.
+    raw_x0 = W - raw_band_w
     for idx, page_i in enumerate(order):
-        x0 = idx * col_w
-        # Same scale. Raw is right-aligned in its column and the cropped page is
-        # right-aligned to match, so the content's right edge lines up in both
-        # rows (right-to-left reading direction) even when a page drifted/shrank.
+        x0 = raw_x0 + idx * col_w
         canvas.paste(raw_cols[idx], (x0 + col_w - raw_cols[idx].width, 0))
-        canvas.paste(crop_cols[idx], (x0 + col_w - crop_cols[idx].width, raw_h + gap))
-        draw.line([(x0, 0), (x0, H)], fill=BLUE, width=3)
+        draw.line([(x0, 0), (x0, raw_h)], fill=BLUE, width=3)
         label = f"p{page_i}"
         tb = draw.textbbox((0, 0), label, font=font)
         tw = tb[2] - tb[0]
         cx = x0 + col_w // 2
         draw.rectangle([cx - tw // 2 - 7, 6, cx + tw // 2 + 7, 48], fill=BLUE)
         draw.text((cx - tw // 2, 8), label, fill=(255, 255, 255), font=font)
+
+    # Cropped band: tight-packed pages (no column whitespace) with blue dividers,
+    # right-aligned as a block so its right edge matches the raw band's.
+    cy = raw_h + gap
+    cx = W - crop_band_w
+    for idx in range(len(order)):
+        draw.line([(cx, cy), (cx, H)], fill=BLUE, width=div)
+        cx += div
+        canvas.paste(crop_cols[idx], (cx, cy))
+        cx += crop_cols[idx].width
+
     draw.rectangle([0, raw_h, W, raw_h + gap], fill=BLUE)
     draw.text((8, raw_h + gap + 2), "▲ raw scan   ▼ kept after crop", fill=(255, 255, 255), font=_font(22))
     return canvas
