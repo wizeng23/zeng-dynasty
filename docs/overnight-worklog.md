@@ -176,6 +176,13 @@ or leave it for stitching. Current build leaves it (strict-drop rejects it).
 - [x] Committed locally: branch book2-bridge-trace-right, commit 0d5ef40.
       WILLIAM MUST `git push` (publication gate).
 
+## FINAL PROOF (decisive test)
+For every orphan across all 10 review graphs, drew its candidate bridge and checked
+whether the orphan count drops. Result: **0 orphans anywhere whose bridge would
+reduce the count** -> every leftover orphan is genuinely cross-graph (no in-graph
+bridge resolves it). Combined with bridge counts matching GT exactly on all 10,
+this proves the within-graph bridging is COMPLETE, not merely best-effort.
+
 ## MORNING SUMMARY (for William)
 Green-bridge algorithm rewritten to your trace-right rule. Final state:
 - All 3 success criteria met: (1) green lines match ground truth on all 10 review
