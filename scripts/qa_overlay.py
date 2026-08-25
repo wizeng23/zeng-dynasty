@@ -189,12 +189,14 @@ def stacked_compare(
     for i in order:
         a = get_image(os.path.join(pages_dir, f"{i}.png"))
         raw_cols.append(_to_rgb(a))
-        # Apply the same crop the pipeline does (trim, label-strip, shrink).
+        # Apply the SAME crop the pipeline does (trim, label-strip, shrink) --
+        # including any per-page CROP_KEEP_LEFT override, so row 2 matches the graph.
         a = seg.trim_borders(a)
         x = seg.is_tree_start_page(a, config)
         if x != -1:
             a = a[:, :x]
-        crop_cols.append(_to_rgb(seg.shrink_page(a)))
+        keep_left = seg.CROP_KEEP_LEFT.get(book, {}).get(i)
+        crop_cols.append(_to_rgb(seg.shrink_page(a, keep_left=keep_left)))
 
     raw_h = max(im.height for im in raw_cols)
     crop_h = max(im.height for im in crop_cols)
@@ -277,7 +279,8 @@ def _page_seams(
         cut = seg.is_tree_start_page(a, config)
         if cut != -1:
             a = a[:, :cut]
-        a = seg.shrink_page(a)
+        keep_left = seg.CROP_KEEP_LEFT.get(book, {}).get(p)
+        a = seg.shrink_page(a, keep_left=keep_left)
         acc += a.shape[1]
     return seams
 
@@ -349,8 +352,15 @@ def _card_notes(
     return " · ".join(segs)
 
 
-def qa_book(book: str, books_dir: str = "books") -> str:
-    """Generate parse + assembly overlays for every graph and an HTML index."""
+def qa_book(
+    book: str, books_dir: str = "books", only: set[str] | None = None
+) -> str:
+    """Generate parse + assembly overlays for every graph and an HTML index.
+
+    ``only``: if given, restrict to these graph stems (e.g. ``{"58_62", "69_82"}``)
+    and write a separate ``index_focus.html`` so the full index is left untouched --
+    used to iterate on a few problem graphs while the rest are frozen.
+    """
     seg_cfg = seg.BOOK_CONFIGS[book]
     bt_cfg = bt.BOOK_CONFIGS[book]
     graphs_dir = os.path.join(books_dir, book, "graphs")
@@ -361,6 +371,8 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         (f for f in os.listdir(graphs_dir) if f.endswith(".png")),
         key=lambda f: int(f.split("_")[0]),
     )
+    if only:
+        files = [f for f in files if os.path.splitext(f)[0] in only]
     # (stem, parse, compare, n, parse_img_height, compare_img_height, notes)
     rows: list[tuple[str, str, str, int, int, int, str]] = []
     for fname in files:
@@ -397,7 +409,8 @@ def qa_book(book: str, books_dir: str = "books") -> str:
         )
         logger.info("%s: %d nodes, pages %d-%d", stem, len(nodes), start, end)
 
-    index_path = os.path.join(qa_dir, "index.html")
+    index_name = "index_focus.html" if only else "index.html"
+    index_path = os.path.join(qa_dir, index_name)
     _write_index(index_path, book, rows)
     logger.info("Wrote %d graph overlays -> %s", len(rows), index_path)
     return index_path

@@ -123,7 +123,7 @@ def trim_borders(a: np.ndarray) -> np.ndarray:
     return a[:, 30 : cols - 120]
 
 
-def shrink_page(a: np.ndarray) -> np.ndarray:
+def shrink_page(a: np.ndarray, keep_left: int | None = None) -> np.ndarray:
     """Shrink a trimmed page to the tightest box around its line-graph.
 
     Finds the densest ink column, grows left and right while ink is present,
@@ -132,6 +132,12 @@ def shrink_page(a: np.ndarray) -> np.ndarray:
 
     Args:
         a: Border-trimmed binary ink grid.
+        keep_left: Optional hard left bound (in trimmed-page columns). When given,
+            the left cut is pulled out to at least this column so a sparse,
+            isolated node group that sits LEFT of the main tree (separated by a
+            blank gap the densest-column grow can't cross) is not cropped away.
+            Used only for the few pages that need it (e.g. Book 2 p122's 尚泽/尚沾);
+            omitting it leaves every other page's crop byte-identical.
 
     Returns:
         The cropped grid containing just the graph.
@@ -148,6 +154,8 @@ def shrink_page(a: np.ndarray) -> np.ndarray:
         max_col += 1
     min_col = max(min_col - 10, 0)
     max_col = min(max_col + 10, cols - 1)
+    if keep_left is not None:
+        min_col = min(min_col, max(keep_left - 10, 0))
     a = a[:, min_col : max_col + 1]
 
     # Cut bottom.
@@ -547,6 +555,44 @@ MIN_BRIDGE_SPAN = BAR_TRACE_HOP + 1
 # missing bar -- so do not bridge it.
 GRAPH_EDGE_MARGIN = 40
 
+# Per-graph MANUAL bridges: connectors for the handful of orphans the automatic
+# trace-right rule can't close. Two forms, both hand-verified against the scan and
+# recorded green in the imaginary sidecar; they never touch any other graph:
+#   * a 4-tuple (r0, c0, r1, c1) is a raw RECTANGLE filled with ink -- for a tiny
+#     faint break or a small vertical step, where an exact box is clearest;
+#   * a 3-tuple (row, c0, c1) is a TRACE bridge drawn via draw_bridge, which snaps to
+#     the real bar-ink y at each end (drift-aware) -- for a long span across the page
+#     where the bar drifts. This encodes William's parent-trace rule: c1 is the
+#     x-column of the orphan's parent (nearest named node in the generation above,
+#     to the right).
+# Keyed by book then graph stem.
+# Per-page left-crop overrides (book -> page index -> keep_left column). shrink_page
+# normally crops to the ink contiguous with the densest column, which drops a sparse
+# node group sitting left of the main tree across a blank gap. These pages need the
+# left bound pulled out to keep those nodes. Hand-verified; other pages untouched.
+CROP_KEEP_LEFT: dict[str, dict[int, int]] = {
+    # Book 2 p122: 尚泽/尚沾 (highest generation) sit at x~299-443, left of the main
+    # tree; the default crop kept only x>=455, cutting them. Keep from x289.
+    "book2": {122: 289},
+}
+
+MANUAL_BRIDGES: dict[str, dict[str, list[tuple[int, ...]]]] = {
+    "book2": {
+        # 58_62: a ~7px faint break in the gen-4 bar at x1757-1764 (bar y1014-1016).
+        "58_62": [(1013, 1755, 1018, 1766)],
+        # 69_82: gen-2 orphan bar ends (x135,y372); next bar starts (x171,y386).
+        # Horizontal stub + short vertical drop.
+        "69_82": [(371, 133, 375, 173), (371, 169, 389, 174)],
+        # 121_122: gen-4 orphan bar (x563) traced right to its parent's column
+        # (x1607). (Coordinates are in the post-CROP_KEEP_LEFT geometry -- p122's crop
+        # is widened to keep 尚泽/尚沾, which shifts this graph's x's.)
+        "121_122": [(1015, 563, 1607)],
+        # 126_128: two bars each traced right to their parent's column (gen3 -> 尚时
+        # at x2718; gen5 -> 衍榜 at x2623). 3-tuples so draw_bridge follows the drift.
+        "126_128": [(693, 445, 2718), (1003, 2179, 2623)],
+    },
+}
+
 
 def _bar_true_end(a: np.ndarray, row: int, start_x: int,
                   ytol: int = BRIDGE_CONNECT_YTOL) -> int:
@@ -670,7 +716,8 @@ def _bridge_candidates(
 
 
 def bridge_orphans(
-    graph: np.ndarray, bt_config, seams: list[int] | None = None
+    graph: np.ndarray, bt_config, seams: list[int] | None = None,
+    stem: str | None = None, book: str | None = None,
 ) -> tuple[np.ndarray, list[list[int]]]:
     """Repair bar-orphans in a merged graph by tracing each orphan bar rightward.
 
@@ -785,6 +832,23 @@ def bridge_orphans(
             break
         if not progressed:
             break
+
+    # Apply any hand-verified manual bridges for this graph. A 4-tuple is a raw
+    # rectangle; a 3-tuple is a drift-aware trace bridge (draw_bridge). Drawn as ink
+    # and recorded green like automatic bridges.
+    for spec in MANUAL_BRIDGES.get(book or "", {}).get(stem or "", []):
+        if len(spec) == 4:
+            r0, c0, r1, c1 = spec
+            out[max(0, r0) : min(out.shape[0], r1 + 1),
+                max(0, c0) : min(out.shape[1], c1 + 1)] = 0
+            imaginary.append([int(r0), int(c0), int(r1), int(c1)])
+            logger.info("manual-bridge %s: rect (%d,%d,%d,%d)", stem, r0, c0, r1, c1)
+        else:
+            row, c0, c1 = spec
+            out = draw_bridge(out, row, c0, c1)
+            imaginary.append([int(row), int(c0), int(row), int(c1)])
+            logger.info("manual-bridge %s: trace row=%d (%d,%d)", stem, row, c0, c1)
+
     return out, imaginary
 
 
@@ -841,7 +905,8 @@ def segment(
             # Crop the label column (and everything right of it) off the page.
             a = a[:, :tree_start_x]
         is_page_tree_start.append(tree_start_x != -1)
-        pages.append(shrink_page(a))
+        keep_left = CROP_KEEP_LEFT.get(book, {}).get(i)
+        pages.append(shrink_page(a, keep_left=keep_left))
 
     # The orphan-bridge pass re-parses each graph, so it needs the Stage-3 config.
     # Import build_tree lazily: it pulls in cv2, and callers that only stitch pages
@@ -894,11 +959,12 @@ def segment(
             ]
         )
 
+        stem = f"{start_i}_{i - 1}"
         # Repair page-gap orphans (missing-line pages) on the assembled graph, and
         # record every synthetic connector to a sidecar for QA (green overlay).
-        graph, imaginary = bridge_orphans(graph, bt_config, seams=seams)
-
-        stem = f"{start_i}_{i - 1}"
+        graph, imaginary = bridge_orphans(
+            graph, bt_config, seams=seams, stem=stem, book=book
+        )
         out_path = os.path.join(graphs_dir, f"{stem}.png")
         save_image(graph, out_path)
         sidecar = os.path.join(graphs_dir, f"{stem}.imaginary.json")

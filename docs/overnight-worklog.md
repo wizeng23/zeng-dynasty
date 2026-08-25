@@ -176,6 +176,17 @@ or leave it for stitching. Current build leaves it (strict-drop rejects it).
 - [x] Committed locally: branch book2-bridge-trace-right, commit 0d5ef40.
       WILLIAM MUST `git push` (publication gate).
 
+## LOCKED (2026-08-24, after William review of the 4 remaining graphs)
+The 4 graphs with leftover orphans were NOT all cross-graph after all — William
+confirmed they were the only 4 with problems and gave targeted fixes. Fixed via
+per-graph MANUAL_BRIDGES + a p122 CROP_KEEP_LEFT override (see
+docs/bridge-revisit-notes.md for the full what/why/how + automation TODO):
+  58_62 (7px gap fill), 69_82 (L-connector), 121_122 (p122 crop restored 尚泽/尚沾 +
+  parent-trace bridge), 126_128 (2 parent-trace bridges).
+Final: ALL 45 Book-2 subgraphs have 0 within-graph orphans, 0 box overlaps; Book 1
+byte-identical; the 41 non-target Book-2 graphs byte-identical (freeze held). ALL
+SUBGRAPHS LOCKED. Next step: William reviews OCR.
+
 ## FINAL PROOF (decisive test)
 For every orphan across all 10 review graphs, drew its candidate bridge and checked
 whether the orphan count drops. Result: **0 orphans anywhere whose bridge would
