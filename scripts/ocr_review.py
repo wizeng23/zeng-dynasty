@@ -55,6 +55,77 @@ DATA_DIR = "data"
 BOOKS_DIR = "books"
 
 
+def _page_ranks(book: str) -> dict[str, tuple[int, int]]:
+    """Map each node provenance -> (page number, 1-based rank ON that page).
+
+    Parses each graph once to recover node x-columns, maps x to a page via the
+    graph's page seams (cumulative shrunk-page widths, the same assembly
+    src.segment uses), and ranks nodes within each page by reading order
+    (right-to-left, i.e. descending x -- eldest first). Cached per book.
+    Returns {} for a book whose graphs can't be parsed (the caller falls back to
+    the provenance index).
+    """
+    import src.segment as seg
+    import src.build_tree as bt
+
+    out: dict[str, tuple[int, int]] = {}
+    seg_cfg = seg.BOOK_CONFIGS.get(book)
+    bt_cfg = bt.BOOK_CONFIGS.get(book, bt.BookConfig())
+    graphs_dir = os.path.join(BOOKS_DIR, book, "graphs")
+    pages_dir = os.path.join(BOOKS_DIR, book, "pages")
+    if seg_cfg is None or not os.path.isdir(graphs_dir):
+        return out
+    from src.imaging import get_image
+
+    for fname in os.listdir(graphs_dir):
+        if not fname.endswith(".png"):
+            continue
+        stem = fname[:-4]
+        try:
+            start, end = (int(x) for x in stem.split("_"))
+        except ValueError:
+            continue
+        # Page seams: cumulative widths of the cropped+shrunk pages, left->right
+        # order end..start (matching segment's assembly, incl. CROP_KEEP_LEFT).
+        order = list(range(end, start - 1, -1))
+        seams: list[tuple[int, int]] = []
+        acc = 0
+        try:
+            for p in order:
+                seams.append((p, acc))
+                a = get_image(os.path.join(pages_dir, f"{p}.png"))
+                a = seg.trim_borders(a)
+                cut = seg.is_tree_start_page(a, seg_cfg)
+                if cut != -1:
+                    a = a[:, :cut]
+                keep_left = seg.CROP_KEEP_LEFT.get(book, {}).get(p)
+                a = seg.shrink_page(a, keep_left=keep_left)
+                acc += a.shape[1]
+            g = get_image(os.path.join(graphs_dir, fname))
+            g = bt.apply_ignore_regions(g, stem, bt_cfg)
+            nodes = bt.parse_graph(g, bt_cfg, graph_stem=stem)
+        except Exception:
+            continue  # skip a graph we can't parse; caller falls back
+        # nodes carry (top row, col); provenance index = their position in this list.
+        def page_of(x: int) -> int:
+            pg = seams[0][0]
+            for p, sx in seams:
+                if x >= sx:
+                    pg = p
+            return pg
+        per_page: dict[int, list[tuple[int, int]]] = {}
+        for li, node in enumerate(nodes):
+            if node.top is None:
+                continue
+            x = node.top[1]
+            per_page.setdefault(page_of(x), []).append((x, li))
+        for pg, items in per_page.items():
+            # reading order on the page = right-to-left (descending x), eldest first
+            for rank, (_x, li) in enumerate(sorted(items, key=lambda t: -t[0]), start=1):
+                out[f"{stem}_{li}"] = (pg, rank)
+    return out
+
+
 def _provenance(notes: str) -> str:
     """The stable ``{graph}_{localindex}`` key = first ' | '-segment of notes."""
     return notes.split(" | ")[0] if notes else ""
@@ -149,6 +220,7 @@ def build_cells() -> list[dict]:
         sidecar_path = os.path.join(DATA_DIR, f"{book}_names.json")
         sidecar = json.load(open(sidecar_path)) if os.path.exists(sidecar_path) else {}
         overrides = _load_overrides(book)
+        page_ranks = _page_ranks(book)
         nodes = [json.loads(line) for line in open(jsonl) if line.strip()]
         nodes.sort(key=lambda n: n["id"])
         for n in nodes:
@@ -166,12 +238,18 @@ def build_cells() -> list[dict]:
                     n_by_ratio = char_count(Image.open(fpath))
             n_chars = n_by_ratio or max(1, len(ocr_name))
             mismatch = bool(ocr_name) and n_by_ratio is not None and n_by_ratio != len(ocr_name)
-            # Page range from the provenance's graph stem ({start}_{end}_{idx});
-            # a node's exact single page isn't stored, so show the graph's page span.
-            pages = ""
-            m = prov.split("_")
-            if len(m) >= 2 and m[0].isdigit() and m[1].isdigit():
-                pages = m[0] if m[0] == m[1] else f"{m[0]}-{m[1]}"
+            # Exact page + reading-order rank on that page (from the parse). Fall
+            # back to the graph's page span + provenance index if unavailable.
+            pr = page_ranks.get(prov)
+            if pr is not None:
+                pages = str(pr[0])
+                page_rank = pr[1]
+            else:
+                m = prov.split("_")
+                pages = ""
+                if len(m) >= 2 and m[0].isdigit() and m[1].isdigit():
+                    pages = m[0] if m[0] == m[1] else f"{m[0]}-{m[1]}"
+                page_rank = int(m[2]) + 1 if len(m) >= 3 and m[2].isdigit() else None
             for ci in range(n_chars):
                 key = f"{prov}#{ci}"
                 ocr_char = ocr_name[ci] if ci < len(ocr_name) else ""
@@ -181,6 +259,7 @@ def build_cells() -> list[dict]:
                         "id": n["id"],
                         "provenance": prov,
                         "pages": pages,
+                        "page_rank": page_rank,
                         "char_index": ci,
                         "n_chars": n_chars,
                         "crop_url": (
@@ -306,7 +385,8 @@ function render() {
     let tag = "&nbsp;";
     if (focused) {
       const bookLbl = c.book === "book1" ? "Book 1" : (c.book === "book2" ? "Book 2" : c.book);
-      const pageLbl = c.pages ? ("page " + c.pages) : "page ?";
+      let pageLbl = c.pages ? ("page " + c.pages) : "page ?";
+      if (c.page_rank != null) pageLbl += ", name " + c.page_rank;
       const scoreLbl = (c.confidence == null) ? "score —"
                        : ("score " + Number(c.confidence).toFixed(2));
       const lines = [bookLbl, pageLbl];
