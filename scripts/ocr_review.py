@@ -255,6 +255,9 @@ def build_cells() -> list[dict]:
         page_ranks = _page_ranks(book)
         nodes = [json.loads(line) for line in open(jsonl) if line.strip()]
         nodes.sort(key=lambda n: n["id"])
+        # Per-page name counter: nodes are in id order (= reading order), so numbering
+        # 1..n per page as they appear here matches the order names show in the tool.
+        page_seen: dict[str, int] = {}
         for n in nodes:
             prov = _provenance(n.get("notes", ""))
             entry = sidecar.get(str(n["id"]), {})
@@ -270,18 +273,21 @@ def build_cells() -> list[dict]:
                     n_by_ratio = char_count(Image.open(fpath))
             n_chars = n_by_ratio or max(1, len(ocr_name))
             mismatch = bool(ocr_name) and n_by_ratio is not None and n_by_ratio != len(ocr_name)
-            # Exact page + reading-order rank on that page (from the parse). Fall
-            # back to the graph's page span + provenance index if unavailable.
+            # Page from the parse (_page_ranks gives the correct page per node); the
+            # NAME NUMBER is just a running 1..n counter per page in tool order.
             pr = page_ranks.get(prov)
             if pr is not None:
                 pages = str(pr[0])
-                page_rank = pr[1]
             else:
                 m = prov.split("_")
                 pages = ""
                 if len(m) >= 2 and m[0].isdigit() and m[1].isdigit():
                     pages = m[0] if m[0] == m[1] else f"{m[0]}-{m[1]}"
-                page_rank = int(m[2]) + 1 if len(m) >= 3 and m[2].isdigit() else None
+            if pages:
+                page_rank = page_seen.get(pages, 0) + 1
+                page_seen[pages] = page_rank
+            else:
+                page_rank = None
             for ci in range(n_chars):
                 key = f"{prov}#{ci}"
                 ocr_char = ocr_name[ci] if ci < len(ocr_name) else ""
