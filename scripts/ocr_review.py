@@ -166,6 +166,12 @@ def build_cells() -> list[dict]:
                     n_by_ratio = char_count(Image.open(fpath))
             n_chars = n_by_ratio or max(1, len(ocr_name))
             mismatch = bool(ocr_name) and n_by_ratio is not None and n_by_ratio != len(ocr_name)
+            # Page range from the provenance's graph stem ({start}_{end}_{idx});
+            # a node's exact single page isn't stored, so show the graph's page span.
+            pages = ""
+            m = prov.split("_")
+            if len(m) >= 2 and m[0].isdigit() and m[1].isdigit():
+                pages = m[0] if m[0] == m[1] else f"{m[0]}-{m[1]}"
             for ci in range(n_chars):
                 key = f"{prov}#{ci}"
                 ocr_char = ocr_name[ci] if ci < len(ocr_name) else ""
@@ -174,6 +180,7 @@ def build_cells() -> list[dict]:
                         "book": book,
                         "id": n["id"],
                         "provenance": prov,
+                        "pages": pages,
                         "char_index": ci,
                         "n_chars": n_chars,
                         "crop_url": (
@@ -236,7 +243,8 @@ PAGE = r"""<!doctype html>
   .cell.low .cropbox { background:#fff; }
   .cell.ovr .txt { border-color:var(--ovr); background:var(--ovr-bg); }
   .cell.mismatch .cropbox { box-shadow:0 0 0 2px var(--low) inset; }
-  .tag { font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; height:14px; }
+  .tag { font-size:11px; line-height:1.35; color:var(--muted);
+    font-variant-numeric:tabular-nums; min-height:74px; text-align:center; }
   .py { font-size:13px; color:var(--muted); height:18px; letter-spacing:.02em;
     font-family:ui-sans-serif,system-ui,sans-serif; }
   .cell.focus .py { color:var(--fg); font-weight:600; }
@@ -295,8 +303,19 @@ function render() {
     const el = document.createElement("div");
     el.className = cellClasses(c, focused);
     const cur = c.override || c.ocr_char || "";
+    let tag = "&nbsp;";
+    if (focused) {
+      const bookLbl = c.book === "book1" ? "Book 1" : (c.book === "book2" ? "Book 2" : c.book);
+      const pageLbl = c.pages ? ("page " + c.pages) : "page ?";
+      const scoreLbl = (c.confidence == null) ? "score —"
+                       : ("score " + Number(c.confidence).toFixed(2));
+      const lines = [bookLbl, pageLbl];
+      if (c.n_chars > 1) lines.push("char " + (c.char_index+1) + "/" + c.n_chars);
+      lines.push(scoreLbl);
+      tag = lines.join("<br>");
+    }
     el.innerHTML =
-      `<div class="tag">${focused ? (c.book+" #"+c.id+" ·"+(c.char_index+1)+"/"+c.n_chars) : "&nbsp;"}</div>` +
+      `<div class="tag">${tag}</div>` +
       `<div class="cropbox">${c.crop_url ? `<img src="${c.crop_url}">` : ""}</div>` +
       (focused
         ? `<input class="txt" id="focusInput" value="${cur.replace(/"/g,'&quot;')}"
