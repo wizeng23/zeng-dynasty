@@ -56,14 +56,46 @@ BOOKS_DIR = "books"
 
 
 def _page_ranks(book: str) -> dict[str, tuple[int, int]]:
-    """Map each node provenance -> (page number, 1-based rank ON that page).
+    """Map each node provenance -> (page number, 1-based rank ON that page), cached.
 
-    Parses each graph once to recover node x-columns, maps x to a page via the
-    graph's page seams (cumulative shrunk-page widths, the same assembly
-    src.segment uses), and ranks nodes within each page by reading order
-    (right-to-left, i.e. descending x -- eldest first). Cached per book.
-    Returns {} for a book whose graphs can't be parsed (the caller falls back to
-    the provenance index).
+    Reads ``data/{book}_page_ranks.json`` if it is newer than every graph png (and
+    this source file); otherwise recomputes via :func:`_compute_page_ranks` and
+    rewrites the cache. This keeps tool startup instant after the first run while
+    staying correct when graphs are re-segmented.
+    """
+    cache_path = os.path.join(DATA_DIR, f"{book}_page_ranks.json")
+    graphs_dir = os.path.join(BOOKS_DIR, book, "graphs")
+    if not os.path.isdir(graphs_dir):
+        return {}
+    # Cache is valid iff it is newer than every graph png AND this script.
+    newest_src = os.path.getmtime(__file__)
+    for f in os.listdir(graphs_dir):
+        if f.endswith(".png"):
+            newest_src = max(newest_src, os.path.getmtime(os.path.join(graphs_dir, f)))
+    if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= newest_src:
+        try:
+            raw = json.load(open(cache_path))
+            return {k: (v[0], v[1]) for k, v in raw.items()}
+        except Exception:
+            pass  # corrupt cache -> recompute
+    ranks = _compute_page_ranks(book)
+    try:
+        json.dump(
+            {k: [v[0], v[1]] for k, v in ranks.items()},
+            open(cache_path, "w"),
+        )
+    except Exception:
+        pass  # non-fatal: just means we recompute next time
+    return ranks
+
+
+def _compute_page_ranks(book: str) -> dict[str, tuple[int, int]]:
+    """Parse each graph to map provenance -> (page, 1-based reading-order rank).
+
+    Recovers node x-columns, maps x to a page via the graph's page seams (cumulative
+    shrunk-page widths, the same assembly src.segment uses), and ranks nodes within
+    each page right-to-left (descending x = eldest first). Returns {} for a book
+    whose graphs can't be parsed (the caller falls back to the provenance index).
     """
     import src.segment as seg
     import src.build_tree as bt
