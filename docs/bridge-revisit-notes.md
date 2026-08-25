@@ -56,6 +56,22 @@ list can shrink. All manual fixes live in `src/segment.MANUAL_BRIDGES` and
   reliably reproduces all 4 manual entries here + 58_62/69_82, the whole manual list
   can be deleted.
 
+## OCR: characters missing dots/strokes (William, 2026-08-25) — REVISIT
+Some parsed names are missing small dots/strokes (e.g. a 丶 in a radical). Suspected
+cause: `remove_small_islands(max_size=10)` in `src/extract_pages.py:90` (called at
+:336) erases every connected ink component <=10px as "scan noise" — but a legitimate
+small dot/stroke that is disconnected from the main glyph gets deleted too. So the
+character is damaged before it ever reaches OCR.
+- **Where:** `src/extract_pages.py` `remove_small_islands`, `max_size=10`.
+- **Fix ideas:** lower `max_size`; or only remove specks that are far from any larger
+  component (a real dot sits close to its glyph, noise is isolated); or restrict
+  removal to the graph-line regions, not the name-crop regions; or run it before,
+  not after, name cropping. Must re-verify against the OCR ground truth and the
+  parse (don't reintroduce scan-spot false components).
+- **Impact:** OCR accuracy + the name crops shown in `scripts/ocr_review.py`.
+- NOTE: changing extract_pages re-runs Stage 1 -> would change pages/graphs for BOTH
+  books; check the freeze / re-verify everything downstream.
+
 ## Automation opportunity (the big one)
 William's **parent-trace rule** ("trace right from the orphan to the x of its
 parent = nearest node in the generation above, to the right") resolved 126_128 and
