@@ -24,8 +24,9 @@ Scans → structured tree. See `docs/pipeline.md` for detail.
 
 1. **Spreads → pages** — split + deskew two-page scans (`books/bookN/original/`) into single pages.
 2. **Pages → graph images** — detect subtree boundaries, stitch line-graphs across pages → `books/bookN/graphs/{start}_{end}.png`.
-3. **Graph images → tree** — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/names/`.
-4. **OCR** (not yet built) — name image → Unicode character.
+3. **Graph images → tree** — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/names/`. Includes **orphan-bridging** (`src.segment.bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.
+3.5. **Stitching** (`src/stitch.py`) — fold each graph's duplicate root into its canonical leaf → one connected lineage. Book 1 done (hand `BOOK_MERGES`); Book 2 auto-matcher TODO.
+4. **OCR** (Stage 3.6, DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/ocr_review.py`.
 
 Stage 4 (spreadsheet path): Book 1 was also hand-typed into a Google Sheet →
 `data/zeng_google_sheet.csv` → `data/book1_golden.jsonl`. This **golden** data
@@ -33,6 +34,13 @@ is the verified ground truth used to check the algorithmic output.
 
 ## Key gotchas
 
+- **Run in the `zeng` conda env, not base.** Base Python lacks the deps
+  (paddleocr/cv2/PIL/pypinyin). Use `/opt/miniconda3/envs/zeng/bin/python` with
+  `PYTHONPATH=.`, or `conda activate zeng`. Symptom of the wrong env: `ModuleNotFoundError`.
+- **Big graphs are slow.** Book 2's `36_52` is 17 pages (~93M px); a full
+  `python -m src.segment --book book2` takes minutes. Run it in the background.
+- **Publication gate.** The repo (`github.com/wizeng23/zeng-dynasty`) is public;
+  agents are BLOCKED from `git push`. Commit locally freely; William pushes.
 - **Thresholds are hand-tuned per book's scan geometry.** "Make it work on
   Book N" means re-tuning the segmentation functions, not just re-running.
   The old code baked per-book fudge factors inline — the rewrite makes these
@@ -59,3 +67,23 @@ is the verified ground truth used to check the algorithmic output.
   it when rewriting `src/`, but it is not the source of truth.
 - Verify a rewritten Book 1 parse by diffing against `data/book1_golden.jsonl`.
 - Design specs go in `docs/specs/YYYY-MM-DD-<topic>-design.md`.
+- **QA is gitignored** (`books/*/qa/`): regenerate with `python -m scripts.qa_overlay
+  --book bookN`, then serve `books/bookN/qa/index.html` on a localhost port to view.
+
+## Docs map (where to look)
+
+- `docs/history.md` — chronological project story (read this to catch up fast).
+- `docs/pipeline.md` — per-stage detail; `docs/progress.md` / `milestones.md` — status/goals.
+- `docs/bridge-ground-truth.md` — the orphan-bridging rule + hand-verified per-graph truth.
+- `docs/bridge-revisit-notes.md` — known pipeline BUGS to fix later (incl. the
+  `remove_small_islands` missing-dots bug).
+- `docs/future-features.md` — deferred FEATURE ideas (e.g. polyphonic-name support).
+- `docs/ocr-bakeoff.md` — why PP-OCRv5; `docs/overnight-worklog.md` — bridging blow-by-blow.
+
+## Current state (2026-08-25)
+
+Books 1 & 2 fully parsed; **all 45 Book-2 subgraphs LOCKED** (0 within-graph
+orphans, bridges match ground truth). OCR populated for both books. Uncommitted-to-
+remote work sits on branch `book2-bridge-trace-right` (William to push). **Next
+step:** William reviews OCR via `scripts/ocr_review.py`, then Book 2 stitching, then
+website. Remaining orphans in a few graphs are cross-graph (resolved at stitching).
