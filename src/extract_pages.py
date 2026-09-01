@@ -26,7 +26,7 @@ Output: ``books/{book}/{pages_dir}/{i}.png`` as an 8-bit binary PNG (0 == ink,
 
 CLI:
     python -m src.extract_pages --book book1 --pdf books/book1/book1.pdf \
-        --first-page 6 --last-page 23 --pages-dir pages_gray
+        --first-page 6 --last-page 23 --pages-dir pages
 """
 
 from __future__ import annotations
@@ -428,7 +428,8 @@ def extract_pages(
         book: Book name, e.g. ``"book1"`` (used to locate the output dir).
         pdf_path: Path to the v1 source PDF.
         pages_dir: Output subdirectory name under ``{books_dir}/{book}/``
-            (e.g. ``pages_gray`` or ``pages_bw``).
+            (``pages`` for the canonical bitonal output; ``gray/pages`` for the
+            grayscale variant).
         first_page: First content page index (inclusive, zero-based). Defaults to
             the book's entry in :data:`BOOK_PAGE_RANGES`.
         last_page: Last content page index (inclusive). Defaults to the book's
@@ -519,7 +520,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Last content page (inclusive). Default: book's BOOK_PAGE_RANGES entry.",
     )
     parser.add_argument(
-        "--pages-dir", required=True, help="Output subdir under books/{book}/ (e.g. pages_gray)."
+        "--pages-dir", default="pages",
+        help="Output subdir under books/{book}/ (default: pages; gray/pages for grayscale)."
     )
     parser.add_argument(
         "--threshold", type=int, default=GRAY_THRESHOLD, help="Grayscale ink cutoff (default 128)."

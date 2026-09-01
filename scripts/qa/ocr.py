@@ -64,7 +64,7 @@ def _page_ranks(book: str) -> dict[str, tuple[int, int]]:
     staying correct when graphs are re-segmented.
     """
     cache_path = os.path.join(DATA_DIR, f"{book}_page_ranks.json")
-    graphs_dir = os.path.join(BOOKS_DIR, book, "graphs")
+    graphs_dir = os.path.join(BOOKS_DIR, book, "v0", "graphs")
     if not os.path.isdir(graphs_dir):
         return {}
     # Cache is valid iff it is newer than every graph png AND this script.
@@ -97,14 +97,14 @@ def _compute_page_ranks(book: str) -> dict[str, tuple[int, int]]:
     each page right-to-left (descending x = eldest first). Returns {} for a book
     whose graphs can't be parsed (the caller falls back to the provenance index).
     """
-    import src.segment as seg
-    import src.build_tree as bt
+    import src.v0.segment as seg
+    import src.v0.build_tree as bt
 
     out: dict[str, tuple[int, int]] = {}
     seg_cfg = seg.BOOK_CONFIGS.get(book)
     bt_cfg = bt.BOOK_CONFIGS.get(book, bt.BookConfig())
-    graphs_dir = os.path.join(BOOKS_DIR, book, "graphs")
-    pages_dir = os.path.join(BOOKS_DIR, book, "pages")
+    graphs_dir = os.path.join(BOOKS_DIR, book, "v0", "graphs")
+    pages_dir = os.path.join(BOOKS_DIR, book, "v0", "pages")
     if seg_cfg is None or not os.path.isdir(graphs_dir):
         return out
     from src.imaging import get_image
@@ -268,7 +268,7 @@ def build_cells() -> list[dict]:
             # the OCR length when there's no crop.
             n_by_ratio = None
             if crop_name:
-                fpath = os.path.join(BOOKS_DIR, book, "names", crop_name)
+                fpath = os.path.join(BOOKS_DIR, book, "v0", "names", crop_name)
                 if os.path.exists(fpath):
                     n_by_ratio = char_count(Image.open(fpath))
             n_chars = n_by_ratio or max(1, len(ocr_name))
@@ -543,7 +543,7 @@ fetch("/data").then(r=>r.json()).then(d=>{
 
 def _crop_band_png(book: str, fname: str, i: int, n: int) -> bytes:
     """Return PNG bytes of the i-th (of n) character band of a name crop."""
-    fpath = os.path.join(BOOKS_DIR, book, "names", os.path.basename(fname))
+    fpath = os.path.join(BOOKS_DIR, book, "v0", "names", os.path.basename(fname))
     im = Image.open(fpath).convert("L")
     bands = split_bands(im, n)
     if 0 <= i < len(bands):

@@ -20,8 +20,8 @@ Per page:
    A page with no label is a continuation of the previous subtree.
 3. ``shrink_page`` crops to the tree's bounding box.
 
-Output: ``books/{book}/crops_bw/{i}.png`` (one tree-crop per page) plus
-``books/{book}/crops_bw/starts.json`` mapping each page index to whether it
+Output: ``books/{book}/crops/{i}.png`` (one tree-crop per page) plus
+``books/{book}/crops/starts.json`` mapping each page index to whether it
 starts a subtree -- the interface :mod:`src.merge_pages` reads.
 
 CLI:
@@ -207,8 +207,8 @@ def segment(
     book: str,
     books_dir: str = "books",
     config: BookConfig | None = None,
-    pages_dir: str = "pages_bw",
-    crops_dir_name: str = "crops_bw",
+    pages_dir: str = "pages",
+    crops_dir_name: str = "crops",
 ) -> list[str]:
     """Crop each page to its tree line-graph; record which pages start a subtree.
 
@@ -266,8 +266,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True, choices=sorted(BOOK_CONFIGS))
     parser.add_argument("--books-dir", default="books")
-    parser.add_argument("--pages-dir", default="pages_bw")
-    parser.add_argument("--crops-dir", default="crops_bw")
+    parser.add_argument("--pages-dir", default="pages")
+    parser.add_argument("--crops-dir", default="crops")
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 

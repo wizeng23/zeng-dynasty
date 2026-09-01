@@ -91,8 +91,11 @@ def build(book, variant, pdf, first_page, last_page, books_dir="books", data_dir
     for d in dirs.values():
         os.makedirs(d, exist_ok=True)
 
-    pages_dir = os.path.join(books_dir, book, f"pages_{variant}")
-    graphs_dir = os.path.join(books_dir, book, f"graphs_{variant}")
+    # Canonical bitonal output lives at books/{book}/{pages,graphs}; the grayscale
+    # variant is namespaced under gray/.
+    sub = "" if variant == "bw" else f"{variant}/"
+    pages_dir = os.path.join(books_dir, book, f"{sub}pages")
+    graphs_dir = os.path.join(books_dir, book, f"{sub}graphs")
     config = bt.BOOK_CONFIGS.get(book, bt.BookConfig())
 
     doc = None

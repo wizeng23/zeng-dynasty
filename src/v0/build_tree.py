@@ -776,8 +776,8 @@ def build_tree(
             )
         config = BOOK_CONFIGS[book]
 
-    graphs_dir = os.path.join(books_dir, book, "graphs")
-    names_dir = os.path.join(books_dir, book, "names")
+    graphs_dir = os.path.join(books_dir, book, "v0", "graphs")
+    names_dir = os.path.join(books_dir, book, "v0", "names")
     os.makedirs(names_dir, exist_ok=True)
     os.makedirs(data_dir, exist_ok=True)
 

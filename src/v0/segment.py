@@ -880,8 +880,8 @@ def segment(
             )
         config = BOOK_CONFIGS[book]
 
-    pages_dir = os.path.join(books_dir, book, "pages")
-    graphs_dir = os.path.join(books_dir, book, "graphs")
+    pages_dir = os.path.join(books_dir, book, "v0", "pages")
+    graphs_dir = os.path.join(books_dir, book, "v0", "graphs")
     os.makedirs(graphs_dir, exist_ok=True)
 
     logger.info(

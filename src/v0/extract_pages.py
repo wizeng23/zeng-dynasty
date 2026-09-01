@@ -312,8 +312,8 @@ def extract_pages(
             )
         config = BOOK_CONFIGS[book]
 
-    original_dir = os.path.join(books_dir, book, "original")
-    pages_dir = os.path.join(books_dir, book, "pages")
+    original_dir = os.path.join(books_dir, book, "v0", "original")
+    pages_dir = os.path.join(books_dir, book, "v0", "pages")
     os.makedirs(pages_dir, exist_ok=True)
 
     logger.info(

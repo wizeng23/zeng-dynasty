@@ -9,35 +9,39 @@ parsed → (2) dynamic website allowing updates. See `docs/milestones.md`.
 ## Repo layout
 
 ```
-src/         rewritten parsing pipeline (Python)
+src/         canonical v1 parsing pipeline (Python); src/v0/ = archived v0 pipeline
   model.py     Node dataclass — the canonical data schema
 data/        parsed output (book1_golden.jsonl) + sheet export (csv)
-books/       per-book assets: bookN/bookN.pdf (canonical = v1 bitonal 600dpi scan),
-             plus bookN_gray.pdf (v1 grayscale), bookN_v0.pdf (old glass-top scan),
-             original/ (v0 spreads), pages/, graphs/, names/, trees/
+books/       per-book assets, namespaced by scan generation:
+  bookN/
+    bookN.pdf                canonical scan = v1 bitonal 600dpi
+    pages/ crops/ graphs/ names/   v1 bitonal pipeline output
+      pages/corners.json, corners_review.json   detected + human-reviewed frame corners
+    gray/  bookN.pdf, bookN_200dpi.pdf, pages/ …   v1 grayscale variant
+    v0/    bookN.pdf, original/ pages/ graphs/ names/   archived old glass-scan assets
 web/         d3.js tree viewer (index.html)
-docs/        milestones.md, progress.md, pipeline.md, specs/
+docs/        milestones.md, progress.md, pipeline.md, history.md, specs/
 old/         the entire pre-restructure repo, archived (history preserved via git mv)
 ```
 
 ## Scan versions (v0 / v1)
 
-Two scan generations exist per book:
+Two scan generations exist per book, namespaced by folder (no filename suffixes):
 
-- **v0** — the original glass-top scans (book laid open face-down on a scanner,
-  two pages per image). Book 1 & 2 only. Lives in `books/bookN/original/*.png`;
-  the source PDF is `books/bookN/book1_v0.pdf` / `book2_v0.pdf`. This is what the
-  **current `src/` pipeline (Stage 1 `extract_pages`) consumes**.
-- **v1** — the new scans: spines cut off, pages through an automatic document
-  feeder (ADF), one page per scan, 600dpi. Two renditions:
-  `bookN.pdf` = **bitonal** (black/white — the canonical default) and
-  `bookN_gray.pdf` = grayscale. Books 3 & 4 are **v1 bitonal only**. The v1
-  pipeline lives in `src/v1/` (`extract_pages`, `segment`, `build_tree`),
-  full-native resolution; it deskews (pure rotation, no perspective warp),
-  strips the printed page frame + header/label text columns, and parses.
+- **v1** (CANONICAL, current) — new scans: spines cut off, one page per scan
+  through an ADF, 600dpi. `books/bookN/bookN.pdf` = bitonal (the parse target);
+  `books/bookN/gray/bookN.pdf` = grayscale variant. All four books have v1 scans.
+  The pipeline is `src/` at full native resolution: `extract_pages` (frame-based
+  deskew+crop), `segment` (crop to tree), `merge_pages` (stitch multi-page
+  subtrees), `apply_corners` (final gen with reviewed corners). Output at
+  `books/bookN/{pages,crops,graphs,names}/`.
+- **v0** (archived) — original glass-top scans (two pages per image), Book 1 & 2
+  only. Assets in `books/bookN/v0/` (`bookN.pdf`, `original/`, `pages/`, `graphs/`,
+  `names/`); code in `src/v0/`. Superseded by the v1 rebuild.
 
-`bookN.pdf` always means the canonical scan to parse (now v1 bitonal). Historical
-`bookN_gray_200dpi.pdf` (Book 1) is an early 200dpi ADF test, kept for reference.
+`books/bookN/bookN.pdf` always means the canonical scan to parse (v1 bitonal).
+`books/bookN/gray/bookN_200dpi.pdf` (Book 1) is an early 200dpi ADF test, kept
+for reference.
 
 ## The pipeline (4 stages)
 

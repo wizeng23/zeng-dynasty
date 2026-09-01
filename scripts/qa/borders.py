@@ -18,7 +18,7 @@ shown centered). Drag any of the four corner dots to correct them. Buttons:
 Left / Right arrow keys switch pages. Position is remembered per tab.
 
 Corrections are a ground-truth layer at
-``books/{book}/pages_bw/corners_review.json`` keyed by content-page number:
+``books/{book}/pages/corners_review.json`` keyed by content-page number:
   { "12": {"status": "approved"},
     "37": {"status": "corners", "corners": {"tl": [x,y], ...}} }
 Nothing here re-runs the pipeline; a later extract step reads this layer to
@@ -241,7 +241,7 @@ def analyze_page(doc, book, pi, ci):
 # ---- review-layer persistence --------------------------------------------
 
 def _review_path(book):
-    return os.path.join(BOOKS_DIR, book, "pages_bw", "corners_review.json")
+    return os.path.join(BOOKS_DIR, book, "pages", "corners_review.json")
 
 
 def load_review(book):
@@ -292,13 +292,13 @@ def render_crop(book, pi, corners):
 
 
 # ---- QA-set index (which pages need review) -------------------------------
-# Read the precomputed books/{book}/pages_bw/corners.json (written by Stage 1 /
+# Read the precomputed books/{book}/pages/corners.json (written by Stage 1 /
 # the compare runs) rather than recomputing both detectors over the whole book
 # on load (which would take minutes and time out the browser). Only the flagged
 # pages -- status == "flagged" -- enter the review set.
 
 def qa_index(book):
-    path = os.path.join(BOOKS_DIR, book, "pages_bw", "corners.json")
+    path = os.path.join(BOOKS_DIR, book, "pages", "corners.json")
     if not os.path.exists(path):
         return []
     with open(path) as f:

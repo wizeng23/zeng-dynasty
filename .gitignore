@@ -224,24 +224,36 @@ books/*/qa_*/
 worklog/
 data/*_page_ranks.json
 
-# v1 pipeline image output — regenerable from the PDFs + reviewed corners, so
-# kept out of the (public) repo. The tiny corner JSONs below ARE tracked (they
-# hold the human review layer, which is not reproducible).
-books/*/pages_bw/*.png
-books/*/pages_gray/
-books/*/crops_bw/*.png
-books/*/crops_gray/
-books/*/graphs_bw/
-books/*/graphs_gray/
-!books/*/pages_bw/corners.json
-!books/*/pages_bw/corners_review.json
-!books/*/crops_bw/starts.json
+# Pipeline image output — regenerable from the PDFs + reviewed corners, so kept
+# out of the (public) repo. The tiny corner/starts JSONs below ARE tracked (the
+# human review layer is not reproducible). Covers the canonical bitonal dirs, the
+# gray/ variant, and the archived v0/ image assets.
+books/*/pages/*.png
+books/*/crops/*.png
+books/*/graphs/
+books/*/names/
+books/*/gray/pages/
+books/*/gray/crops/
+books/*/gray/graphs/
+books/*/gray/names/
+books/*/v0/pages/
+books/*/v0/crops/
+books/*/v0/graphs/
+books/*/v0/names/
+books/*/v0/original/
+!books/*/pages/corners.json
+!books/*/pages/corners_review.json
+!books/*/crops/starts.json
 
 # per-stage QA artifacts / scratch data (regenerable)
 data/artifacts/
+# early v1-variant parse experiments (bw/gray forks), superseded
+data/book*_bw.jsonl
+data/book*_gray.jsonl
+data/book*_v1_*.jsonl
+data/book*_v2_*.jsonl
 
-# v1 scan PDFs are large; keep them out of the public repo (William holds them).
-# (The small v0 glass-scan PDFs bookN_v0.pdf are already tracked and stay.)
+# Scan PDFs are large; keep them out of the public repo (William holds them).
+# The small v0 glass-scan PDFs (books/*/v0/bookN.pdf) are already tracked and stay.
 books/*/book?.pdf
-books/*/book?_gray.pdf
-books/*/book?_gray_200dpi.pdf
+books/*/gray/*.pdf

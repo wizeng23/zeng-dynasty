@@ -1,10 +1,10 @@
 """Stage 2.5 (v1 scans): per-page tree crops -> merged subtree-graph images.
 
 The previous step (:mod:`src.segment`) cropped each page down to its tree and
-recorded which pages start a subtree (``crops_bw/starts.json``). A subtree can
+recorded which pages start a subtree (``crops/starts.json``). A subtree can
 span several consecutive pages; this step stitches each run of continuation pages
 onto the page that started the subtree, aligning the dangling lines at each seam,
-and writes one image per subtree to ``books/{book}/graphs_bw/{start}_{end}.png``.
+and writes one image per subtree to ``books/{book}/graphs/{start}_{end}.png``.
 
 Physically stitching at the seam lets the Stage-3 parser treat each subtree as
 one connected graph. The book reads right-to-left, so ``merge_graphs`` places the
@@ -166,8 +166,8 @@ def merge_pages(
     book: str,
     books_dir: str = "books",
     config: BookConfig | None = None,
-    crops_dir_name: str = "crops_bw",
-    graphs_dir_name: str = "graphs_bw",
+    crops_dir_name: str = "crops",
+    graphs_dir_name: str = "graphs",
 ) -> list[str]:
     """Merge each subtree's per-page crops into one graph image.
 
@@ -226,8 +226,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True, choices=sorted(BOOK_CONFIGS))
     parser.add_argument("--books-dir", default="books")
-    parser.add_argument("--crops-dir", default="crops_bw")
-    parser.add_argument("--graphs-dir", default="graphs_bw")
+    parser.add_argument("--crops-dir", default="crops")
+    parser.add_argument("--graphs-dir", default="graphs")
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 

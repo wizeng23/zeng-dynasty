@@ -2,16 +2,16 @@
 
 Two corner sources feed this, in priority order per page:
 
-1. ``books/{book}/pages_bw/corners_review.json`` -- the human review layer from
+1. ``books/{book}/pages/corners_review.json`` -- the human review layer from
    the border-QA tool (:mod:`scripts.qa.borders`). An entry with
    ``status == "corners"`` holds hand-placed/confirmed corners and always wins.
-2. ``books/{book}/pages_bw/corners.json`` -- the detector output. Pages the two
+2. ``books/{book}/pages/corners.json`` -- the detector output. Pages the two
    detectors agreed on carry their ``corners``; flagged pages carry none and must
    be covered by the review layer.
 
 For each content page in the book's range, the resolved corners are warped with
 :func:`src.extract_pages.deskew_to_frame` (same as the detector path) and written
-to ``books/{book}/pages_bw/{i}.png``. A page with no corners from either source
+to ``books/{book}/pages/{i}.png``. A page with no corners from either source
 is skipped and reported with its page version.
 
 CLI:
@@ -54,7 +54,7 @@ def apply_corners(book: str, books_dir: str = "books") -> tuple[int, list[str]]:
     Returns ``(num_written, missing)`` where ``missing`` lists page tags that had
     no corners from either source.
     """
-    out_dir = os.path.join(books_dir, book, "pages_bw")
+    out_dir = os.path.join(books_dir, book, "pages")
     corners_path = os.path.join(out_dir, "corners.json")
     review_path = os.path.join(out_dir, "corners_review.json")
 
