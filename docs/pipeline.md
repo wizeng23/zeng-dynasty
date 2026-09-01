@@ -31,7 +31,7 @@ Old helpers: `remove_small_islands`, `get_corners`, `normalize_page`.
 ## Stage 2 — Classify pages (tree graph vs biography)
 
 **In:** `books/bookN/1_pages/*.png`
-**Out:** `books/bookN/1_pages/page_types.json` — per-page `graph`/`bio` label +
+**Out:** `books/bookN/2_classify/page_types.json` — per-page `graph`/`bio` label +
 flat `graph_pages` / `bio_pages` lists; each bio page records `follows_graph`
 (the nearest preceding tree page) for later graph↔biography association.
 

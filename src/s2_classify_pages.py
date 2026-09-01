@@ -24,7 +24,7 @@ This was validated against hand-labelled pages across all four books: Books 1 & 
 Books 3 & 4's biography/tree split matches eyeballed ground truth, and every page
 Stage 3 independently detects as a subtree-start comes out ``graph`` (0 conflicts).
 
-Output: ``books/{book}/pages/page_types.json`` -- see :func:`classify_pages`.
+Output: ``books/{book}/2_classify/page_types.json`` -- see :func:`classify_pages`.
 
 CLI:
     python -m src.classify_pages --book book3
@@ -44,6 +44,11 @@ from src.imaging import get_image
 from src.s3_segment import trim_borders
 
 logger = logging.getLogger(__name__)
+
+# Stage-2 output dir (holds page_types.json). Reads pages from the Stage-1
+# ``1_pages`` dir but writes its own labeling here.
+CLASSIFY_DIR = "2_classify"
+PAGE_TYPES_FILE = "page_types.json"
 
 # Fixed vertical positions (as a fraction of trimmed page height) of the 4
 # full-width cell dividers on a biography page. Measured across biography pages in
@@ -112,15 +117,17 @@ def classify_pages(
     num_pages: int,
     books_dir: str = "books",
     pages_dir: str = "1_pages",
+    out_dir_name: str = CLASSIFY_DIR,
 ) -> dict:
     """Classify every page of a book as ``graph`` or ``bio``; write the sidecar.
 
-    Reads ``{books_dir}/{book}/{pages_dir}/{i}.png`` for ``i`` in
-    ``0..num_pages-1`` and writes ``{pages_dir}/page_types.json`` with, per page,
-    its type and the detected rule positions, plus flat ``graph_pages`` /
-    ``bio_pages`` lists. Each biography page also records ``follows_graph`` -- the
-    index of the nearest preceding tree page -- so it can be re-associated with the
-    lineage it details when biographies are parsed later.
+    Reads pages from ``{books_dir}/{book}/{pages_dir}/{i}.png`` (the Stage-1 dir)
+    for ``i`` in ``0..num_pages-1`` and writes ``{out_dir_name}/page_types.json``
+    (its own Stage-2 dir) with, per page, its type and the detected rule positions,
+    plus flat ``graph_pages`` / ``bio_pages`` lists. Each biography page also
+    records ``follows_graph`` -- the index of the nearest preceding tree page -- so
+    it can be re-associated with the lineage it details when biographies are parsed
+    later.
 
     Returns the written sidecar dict.
     """
@@ -152,7 +159,9 @@ def classify_pages(
         "bio_pages": bio_pages,
         "pages": pages,
     }
-    out_path = os.path.join(pages_path, "page_types.json")
+    out_path_dir = os.path.join(books_dir, book, out_dir_name)
+    os.makedirs(out_path_dir, exist_ok=True)
+    out_path = os.path.join(out_path_dir, PAGE_TYPES_FILE)
     with open(out_path, "w") as fh:
         json.dump(sidecar, fh, indent=2)
 
@@ -161,14 +170,15 @@ def classify_pages(
     return sidecar
 
 
-def load_bio_pages(book: str, books_dir: str = "books", pages_dir: str = "1_pages") -> set[int]:
+def load_bio_pages(book: str, books_dir: str = "books",
+                   out_dir_name: str = CLASSIFY_DIR) -> set[int]:
     """Read the sidecar's ``bio_pages`` set, or an empty set if no sidecar exists.
 
     Books with no ``page_types.json`` (e.g. the all-tree Books 1 & 2, which were
     never classified) return an empty set, so downstream code treats every page as
     a graph page -- preserving their existing behaviour untouched.
     """
-    path = os.path.join(books_dir, book, pages_dir, "page_types.json")
+    path = os.path.join(books_dir, book, out_dir_name, PAGE_TYPES_FILE)
     if not os.path.exists(path):
         return set()
     with open(path) as fh:

@@ -51,7 +51,7 @@ Scans → structured tree. Whole-integer stage numbers (no `.5`s). See
 `docs/pipeline.md` for detail.
 
 1. **extract_pages** (`src/s1_extract_pages.py`) — split + deskew scans into single upright pages → `books/bookN/1_pages/`.
-2. **classify_pages** (`src/s2_classify_pages.py`) — tag each page tree-graph vs **biography**. Books 3 & 4 interleave biography-text pages; only tree pages go on the graph path. Writes `books/bookN/1_pages/page_types.json` (`graph_pages`/`bio_pages`, each bio's `follows_graph`). Bio = exactly 4 full-width rules at fixed y-fracs ≈ 0.19/0.40/0.60/0.80. Books 1 & 2 (all-tree) → no sidecar, unchanged.
+2. **classify_pages** (`src/s2_classify_pages.py`) — tag each page tree-graph vs **biography**. Books 3 & 4 interleave biography-text pages; only tree pages go on the graph path. Writes `books/bookN/2_classify/page_types.json` (`graph_pages`/`bio_pages`, each bio's `follows_graph`). Bio = exactly 4 full-width rules at fixed y-fracs ≈ 0.19/0.40/0.60/0.80. Books 1 & 2 (all-tree) → no sidecar, unchanged.
 3. **segment** (`src/s3_segment.py`) — crop each tree page to its line-graph → `books/bookN/3_crops/` + `starts.json` (biographies skipped via the sidecar).
 4. **merge_pages** (`src/s4_merge_pages.py`) — stitch a subtree's pages into one graph image → `books/bookN/4_graphs/{start}_{end}.png`.
 5. **build_tree** (`src/s5_build_tree.py`) — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/5_names/`. Includes **orphan-bridging** (`bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/4_graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.

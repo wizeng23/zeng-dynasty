@@ -238,7 +238,7 @@ def segment(
 
     # Lazy import avoids a circular dependency (classify_pages imports from here).
     from src.s2_classify_pages import load_bio_pages
-    bio_pages = load_bio_pages(book, books_dir=books_dir, pages_dir=pages_dir)
+    bio_pages = load_bio_pages(book, books_dir=books_dir)
 
     in_dir = os.path.join(books_dir, book, pages_dir)
     crops_dir = os.path.join(books_dir, book, crops_dir_name)
