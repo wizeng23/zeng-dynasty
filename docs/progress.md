@@ -3,7 +3,7 @@
 Status of each book through the pipeline stages. See `pipeline.md` for what
 each stage does.
 
-| Book | 1: spreads→pages | 2: pages→graphs | 3: graphs→tree | 3.5: OCR | Notes |
+| Book | 1: extract | 3: segment+4: merge→graphs | 5: build_tree | 7: OCR | Notes |
 |------|------------------|-----------------|----------------|----------|-------|
 | 1    | **done (src/)**  | **done (src/)** | **done (src/)** | not started | Reproduced: 100% topology match to old, RTL-fixed. `data/book1.jsonl` |
 | 2    | done (cropping)  | **done (src/)** | **done w/ caveats (src/)** | not started | 45 graphs, 1763 nodes. No oracle — verified structurally. Stitching gap amplified (181 subtrees). See Book 2 result. |
@@ -117,7 +117,7 @@ Tailwind v4 + Biome + next-themes, d3 for layout. Mirrors the mckloset stack.
   stitching); parsed-book names are image crops (pending OCR). Old
   `web/index.html` kept as reference.
 
-### Cross-graph stitching — Stage 3.5 (`src/stitch.py`)
+### Cross-graph stitching — Stage 6 (`src/stitch.py`)
 
 William DID stitch Book 1 originally (by hand) — recovered `data/book1_merged.jsonl`
 (150 nodes, 1 root) from git history (commit `d544cd8`) and archived it as
@@ -329,7 +329,7 @@ Lower-value long tail; the systematic bug is fixed. Revisit if needed.
 1. Rewrite the pipeline into `src/` scripts, reproducing the Book 1 result, then applying the RTL fix.
 2. Verify rewritten Book 1 output against `data/book1_golden.jsonl`.
 3. Finish Book 2 (stages 2–3).
-4. OCR (stage 3.5).
+4. OCR (stage 7).
 
 ## Known bugs carried over from old pipeline (fix in rewrite)
 

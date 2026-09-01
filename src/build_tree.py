@@ -1,7 +1,7 @@
-"""Stage 3 of the pipeline: merged subtree-graph images -> tree JSONL + name crops.
+"""Stage 5 of the pipeline: merged subtree-graph images -> tree JSONL + name crops.
 
 Each image in ``books/{book}/graphs/{start}_{end}.png`` is one subtree's
-line-graph (see ``src/segment.py``). Every name sits on a rigid grid:
+line-graph (from ``src/merge_pages.py``, Stage 4). Every name sits on a rigid grid:
 generation is a vertical row, sibling position is a horizontal column, and a
 vertical line drops from each parent down to its children. This stage turns
 that geometry into structured :class:`src.model.Node` records:
@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class BookConfig:
-    """Per-book Stage-3 configuration.
+    """Per-book Stage-5 configuration.
 
     The parse geometry is otherwise structural, but a few thresholds are kept
     here so a book with different scan geometry can retune them without touching
@@ -632,7 +632,7 @@ def parse_graph(
 
     Args:
         a: The graph's binary ink grid.
-        config: The book's Stage-3 config.
+        config: The book's Stage-5 config.
         graph_stem: The graph's filename stem (e.g. ``"8_10"``), used to look up
             any :attr:`BookConfig.ignore_regions` to blank first. Omit when the
             graph has no configured ignore regions.
@@ -713,7 +713,7 @@ def build_tree(
     # Each entry: (node_id, graph binary grid, LineNode, provenance) so we can
     # crop names after every node has an ID and infer generations tree-wide.
     # ``provenance`` is "{graph}_{local_index}" (e.g. "13_16_54"), recording which
-    # Stage-2 graph and within-graph position a node came from -- invaluable for
+    # Stage-4 graph and within-graph position a node came from -- invaluable for
     # tracing a suspect node back to its source graph when debugging mis-merges.
     node_records: list[tuple[int, np.ndarray, LineNode, str]] = []
 

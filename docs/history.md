@@ -139,8 +139,37 @@ override → agreed detector → Hough fallback, then warp + write.
 (regenerable from PDFs + corners); the corner JSONs are tracked (the review layer is not
 reproducible).
 
-**Next step:** Stage 2 (crop + merge) for books 2/3/4, then Stage 3 (`build_tree`) on
-the v1 pipeline.
+**Next step:** crop + merge for books 2/3/4, then `build_tree` on the v1 pipeline.
+
+## Era 8 — biography-page detection + stage renumber (2026-09-01)
+
+Ran the crop stage for books 2/3/4. Book 2 crops + merges cleanly (44 graphs).
+Books 3 & 4 exposed a new problem: they **interleave biography pages** (dense
+name + birth/death prose) with the tree pages, and the crop stage assumed every
+page was a tree — the biographies would have merged into garbage graphs.
+
+**New stage: page classification** (`src/classify_pages.py`). A page is a
+biography iff it has exactly 4 full-width horizontal rules at *fixed* y-fractions
+≈ 0.19/0.40/0.60/0.80 (the bio cell-grid template) and no other full-width
+interior rule; the page's own top/bottom frame border is ignored. Getting here
+took several wrong turns — ink-density ratios and a naive "has a ruled grid"
+test both failed, because Book 2's **tree** pages share a 4-rule grid too (just
+at a different template, ~0.15/0.32/0.48/0.64). William's insight — bio rules are
+at *fixed* positions and span *edge to edge*, tree fan-out bars don't — was the
+key. Validated: Books 1 & 2 (all-tree) → **0** biographies; Book 3 → 51 graph /
+241 bio, Book 4 → 147 graph / 170 bio; **0** conflicts with the independent
+subtree-start detector. A frame-edge false-negative (the page border counted as a
+spurious 5th rule) was found via a full-book contact-sheet review and fixed.
+Writes `books/bookN/pages/page_types.json` (`graph_pages`/`bio_pages`, each bio's
+`follows_graph` for later tree↔biography association). The crop stage skips bio
+pages when the sidecar exists (no-op for books 1/2 — their output stays
+byte-identical, verified by hash).
+
+**Stage renumber (no more `.5`s).** With classification inserted the pipeline is
+now 7 whole-integer stages: 1 extract_pages, 2 classify_pages, 3 segment (crop),
+4 merge_pages, 5 build_tree, 6 stitch, 7 OCR. Renumbered the `src/` module
+docstrings and the live docs (CLAUDE.md, pipeline.md, progress.md, milestones.md,
+this file); dated design specs left as historical snapshots.
 
 ---
 
@@ -151,12 +180,12 @@ rebuild (new ADF scans, `src/`) is redoing every stage from clean scans.
 
 **v1 pipeline (current):**
 
-| Book | 1 pages | 2 crop+merge | 3 tree | 3.5 stitch | 3.6 OCR |
-|------|---------|--------------|--------|------------|---------|
-| 1 | done (17) | done (14 graphs) | not started | — | — |
-| 2 | done (134) | not started | — | — | — |
-| 3 | done (292) | not started | — | — | — |
-| 4 | done (317) | not started | — | — | — |
+| Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 tree | 6 stitch | 7 OCR |
+|------|-----------|------------|--------|---------|--------|----------|-------|
+| 1 | done (17) | — all-tree | done (17) | done (14 graphs) | not started | — | — |
+| 2 | done (134) | — all-tree | done (134) | done (44 graphs) | not started | — | — |
+| 3 | done (292) | done (51 graph / 241 bio) | done (51) | not started | — | — | — |
+| 4 | done (317) | done (147 graph / 170 bio) | done (147) | not started | — | — | — |
 
 **v0 pipeline (prior, archived):** books 1–2 reached tree + OCR (book 1 stitched by
 hand); superseded by the v1 rebuild above.

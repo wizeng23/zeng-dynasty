@@ -1,4 +1,4 @@
-"""Stage 3.6 -- OCR: turn name-crop images into Unicode characters.
+"""Stage 7 -- OCR: turn name-crop images into Unicode characters.
 
 Each parsed node carries a name-image crop (``books/bookN/names/{id}.png``) rather
 than a Unicode name until this stage runs. The characters are printed, single, and

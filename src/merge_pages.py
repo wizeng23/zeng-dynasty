@@ -1,14 +1,14 @@
-"""Stage 2.5 (v1 scans): per-page tree crops -> merged subtree-graph images.
+"""Stage 4 (v1 scans): per-page tree crops -> merged subtree-graph images.
 
-The previous step (:mod:`src.segment`) cropped each page down to its tree and
+The previous step (:mod:`src.segment`, Stage 3) cropped each page down to its tree and
 recorded which pages start a subtree (``crops/starts.json``). A subtree can
 span several consecutive pages; this step stitches each run of continuation pages
 onto the page that started the subtree, aligning the dangling lines at each seam,
 and writes one image per subtree to ``books/{book}/graphs/{start}_{end}.png``.
 
-Physically stitching at the seam lets the Stage-3 parser treat each subtree as
-one connected graph. The book reads right-to-left, so ``merge_graphs`` places the
-newer (left) page on the left of the accumulated graph.
+Physically stitching at the seam lets the Stage-5 parser (:mod:`src.build_tree`)
+treat each subtree as one connected graph. The book reads right-to-left, so
+``merge_graphs`` places the newer (left) page on the left of the accumulated graph.
 
 Pixel constants are scaled from the v0 pipeline by :data:`src.segment.SCALE`.
 (Orphan-bridging -- repairing generation bars broken across a page seam -- is a
@@ -188,34 +188,40 @@ def merge_pages(
 
     with open(os.path.join(crops_dir, "starts.json")) as fh:
         starts = json.load(fh)
-    is_start = [bool(starts[str(i)]) for i in range(config.num_pages)]
-    pages = [get_image(os.path.join(crops_dir, f"{i}.png"))
-             for i in range(config.num_pages)]
+    # Only the pages Stage 3 cropped appear in starts.json; biography pages (Books
+    # 3 & 4) were skipped and have no crop. Iterate the cropped pages in order --
+    # for the all-tree Books 1 & 2 this is simply 0..num_pages-1.
+    page_indices = sorted(int(k) for k in starts)
+    is_start = {i: bool(starts[str(i)]) for i in page_indices}
+    pages = {i: get_image(os.path.join(crops_dir, f"{i}.png")) for i in page_indices}
 
-    logger.info("Merging %s: %d page crops -> %s", book, config.num_pages, graphs_dir)
+    logger.info("Merging %s: %d page crops -> %s", book, len(page_indices), graphs_dir)
 
     written: list[str] = []
     frame = _s(100)
-    i = 0
-    while i < config.num_pages:
-        start_i = i
-        graph = pages[i]
-        i += 1
-        while i < config.num_pages and not is_start[i]:
-            logger.info("Merging page %d into subtree started at %d", i, start_i)
-            graph = merge_graphs(pages[i], graph)
-            i += 1
+    n = len(page_indices)
+    j = 0
+    while j < n:
+        start_i = page_indices[j]
+        graph = pages[start_i]
+        j += 1
+        while j < n and not is_start[page_indices[j]]:
+            cont = page_indices[j]
+            logger.info("Merging page %d into subtree started at %d", cont, start_i)
+            graph = merge_graphs(pages[cont], graph)
+            j += 1
 
+        end_i = page_indices[j - 1]
         graph = np.vstack([
             np.ones((frame, graph.shape[1])).astype(np.uint8),
             graph,
             np.ones((frame, graph.shape[1])).astype(np.uint8),
         ])
 
-        stem = f"{start_i}_{i - 1}"
+        stem = f"{start_i}_{end_i}"
         out_path = os.path.join(graphs_dir, f"{stem}.png")
         save_image(graph, out_path)
-        logger.info("Wrote subtree %d..%d -> %s", start_i, i - 1, out_path)
+        logger.info("Wrote subtree %d..%d -> %s", start_i, end_i, out_path)
         written.append(out_path)
 
     logger.info("Merged %d subtrees for %s", len(written), book)

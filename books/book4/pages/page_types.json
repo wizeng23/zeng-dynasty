@@ -1,0 +1,2666 @@
+{
+  "book": "book4",
+  "num_pages": 317,
+  "bio_rule_yfrac": [
+    0.193,
+    0.396,
+    0.597,
+    0.802
+  ],
+  "bio_rule_tol": 0.03,
+  "graph_pages": [
+    0,
+    1,
+    3,
+    5,
+    7,
+    14,
+    17,
+    19,
+    21,
+    23,
+    24,
+    27,
+    29,
+    31,
+    35,
+    37,
+    41,
+    42,
+    43,
+    45,
+    47,
+    49,
+    51,
+    53,
+    55,
+    57,
+    59,
+    61,
+    63,
+    65,
+    70,
+    73,
+    75,
+    78,
+    80,
+    82,
+    84,
+    86,
+    89,
+    91,
+    93,
+    95,
+    96,
+    98,
+    100,
+    101,
+    102,
+    104,
+    106,
+    108,
+    111,
+    113,
+    115,
+    117,
+    119,
+    121,
+    123,
+    125,
+    127,
+    129,
+    131,
+    134,
+    135,
+    136,
+    138,
+    140,
+    143,
+    145,
+    147,
+    149,
+    152,
+    154,
+    156,
+    158,
+    160,
+    161,
+    163,
+    165,
+    168,
+    170,
+    172,
+    175,
+    177,
+    179,
+    181,
+    182,
+    184,
+    187,
+    191,
+    194,
+    196,
+    199,
+    201,
+    202,
+    203,
+    205,
+    207,
+    210,
+    211,
+    216,
+    218,
+    220,
+    222,
+    224,
+    227,
+    229,
+    231,
+    233,
+    235,
+    237,
+    239,
+    241,
+    244,
+    246,
+    248,
+    249,
+    251,
+    253,
+    255,
+    258,
+    260,
+    262,
+    265,
+    267,
+    269,
+    271,
+    273,
+    276,
+    278,
+    280,
+    282,
+    284,
+    286,
+    288,
+    290,
+    292,
+    294,
+    296,
+    298,
+    300,
+    302,
+    304,
+    306,
+    308,
+    310,
+    312,
+    315
+  ],
+  "bio_pages": [
+    2,
+    4,
+    6,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15,
+    16,
+    18,
+    20,
+    22,
+    25,
+    26,
+    28,
+    30,
+    32,
+    33,
+    34,
+    36,
+    38,
+    39,
+    40,
+    44,
+    46,
+    48,
+    50,
+    52,
+    54,
+    56,
+    58,
+    60,
+    62,
+    64,
+    66,
+    67,
+    68,
+    69,
+    71,
+    72,
+    74,
+    76,
+    77,
+    79,
+    81,
+    83,
+    85,
+    87,
+    88,
+    90,
+    92,
+    94,
+    97,
+    99,
+    103,
+    105,
+    107,
+    109,
+    110,
+    112,
+    114,
+    116,
+    118,
+    120,
+    122,
+    124,
+    126,
+    128,
+    130,
+    132,
+    133,
+    137,
+    139,
+    141,
+    142,
+    144,
+    146,
+    148,
+    150,
+    151,
+    153,
+    155,
+    157,
+    159,
+    162,
+    164,
+    166,
+    167,
+    169,
+    171,
+    173,
+    174,
+    176,
+    178,
+    180,
+    183,
+    185,
+    186,
+    188,
+    189,
+    190,
+    192,
+    193,
+    195,
+    197,
+    198,
+    200,
+    204,
+    206,
+    208,
+    209,
+    212,
+    213,
+    214,
+    215,
+    217,
+    219,
+    221,
+    223,
+    225,
+    226,
+    228,
+    230,
+    232,
+    234,
+    236,
+    238,
+    240,
+    242,
+    243,
+    245,
+    247,
+    250,
+    252,
+    254,
+    256,
+    257,
+    259,
+    261,
+    263,
+    264,
+    266,
+    268,
+    270,
+    272,
+    274,
+    275,
+    277,
+    279,
+    281,
+    283,
+    285,
+    287,
+    289,
+    291,
+    293,
+    295,
+    297,
+    299,
+    301,
+    303,
+    305,
+    307,
+    309,
+    311,
+    313,
+    314,
+    316
+  ],
+  "pages": {
+    "0": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "1": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "2": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.604,
+        0.806
+      ],
+      "follows_graph": 1
+    },
+    "3": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "4": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.2,
+        0.404,
+        0.603,
+        0.805
+      ],
+      "follows_graph": 3
+    },
+    "5": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "6": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 5
+    },
+    "7": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.144
+      ]
+    },
+    "8": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 7
+    },
+    "9": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 7
+    },
+    "10": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.597,
+        0.801
+      ],
+      "follows_graph": 7
+    },
+    "11": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 7
+    },
+    "12": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 7
+    },
+    "13": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.596,
+        0.803
+      ],
+      "follows_graph": 7
+    },
+    "14": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "15": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.394,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 14
+    },
+    "16": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.197,
+        0.401,
+        0.6,
+        0.805
+      ],
+      "follows_graph": 14
+    },
+    "17": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "18": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.198,
+        0.402,
+        0.601,
+        0.804
+      ],
+      "follows_graph": 17
+    },
+    "19": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "20": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.2,
+        0.403,
+        0.602,
+        0.806
+      ],
+      "follows_graph": 19
+    },
+    "21": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "22": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 21
+    },
+    "23": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "24": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.599
+      ]
+    },
+    "25": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 24
+    },
+    "26": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.397,
+        0.597,
+        0.801
+      ],
+      "follows_graph": 24
+    },
+    "27": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "28": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.596,
+        0.802
+      ],
+      "follows_graph": 27
+    },
+    "29": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "30": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 29
+    },
+    "31": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.146
+      ]
+    },
+    "32": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 31
+    },
+    "33": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.598,
+        0.802
+      ],
+      "follows_graph": 31
+    },
+    "34": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.6,
+        0.805
+      ],
+      "follows_graph": 31
+    },
+    "35": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.4,
+        0.6,
+        0.804
+      ]
+    },
+    "36": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 35
+    },
+    "37": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "38": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 37
+    },
+    "39": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 37
+    },
+    "40": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.802
+      ],
+      "follows_graph": 37
+    },
+    "41": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.805
+      ]
+    },
+    "42": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "43": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.804
+      ]
+    },
+    "44": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 43
+    },
+    "45": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "46": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.198,
+        0.401,
+        0.601,
+        0.805
+      ],
+      "follows_graph": 45
+    },
+    "47": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "48": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.6,
+        0.805
+      ],
+      "follows_graph": 47
+    },
+    "49": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "50": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.6,
+        0.805
+      ],
+      "follows_graph": 49
+    },
+    "51": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "52": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 51
+    },
+    "53": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "54": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 53
+    },
+    "55": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "56": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.598,
+        0.801
+      ],
+      "follows_graph": 55
+    },
+    "57": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "58": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 57
+    },
+    "59": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "60": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 59
+    },
+    "61": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "62": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.201,
+        0.403,
+        0.602,
+        0.805
+      ],
+      "follows_graph": 61
+    },
+    "63": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "64": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.199,
+        0.398,
+        0.598,
+        0.802
+      ],
+      "follows_graph": 63
+    },
+    "65": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "66": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.398,
+        0.6,
+        0.803
+      ],
+      "follows_graph": 65
+    },
+    "67": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.596,
+        0.803
+      ],
+      "follows_graph": 65
+    },
+    "68": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.6,
+        0.805
+      ],
+      "follows_graph": 65
+    },
+    "69": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.601,
+        0.805
+      ],
+      "follows_graph": 65
+    },
+    "70": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "71": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 70
+    },
+    "72": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 70
+    },
+    "73": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "74": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 73
+    },
+    "75": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "76": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 75
+    },
+    "77": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 75
+    },
+    "78": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "79": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 78
+    },
+    "80": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "81": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.801
+      ],
+      "follows_graph": 80
+    },
+    "82": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "83": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 82
+    },
+    "84": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "85": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 84
+    },
+    "86": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.194,
+        0.802
+      ]
+    },
+    "87": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 86
+    },
+    "88": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.6,
+        0.803
+      ],
+      "follows_graph": 86
+    },
+    "89": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "90": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.599,
+        0.805
+      ],
+      "follows_graph": 89
+    },
+    "91": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "92": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.396,
+        0.598,
+        0.801
+      ],
+      "follows_graph": 91
+    },
+    "93": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "94": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.6,
+        0.805
+      ],
+      "follows_graph": 93
+    },
+    "95": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.192,
+        0.394
+      ]
+    },
+    "96": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "97": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 96
+    },
+    "98": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "99": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 98
+    },
+    "100": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "101": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.598,
+        0.801
+      ]
+    },
+    "102": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "103": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.804
+      ],
+      "follows_graph": 102
+    },
+    "104": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "105": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 104
+    },
+    "106": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "107": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.397,
+        0.598,
+        0.802
+      ],
+      "follows_graph": 106
+    },
+    "108": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "109": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.596,
+        0.802
+      ],
+      "follows_graph": 108
+    },
+    "110": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 108
+    },
+    "111": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "112": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.394,
+        0.596,
+        0.801
+      ],
+      "follows_graph": 111
+    },
+    "113": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "114": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 113
+    },
+    "115": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "116": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 115
+    },
+    "117": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "118": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 117
+    },
+    "119": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "120": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.601,
+        0.804
+      ],
+      "follows_graph": 119
+    },
+    "121": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "122": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 121
+    },
+    "123": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "124": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 123
+    },
+    "125": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "126": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 125
+    },
+    "127": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "128": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.4,
+        0.602,
+        0.805
+      ],
+      "follows_graph": 127
+    },
+    "129": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "130": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 129
+    },
+    "131": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "132": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 131
+    },
+    "133": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 131
+    },
+    "134": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "135": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.599,
+        0.803
+      ]
+    },
+    "136": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "137": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.395,
+        0.596,
+        0.801
+      ],
+      "follows_graph": 136
+    },
+    "138": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "139": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 138
+    },
+    "140": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "141": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 140
+    },
+    "142": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.602,
+        0.804
+      ],
+      "follows_graph": 140
+    },
+    "143": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "144": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.6,
+        0.803
+      ],
+      "follows_graph": 143
+    },
+    "145": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "146": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 145
+    },
+    "147": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "148": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.598,
+        0.802
+      ],
+      "follows_graph": 147
+    },
+    "149": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "150": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.604,
+        0.806
+      ],
+      "follows_graph": 149
+    },
+    "151": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 149
+    },
+    "152": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "153": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 152
+    },
+    "154": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "155": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 154
+    },
+    "156": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "157": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 156
+    },
+    "158": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "159": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 158
+    },
+    "160": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "161": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "162": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.405,
+        0.603,
+        0.805
+      ],
+      "follows_graph": 161
+    },
+    "163": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "164": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.203,
+        0.406,
+        0.607,
+        0.811
+      ],
+      "follows_graph": 163
+    },
+    "165": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "166": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.197,
+        0.4,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 165
+    },
+    "167": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 165
+    },
+    "168": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "169": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.395,
+        0.595,
+        0.801
+      ],
+      "follows_graph": 168
+    },
+    "170": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "171": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 170
+    },
+    "172": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "173": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 172
+    },
+    "174": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.197,
+        0.4,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 172
+    },
+    "175": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "176": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.603,
+        0.805
+      ],
+      "follows_graph": 175
+    },
+    "177": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "178": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.599,
+        0.802
+      ],
+      "follows_graph": 177
+    },
+    "179": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "180": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 179
+    },
+    "181": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "182": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.399,
+        0.599,
+        0.802
+      ]
+    },
+    "183": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 182
+    },
+    "184": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "185": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 184
+    },
+    "186": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.603,
+        0.805
+      ],
+      "follows_graph": 184
+    },
+    "187": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "188": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.603,
+        0.805
+      ],
+      "follows_graph": 187
+    },
+    "189": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.397,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 187
+    },
+    "190": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 187
+    },
+    "191": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "192": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.203,
+        0.406,
+        0.605,
+        0.806
+      ],
+      "follows_graph": 191
+    },
+    "193": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 191
+    },
+    "194": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "195": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.4,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 194
+    },
+    "196": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "197": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.191,
+        0.394,
+        0.596,
+        0.802
+      ],
+      "follows_graph": 196
+    },
+    "198": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 196
+    },
+    "199": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "200": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.6,
+        0.804
+      ],
+      "follows_graph": 199
+    },
+    "201": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "202": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "203": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "204": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.199,
+        0.402,
+        0.601,
+        0.805
+      ],
+      "follows_graph": 203
+    },
+    "205": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "206": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.198,
+        0.4,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 205
+    },
+    "207": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "208": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.197,
+        0.401,
+        0.601,
+        0.804
+      ],
+      "follows_graph": 207
+    },
+    "209": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 207
+    },
+    "210": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.4,
+        0.601,
+        0.805
+      ]
+    },
+    "211": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "212": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.601,
+        0.804
+      ],
+      "follows_graph": 211
+    },
+    "213": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 211
+    },
+    "214": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.399,
+        0.598,
+        0.801
+      ],
+      "follows_graph": 211
+    },
+    "215": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 211
+    },
+    "216": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "217": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 216
+    },
+    "218": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "219": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 218
+    },
+    "220": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.201
+      ]
+    },
+    "221": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 220
+    },
+    "222": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "223": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 222
+    },
+    "224": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "225": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 224
+    },
+    "226": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.2,
+        0.403,
+        0.602,
+        0.804
+      ],
+      "follows_graph": 224
+    },
+    "227": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "228": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.201,
+        0.403,
+        0.601,
+        0.804
+      ],
+      "follows_graph": 227
+    },
+    "229": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "230": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.201,
+        0.401,
+        0.601,
+        0.804
+      ],
+      "follows_graph": 229
+    },
+    "231": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "232": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 231
+    },
+    "233": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "234": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.604,
+        0.806
+      ],
+      "follows_graph": 233
+    },
+    "235": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "236": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.598,
+        0.802
+      ],
+      "follows_graph": 235
+    },
+    "237": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "238": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.197,
+        0.4,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 237
+    },
+    "239": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "240": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.2,
+        0.4,
+        0.599,
+        0.802
+      ],
+      "follows_graph": 239
+    },
+    "241": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "242": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.398,
+        0.598,
+        0.801
+      ],
+      "follows_graph": 241
+    },
+    "243": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 241
+    },
+    "244": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "245": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.396,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 244
+    },
+    "246": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "247": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 246
+    },
+    "248": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "249": {
+      "type": "graph",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.803
+      ]
+    },
+    "250": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.202,
+        0.404,
+        0.603,
+        0.805
+      ],
+      "follows_graph": 249
+    },
+    "251": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "252": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.203,
+        0.405,
+        0.604,
+        0.806
+      ],
+      "follows_graph": 251
+    },
+    "253": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "254": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.399,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 253
+    },
+    "255": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "256": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.398,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 255
+    },
+    "257": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 255
+    },
+    "258": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "259": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.398,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 258
+    },
+    "260": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "261": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 260
+    },
+    "262": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "263": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 262
+    },
+    "264": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.801
+      ],
+      "follows_graph": 262
+    },
+    "265": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "266": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.201,
+        0.402,
+        0.6,
+        0.803
+      ],
+      "follows_graph": 265
+    },
+    "267": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "268": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.195,
+        0.399,
+        0.6,
+        0.802
+      ],
+      "follows_graph": 267
+    },
+    "269": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "270": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 269
+    },
+    "271": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "272": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.197,
+        0.4,
+        0.602,
+        0.805
+      ],
+      "follows_graph": 271
+    },
+    "273": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "274": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.399,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 273
+    },
+    "275": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.803
+      ],
+      "follows_graph": 273
+    },
+    "276": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "277": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 276
+    },
+    "278": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "279": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 278
+    },
+    "280": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "281": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 280
+    },
+    "282": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "283": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.401,
+        0.602,
+        0.805
+      ],
+      "follows_graph": 282
+    },
+    "284": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "285": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.196,
+        0.4,
+        0.601,
+        0.805
+      ],
+      "follows_graph": 284
+    },
+    "286": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "287": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 286
+    },
+    "288": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "289": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 288
+    },
+    "290": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "291": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 290
+    },
+    "292": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "293": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 292
+    },
+    "294": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "295": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 294
+    },
+    "296": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "297": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.194,
+        0.397,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 296
+    },
+    "298": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "299": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.599,
+        0.804
+      ],
+      "follows_graph": 298
+    },
+    "300": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "301": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.396,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 300
+    },
+    "302": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "303": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 302
+    },
+    "304": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "305": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.395,
+        0.598,
+        0.802
+      ],
+      "follows_graph": 304
+    },
+    "306": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "307": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.804
+      ],
+      "follows_graph": 306
+    },
+    "308": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "309": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.598,
+        0.803
+      ],
+      "follows_graph": 308
+    },
+    "310": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "311": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.193,
+        0.397,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 310
+    },
+    "312": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "313": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.395,
+        0.597,
+        0.803
+      ],
+      "follows_graph": 312
+    },
+    "314": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.192,
+        0.396,
+        0.597,
+        0.802
+      ],
+      "follows_graph": 312
+    },
+    "315": {
+      "type": "graph",
+      "rule_yfrac": []
+    },
+    "316": {
+      "type": "bio",
+      "rule_yfrac": [
+        0.203,
+        0.404,
+        0.602,
+        0.805
+      ],
+      "follows_graph": 315
+    }
+  }
+}

@@ -43,17 +43,20 @@ Two scan generations exist per book, namespaced by folder (no filename suffixes)
 `books/bookN/gray/bookN_200dpi.pdf` (Book 1) is an early 200dpi ADF test, kept
 for reference.
 
-## The pipeline (4 stages)
+## The pipeline (7 stages)
 
-Scans → structured tree. See `docs/pipeline.md` for detail.
+Scans → structured tree. Whole-integer stage numbers (no `.5`s). See
+`docs/pipeline.md` for detail.
 
-1. **Spreads → pages** — split + deskew two-page scans (`books/bookN/original/`) into single pages.
-2. **Pages → graph images** — detect subtree boundaries, stitch line-graphs across pages → `books/bookN/graphs/{start}_{end}.png`.
-3. **Graph images → tree** — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/names/`. Includes **orphan-bridging** (`src.segment.bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.
-3.5. **Stitching** (`src/stitch.py`) — fold each graph's duplicate root into its canonical leaf → one connected lineage. Book 1 done (hand `BOOK_MERGES`); Book 2 auto-matcher TODO.
-4. **OCR** (Stage 3.6, DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/qa/ocr.py`.
+1. **extract_pages** — split + deskew scans into single upright pages → `books/bookN/pages/`.
+2. **classify_pages** (`src/classify_pages.py`) — tag each page tree-graph vs **biography**. Books 3 & 4 interleave biography-text pages; only tree pages go on the graph path. Writes `books/bookN/pages/page_types.json` (`graph_pages`/`bio_pages`, each bio's `follows_graph`). Bio = exactly 4 full-width rules at fixed y-fracs ≈ 0.19/0.40/0.60/0.80. Books 1 & 2 (all-tree) → no sidecar, unchanged.
+3. **segment** (`src/segment.py`) — crop each tree page to its line-graph → `books/bookN/crops/` + `starts.json` (biographies skipped via the sidecar).
+4. **merge_pages** (`src/merge_pages.py`) — stitch a subtree's pages into one graph image → `books/bookN/graphs/{start}_{end}.png`.
+5. **build_tree** (`src/build_tree.py`) — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/names/`. Includes **orphan-bridging** (`src.segment.bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.
+6. **Stitching** (`src/stitch.py`) — fold each graph's duplicate root into its canonical leaf → one connected lineage. Book 1 done (hand `BOOK_MERGES`); Book 2 auto-matcher TODO.
+7. **OCR** (DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/qa/ocr.py`.
 
-Stage 4 (spreadsheet path): Book 1 was also hand-typed into a Google Sheet →
+Spreadsheet path (verification): Book 1 was also hand-typed into a Google Sheet →
 `data/zeng_google_sheet.csv` → `data/book1_golden.jsonl`. This **golden** data
 is the verified ground truth used to check the algorithmic output.
 

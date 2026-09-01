@@ -1,6 +1,6 @@
-"""Stage 2 (v1 scans): frame-cropped pages -> per-page tree crops.
+"""Stage 3 (v1 scans): frame-cropped pages -> per-page tree crops.
 
-Restarted from the v0 (glass-scan) Stage 2, with every pixel constant scaled up
+Restarted from the v0 (glass-scan) crop stage, with every pixel constant scaled up
 for the v1 native resolution. v0 ran on a fixed 1300x1950 normalized canvas; the
 v1 pages are ~3789x5740 (see ``src.extract_pages``), so pixel thresholds are
 scaled by :data:`SCALE` (~2.9x).
@@ -69,7 +69,7 @@ PAGE_WIDTH = _s(1300)
 
 @dataclasses.dataclass(frozen=True)
 class BookConfig:
-    """Per-book Stage-2 configuration (pixel bounds are v1-native, scaled from v0).
+    """Per-book Stage-3 configuration (pixel bounds are v1-native, scaled from v0).
 
     The label geometry is structural: the label is one character column wide,
     sits in the rightmost sliver of the page, and does not run to the very edge
@@ -93,6 +93,8 @@ class BookConfig:
 BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(num_pages=17),
     "book2": BookConfig(num_pages=134),
+    "book3": BookConfig(num_pages=292),
+    "book4": BookConfig(num_pages=317),
 }
 
 
@@ -221,6 +223,11 @@ def segment(
 
     Merging the crops of a multi-page subtree into one graph is done separately by
     :mod:`src.merge_pages`, which reads ``starts.json``.
+
+    Biography pages (Books 3 & 4 interleave them; see :mod:`src.classify_pages`,
+    the preceding Stage 2) are skipped -- they are not tree pages, so they get no
+    crop and no ``starts.json`` entry. If no ``page_types.json`` sidecar exists
+    (Books 1 & 2, which are entirely tree pages), every page is processed as before.
     """
     if config is None:
         if book not in BOOK_CONFIGS:
@@ -229,16 +236,22 @@ def segment(
             )
         config = BOOK_CONFIGS[book]
 
+    # Lazy import avoids a circular dependency (classify_pages imports from here).
+    from src.classify_pages import load_bio_pages
+    bio_pages = load_bio_pages(book, books_dir=books_dir, pages_dir=pages_dir)
+
     in_dir = os.path.join(books_dir, book, pages_dir)
     crops_dir = os.path.join(books_dir, book, crops_dir_name)
     os.makedirs(crops_dir, exist_ok=True)
 
-    logger.info("Cropping %s: %d pages in %s -> %s",
-                book, config.num_pages, in_dir, crops_dir)
+    logger.info("Cropping %s: %d pages in %s -> %s (%d biography pages skipped)",
+                book, config.num_pages, in_dir, crops_dir, len(bio_pages))
 
     written: list[str] = []
     starts: dict[str, bool] = {}
     for i in range(config.num_pages):
+        if i in bio_pages:
+            continue
         filepath = os.path.join(in_dir, f"{i}.png")
         a = get_image(filepath)
         a = trim_borders(a)
