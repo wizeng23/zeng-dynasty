@@ -218,7 +218,30 @@ scratchpad/
 # output (node_modules, .next, out, public/data, public/names).
 !/web-app/**
 
-# QA overlay output (regenerate: python -m scripts.qa_overlay --book bookN)
+# QA overlay output (regenerate: python -m scripts.qa.overlay --book bookN)
 books/*/qa/
+books/*/qa_*/
 worklog/
 data/*_page_ranks.json
+
+# v1 pipeline image output — regenerable from the PDFs + reviewed corners, so
+# kept out of the (public) repo. The tiny corner JSONs below ARE tracked (they
+# hold the human review layer, which is not reproducible).
+books/*/pages_bw/*.png
+books/*/pages_gray/
+books/*/crops_bw/*.png
+books/*/crops_gray/
+books/*/graphs_bw/
+books/*/graphs_gray/
+!books/*/pages_bw/corners.json
+!books/*/pages_bw/corners_review.json
+!books/*/crops_bw/starts.json
+
+# per-stage QA artifacts / scratch data (regenerable)
+data/artifacts/
+
+# v1 scan PDFs are large; keep them out of the public repo (William holds them).
+# (The small v0 glass-scan PDFs bookN_v0.pdf are already tracked and stay.)
+books/*/book?.pdf
+books/*/book?_gray.pdf
+books/*/book?_gray_200dpi.pdf

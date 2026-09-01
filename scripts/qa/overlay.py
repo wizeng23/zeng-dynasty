@@ -17,7 +17,7 @@ edge-parsing, AND page assembly in one place.
 
 Usage::
 
-    python -m scripts.qa_overlay --book book1
+    python -m scripts.qa.overlay --book book1
     # -> books/book1/qa/*.png + books/book1/qa/index.html
 """
 

@@ -1,382 +1,531 @@
-"""Stage 1 of the pipeline: two-page spreads -> deskewed single pages.
+"""Stage 1 (v1 scans): ADF single-page PDF -> single upright pages.
 
-Each scan in ``books/bookN/original/*.png`` is a camera photo of an open book,
-so it contains a left page and a right page side by side. This stage finds the
-border corners of each half, applies a perspective transform to deskew and
-normalize it onto a fixed canvas, and writes the single pages to
-``books/bookN/pages/{i}.png``.
+The v1 scans are automatic-document-feeder captures: one book page per PDF page,
+already flat (no perspective distortion) and already upright once the page's
+``/Rotate`` flag is honored. This is unlike the v1 glass-top scans, which were
+two-page spreads needing corner-detection + perspective deskew. So this stage is
+simple: render each content page at full native resolution, binarize, crop away
+the blank scanner margin, and write it out. **No downsizing** -- the whole point
+of the 600dpi scan is to keep every pixel for line detection and OCR. Downstream
+v1 stages carry pixel constants sized for this native resolution.
 
-The book reads right-to-left, so within a spread the *right* page is emitted
-first and the *left* page second.
+Two renditions of each book exist; both flow through here identically, differing
+only in the source PDF and threshold:
 
-Per-book quirks (which spreads to read, how to number the output, whether to
-skip a half-page at the very start) are captured in :data:`BOOK_CONFIGS` rather
-than baked into the algorithm.
+* grayscale (``book1.pdf``) -- 600dpi continuous-tone; binarized at
+  :data:`GRAY_THRESHOLD`. The threshold is chosen so every printed stroke (which
+  scans as near-black) survives, while lighter hand-pen margin marks (which scan
+  as mid-gray) drop out. Preserving true ink is the hard constraint; dropping
+  pen marks is a welcome side effect, never pursued at the cost of real pixels.
+* bitonal (``book1_bw.pdf``) -- the scanner already thresholded to black/white;
+  rendering upsamples it so a few edge grays appear, and the same
+  :data:`GRAY_THRESHOLD` re-binarizes it near-losslessly.
+
+Output: ``books/{book}/{pages_dir}/{i}.png`` as an 8-bit binary PNG (0 == ink,
+255 == background), page 0 first.
 
 CLI:
-    python -m src.extract_pages --book book1
+    python -m src.extract_pages --book book1 --pdf books/book1/book1.pdf \
+        --first-page 6 --last-page 23 --pages-dir pages_gray
 """
 
 from __future__ import annotations
 
 import argparse
-import collections
-import dataclasses
+import json
 import logging
 import os
 
 import numpy as np
-
-from src.imaging import get_image, pad_image, save_image  # noqa: F401  (pad_image re-exported for callers)
+import pymupdf
+from PIL import Image
 
 try:
     import cv2
 except ImportError as exc:  # pragma: no cover - dependency guard
-    raise ImportError("extract_pages requires opencv-python (cv2)") from exc
+    raise ImportError("src.extract_pages requires opencv-python (cv2)") from exc
 
+from src.imaging import save_image
 
 logger = logging.getLogger(__name__)
 
-# Normalized output-page dimensions. Every scan is the same book on the same
-# scanner, so all pages map onto this fixed canvas (see the design spec).
-PAGE_WIDTH = 1300
-PAGE_HEIGHT = 1950
+# Grayscale binarization cutoff (0..255): pixels this dark or darker are ink.
+# 128 keeps all printed strokes (they scan < 128) while dropping lighter pen
+# marks (they scan > 128). See the threshold experiment in the design notes.
+GRAY_THRESHOLD = 128
 
-# Number of consecutive matching border pixels required before we accept a row
-# position as "inside the page border" when scanning inward for the seed pixel.
-_BORDER_RUN = 4
-
-
-@dataclasses.dataclass(frozen=True)
-class BookConfig:
-    """Per-book Stage-1 configuration.
-
-    Attributes:
-        first_spread: Index of the first ``original/{i}.png`` spread to process.
-        last_spread: One past the last spread index (exclusive), i.e. spreads
-            ``range(first_spread, last_spread)`` are processed.
-        start_index: Page number assigned to the very first emitted page. Book 1
-            numbers its first (right) page ``-1`` so that the first real page
-            lands on ``0``; Book 2 starts at ``0``.
-        skip_right_on_first_spread: If True, the right half of the first
-            processed spread is skipped entirely (only its left page is
-            emitted). Book 2's page-0 spread has no usable right page.
-    """
-
-    first_spread: int
-    last_spread: int
-    start_index: int
-    skip_right_on_first_spread: bool
-
-
-# Faithful to the old notebook: Book 1 read spreads 3..11 and numbered pages
-# from -1; Book 2 read spreads 0..67 and skipped the right half of spread 0.
-BOOK_CONFIGS: dict[str, BookConfig] = {
-    "book1": BookConfig(
-        first_spread=3,
-        last_spread=12,
-        start_index=-1,
-        skip_right_on_first_spread=False,
-    ),
-    "book2": BookConfig(
-        first_spread=0,
-        last_spread=68,
-        start_index=0,
-        skip_right_on_first_spread=True,
-    ),
+# Content page range per book, as inclusive 0-based PDF page indices. Everything
+# outside is cover / front matter / blank trailing pages -- ignored. (William's
+# ranges, given 1-indexed, converted here: book1 7-23, book2 3-136, book3 7-298,
+# book4 14-330.) Used when --first-page/--last-page are not passed explicitly.
+BOOK_PAGE_RANGES: dict[str, tuple[int, int]] = {
+    "book1": (6, 22),
+    "book2": (2, 135),
+    "book3": (6, 297),
+    "book4": (13, 329),
 }
 
+# Render scale: the PDF page is ~595x842 pt; x8.2 lands near the native embedded
+# resolution (~4882x6904) without upsampling past it.
+RENDER_SCALE = 8.2
 
-def remove_small_islands(orig_a: np.ndarray, max_size: int = 10) -> np.ndarray:
-    """Remove tiny ink specks (scanning noise) from a binary grid.
+# The printed page frame is a closed rectangle whose fitted size must cover at
+# least this fraction of the page in each dimension; a smaller detection means
+# the flood-fill leaked or caught the wrong ink, so that seed is rejected.
+FRAME_MIN_COVER = 0.60
 
-    Every connected component of ink pixels no larger than ``max_size`` is
-    erased (set to background). Uses 4-connectivity BFS.
+# The four detected corners must form a near-rectangle: each side's angle may
+# deviate from horizontal/vertical by at most this many degrees. A leaked fill
+# yields a slanted "side" (e.g. a diagonal cutting across the page) that this
+# rejects even when the bounding box happens to be large enough.
+FRAME_MAX_SIDE_SKEW_DEG = 3.0
 
-    Args:
-        orig_a: Binary ink grid (0 == ink, 1 == background).
-        max_size: Components with this many pixels or fewer are removed.
+# Morphological-open kernel (px) applied to a copy of the ink before frame
+# detection. It erases sub-kernel-thickness strokes -- speckle and the thin,
+# faint scanning whiskers that trail off a frame corner -- while the thick frame
+# rules survive untouched. Without it a stray whisker becomes a false corner and
+# skews the whole warp. Detection-only: the warp still uses the original ink.
+FRAME_OPEN_KERNEL = 5
 
-    Returns:
-        A new grid with small islands erased.
-    """
-    a = orig_a.copy()  # avoid modifying original
-    rows, cols = a.shape
-    visited = np.zeros_like(a, dtype=bool)
+# Gap-bridging close applied to the detection copy after the open. Some scans
+# (books 3-4) print the frame with small breaks -- a faint or missing stretch of
+# a rule -- so a single flood-fill cannot trace the whole box. A *directional*
+# close bridges gaps only *along* each rule: a horizontal close reconnects the
+# top/bottom rules, a vertical one the sides. Being directional, it cannot fuse
+# an interior name to the frame across the margin (that would need bridging
+# perpendicular to a rule). Detection-only: corners feed the warp, which reads
+# the original ink, so bridged pixels never reach the output. The length is how
+# wide a gap to jump; the thickness (3) keeps it hugging the rule.
+FRAME_CLOSE_LEN = 15
 
-    directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
-    for r in range(rows):
-        for c in range(cols):
-            if a[r, c] == 0 and not visited[r, c]:
-                # BFS over this ink component.
-                queue = collections.deque([(r, c)])
-                visited[r, c] = True
-                coords = [(r, c)]
-
-                while queue:
-                    cr, cc = queue.popleft()
-                    for dr, dc in directions:
-                        nr, nc = cr + dr, cc + dc
-                        if (
-                            0 <= nr < rows
-                            and 0 <= nc < cols
-                            and a[nr, nc] == 0
-                            and not visited[nr, nc]
-                        ):
-                            visited[nr, nc] = True
-                            queue.append((nr, nc))
-                            coords.append((nr, nc))
-
-                if len(coords) <= max_size:
-                    for rr, cc in coords:
-                        a[rr, cc] = 1
-
-    return a
+# Frame detection seeds, one per side: walk inward from the middle of each edge
+# to the first ink pixel (the frame rule), then flood-fill from there. Tried in
+# order; the first seed whose fill passes the frame heuristic wins. Trying all
+# four survives a frame broken on any one side -- the fill from an intact side
+# still traces the rest of the box. Each entry is (edge_name, axis, direction).
+_FRAME_SEED_EDGES = ("top", "bottom", "left", "right")
 
 
-def get_corners(
-    a: np.ndarray, start_i: int, start_j: int
-) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
-    """Find the four corners of a page by flood-filling its border region.
-
-    Flood-fills the connected background region reachable from
-    ``(start_i, start_j)`` (a pixel just inside the page border) and tracks the
-    extreme pixels in each diagonal direction to recover the page's corners.
+def _seed_from_edge(ink: np.ndarray, edge: str) -> tuple[int, int] | None:
+    """Walk inward from the middle of ``edge`` to the first ink pixel.
 
     Args:
-        a: Binary ink grid.
-        start_i: Seed row, inside the target page.
-        start_j: Seed column, inside the target page.
+        ink: Binary grid, 1 == ink.
+        edge: One of ``"top"``, ``"bottom"``, ``"left"``, ``"right"``.
 
     Returns:
-        The corners as ``(top_left, top_right, bottom_right, bottom_left)``,
-        each a ``(row, col)`` tuple.
+        The ``(x, y)`` seed pixel on the frame rule, or ``None`` if the whole
+        scan line is background (no frame rule on that side).
     """
-    rows, cols = a.shape
-    queue: collections.deque[tuple[int, int]] = collections.deque()
-    queue.append((start_i, start_j))
+    h, w = ink.shape
+    if edge in ("top", "bottom"):
+        col = w // 2
+        rows = range(h) if edge == "top" else range(h - 1, -1, -1)
+        for row in rows:
+            if ink[row, col]:
+                return (col, row)
+    else:
+        row = h // 2
+        cols = range(w) if edge == "left" else range(w - 1, -1, -1)
+        for col in cols:
+            if ink[row, col]:
+                return (col, row)
+    return None
 
-    visited = np.zeros([rows, cols])
 
-    tl = tr = br = bl = (start_i, start_j)
+def _fit_edge(frame: np.ndarray, side: str) -> tuple[float, float]:
+    """Robustly fit the line of one frame side to its outermost pixels.
 
-    while queue:
-        i, j = queue.popleft()
-        if i < 0 or i >= rows or j < 0 or j >= cols:
-            continue
-        if visited[i][j]:
-            continue
-        if a[i][j]:
-            continue
-        visited[i][j] = 1
+    For each scan line perpendicular to ``side``, take the frame's *outermost*
+    pixel (the leftmost for ``"left"``, topmost for ``"top"``, etc.). Those
+    extreme pixels trace the outer frame rule; a Huber line fit through them
+    recovers the rule even when it is broken on part of its length (the missing
+    rows are simply a minority the robust fit ignores) or when the flood-fill
+    wandered inward through touching text (those inner pixels are never the
+    outermost, so they do not enter the fit).
 
-        if -i - j > -tl[0] - tl[1]:
-            tl = i, j
-        if -i + j > -tr[0] + tr[1]:
-            tr = i, j
-        if i - j > bl[0] - bl[1]:
-            bl = i, j
-        if i + j > br[0] + br[1]:
-            br = i, j
+    Args:
+        frame: Boolean grid, True where the flood-filled frame is.
+        side: One of ``"top"``, ``"bottom"``, ``"left"``, ``"right"``.
 
-        queue.append((i + 1, j))
-        queue.append((i - 1, j))
-        queue.append((i, j + 1))
-        queue.append((i, j - 1))
+    Returns:
+        ``(m, b)`` for the fitted line. For left/right (near-vertical) it is
+        ``x = m*y + b``; for top/bottom (near-horizontal) it is ``y = m*x + b``.
+    """
+    h, w = frame.shape
+    ys, xs = np.where(frame)
+    if side in ("left", "right"):
+        # Outermost x per row.
+        ext = np.full(h, -1 if side == "right" else w, dtype=np.int32)
+        if side == "right":
+            np.maximum.at(ext, ys, xs)
+        else:
+            np.minimum.at(ext, ys, xs)
+        rows = np.where((ext >= 0) & (ext < w))[0]
+        pts = np.column_stack([rows, ext[rows]]).astype(np.float32)  # (y, x)
+        vy, vx, y0, x0 = cv2.fitLine(pts, cv2.DIST_HUBER, 0, 0.01, 0.01).ravel()
+        m = float(vx / vy)
+        return m, float(x0 - m * y0)  # x = m*y + b
+    # Outermost y per column.
+    ext = np.full(w, -1 if side == "bottom" else h, dtype=np.int32)
+    if side == "bottom":
+        np.maximum.at(ext, xs, ys)
+    else:
+        np.minimum.at(ext, xs, ys)
+    cols = np.where((ext >= 0) & (ext < h))[0]
+    pts = np.column_stack([cols, ext[cols]]).astype(np.float32)  # (x, y)
+    vx, vy, x0, y0 = cv2.fitLine(pts, cv2.DIST_HUBER, 0, 0.01, 0.01).ravel()
+    m = float(vy / vx)
+    return m, float(y0 - m * x0)  # y = m*x + b
+
+
+def _intersect(horiz: tuple[float, float], vert: tuple[float, float]) -> tuple[int, int]:
+    """Intersect a near-horizontal edge (y = m*x + b) with a near-vertical one
+    (x = m*y + b), returning the ``(x, y)`` corner."""
+    mh, bh = horiz
+    mv, bv = vert
+    # y = mh*(mv*y + bv) + bh  ->  y (1 - mh*mv) = mh*bv + bh
+    y = (mh * bv + bh) / (1.0 - mh * mv)
+    x = mv * y + bv
+    return int(round(x)), int(round(y))
+
+
+def _fill_corners(
+    ink: np.ndarray, seed: tuple[int, int]
+) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]] | None:
+    """Flood-fill the frame from ``seed`` and return its corners, or None if bad.
+
+    Fills the connected ink reachable from ``seed`` (the traced frame outline),
+    then recovers the four corners by robustly fitting a line to each side's
+    outermost pixels (:func:`_fit_edge`) and intersecting adjacent lines. Fitting
+    the *outermost* pixels per scan line makes this robust to a frame that is
+    broken/truncated on one side or to a fill that wandered inward through
+    touching header text -- neither perturbs the outer rule the fit locks onto.
+    The fill is validated to cover the page (:data:`FRAME_MIN_COVER`) and the
+    fitted corners to form a near-rectangle (:data:`FRAME_MAX_SIDE_SKEW_DEG`).
+
+    Returns:
+        ``(tl, tr, br, bl)`` (x, y) corners, or ``None`` if the fill is not a
+        plausible frame.
+    """
+    h, w = ink.shape
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    filled = ink.copy()
+    cv2.floodFill(filled, mask, seed, 2, flags=8)
+    frame = filled == 2
+    ys, xs = np.where(frame)
+
+    if xs.max() - xs.min() < FRAME_MIN_COVER * w or ys.max() - ys.min() < FRAME_MIN_COVER * h:
+        return None
+
+    top = _fit_edge(frame, "top")
+    bot = _fit_edge(frame, "bottom")
+    left = _fit_edge(frame, "left")
+    right = _fit_edge(frame, "right")
+
+    tl = _intersect(top, left)
+    tr = _intersect(top, right)
+    br = _intersect(bot, right)
+    bl = _intersect(bot, left)
+
+    # Reject if any fitted side is too far from horizontal/vertical: the top and
+    # bottom slopes (dy/dx) and the left/right slopes (dx/dy) are each a tangent.
+    tol = np.tan(np.radians(FRAME_MAX_SIDE_SKEW_DEG))
+    if max(abs(top[0]), abs(bot[0]), abs(left[0]), abs(right[0])) > tol:
+        return None
 
     return tl, tr, br, bl
 
 
-def normalize_page(
+def find_frame_corners(
     a: np.ndarray,
-    page_corners: tuple[
-        tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]
-    ],
-    width: int = PAGE_WIDTH,
-    height: int = PAGE_HEIGHT,
+) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    """Locate the four corners of the printed page frame.
+
+    Every page is boxed by a closed rectangular rule (a double line). Flood-fill
+    the connected ink from a seed on the frame, then recover the corners by
+    fitting a line to each side and intersecting them (:func:`_fill_corners`) --
+    giving the true quad, since some frames are a slight trapezoid the downstream
+    warp must straighten. The fill touches only the thin rules, so it is
+    O(frame perimeter), not O(page area).
+
+    The frame is sometimes *broken* on one side (a printed gap, or the scanner
+    cut a corner), so a fill seeded from that side traces only a fragment. To
+    survive that, seed from the middle of each of the four edges in turn (walking
+    inward to the first ink pixel) and accept the first fill that passes the
+    frame heuristic in :func:`_fill_corners`; a break on any single side still
+    leaves an intact side to seed from. A morphological open (see
+    :data:`FRAME_OPEN_KERNEL`) first removes thin scanning whiskers.
+
+    Args:
+        a: Binary ink grid (0 == ink, 1 == background), full resolution.
+
+    Returns:
+        The corners as ``(tl, tr, br, bl)``, each an ``(x, y)`` (col, row) pair.
+
+    Raises:
+        ValueError: If no seed from any of the four edges yields a plausible
+            frame (all fail the cover/rectangle heuristic).
+    """
+    ink = (1 - a).astype(np.uint8)  # 1 == ink
+    ker = cv2.getStructuringElement(
+        cv2.MORPH_ELLIPSE, (FRAME_OPEN_KERNEL, FRAME_OPEN_KERNEL)
+    )
+    ink = cv2.morphologyEx(ink, cv2.MORPH_OPEN, ker)
+
+    # Bridge small breaks in the frame rules so a single fill traces the whole
+    # box. Directional: horizontal close for the top/bottom rules, vertical for
+    # the sides. Detection-only -- the warp uses the original ink.
+    h_ker = cv2.getStructuringElement(cv2.MORPH_RECT, (FRAME_CLOSE_LEN, 3))
+    v_ker = cv2.getStructuringElement(cv2.MORPH_RECT, (3, FRAME_CLOSE_LEN))
+    ink = cv2.morphologyEx(ink, cv2.MORPH_CLOSE, h_ker)
+    ink = cv2.morphologyEx(ink, cv2.MORPH_CLOSE, v_ker)
+
+    for edge in _FRAME_SEED_EDGES:
+        seed = _seed_from_edge(ink, edge)
+        if seed is None:
+            continue
+        corners = _fill_corners(ink, seed)
+        if corners is not None:
+            return corners
+
+    h, w = a.shape
+    raise ValueError(
+        f"no page frame found: no seed from any edge (top/bottom/left/right) of "
+        f"the {w}x{h} page produced a fill covering >={FRAME_MIN_COVER:.0%} and "
+        f"forming a rectangle (sides within {FRAME_MAX_SIDE_SKEW_DEG:.0f} deg)"
+    )
+
+
+def deskew_to_frame(
+    a: np.ndarray,
+    corners: tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]],
 ) -> np.ndarray:
-    """Deskew a page onto a fixed ``width`` x ``height`` canvas.
+    """Warp the page so the frame corners become the output page corners.
 
-    Applies a perspective transform mapping the four detected page corners to
-    the corners of a rectangle of the given size.
-
-    Args:
-        a: Binary ink grid containing the page.
-        page_corners: ``(tl, tr, br, bl)`` as returned by :func:`get_corners`.
-        width: Output canvas width.
-        height: Output canvas height.
-
-    Returns:
-        The warped, normalized page as a binary grid.
-    """
-    tl, tr, br, bl = page_corners
-    # Corners are (row, col); OpenCV wants (x, y) == (col, row).
-    src_pts = np.float32(
-        [
-            [tl[1], tl[0]],
-            [tr[1], tr[0]],
-            [br[1], br[0]],
-            [bl[1], bl[0]],
-        ]
-    )
-    dst_pts = np.float32(
-        [
-            [0, 0],  # top-left
-            [width - 1, 0],  # top-right
-            [width - 1, height - 1],  # bottom-right
-            [0, height - 1],  # bottom-left
-        ]
-    )
-
-    matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
-    return cv2.warpPerspective(a, matrix, (width, height))
-
-
-def _seed_from_right(a: np.ndarray) -> tuple[int, int]:
-    """Find a seed pixel just inside the right page's border.
-
-    Scans leftward along the vertical middle from the right edge until it
-    passes the page's outer border into background.
-    """
-    rows, cols = a.shape
-    i = rows // 2
-    j = cols - 20
-    # Walk left while any of the next few pixels are ink (the border run).
-    while a[i][j] or a[i][j - 1] or a[i][j - 2] or a[i][j - 3]:
-        j -= 1
-    return i, j
-
-
-def _seed_from_left(a: np.ndarray) -> tuple[int, int]:
-    """Find a seed pixel just inside the left page's border.
-
-    Scans rightward along the vertical middle from the left edge until it
-    passes the page's outer border into background.
-    """
-    rows, _cols = a.shape
-    i = rows // 2
-    j = 0
-    while a[i][j] or a[i][j + 1] or a[i][j + 2] or a[i][j + 3]:
-        j += 1
-    return i, j
-
-
-def extract_page_from_side(a: np.ndarray, side: str) -> np.ndarray:
-    """Extract and normalize one page (``"right"`` or ``"left"``) from a spread.
+    A perspective transform mapping the four detected frame corners to a clean
+    axis-aligned rectangle. This deskews the page, crops it to exactly the inside
+    of the frame, and discards everything outside (the scanner margin) in a
+    single step -- the frame line itself is kept, sitting at the page edge. The
+    output size is the frame's own averaged side lengths, so no resolution is
+    lost. (The ADF adds no perspective distortion, so this is effectively a pure
+    rotation; a projective transform is used only because it maps corners
+    directly.)
 
     Args:
-        a: Binary ink grid of the full spread (already denoised).
-        side: Which half to extract, ``"right"`` or ``"left"``.
+        a: Binary ink grid (0 == ink, 1 == background).
+        corners: ``(tl, tr, br, bl)`` from :func:`find_frame_corners`.
 
     Returns:
-        The deskewed, normalized single page.
+        The deskewed, frame-cropped binary grid (0 == ink, 1 == background).
     """
-    if side == "right":
-        seed = _seed_from_right(a)
-    elif side == "left":
-        seed = _seed_from_left(a)
-    else:
-        raise ValueError(f"side must be 'right' or 'left', got {side!r}")
+    tl, tr, br, bl = corners
 
-    corners = get_corners(a, *seed)
-    logger.debug("%s page corners: %s", side, corners)
-    return normalize_page(a, corners)
+    def _dist(p: tuple[int, int], q: tuple[int, int]) -> float:
+        return float(np.hypot(p[0] - q[0], p[1] - q[1]))
+
+    out_w = int(round((_dist(tl, tr) + _dist(bl, br)) / 2))
+    out_h = int(round((_dist(tl, bl) + _dist(tr, br)) / 2))
+    src = np.float32([tl, tr, br, bl])
+    dst = np.float32([[0, 0], [out_w - 1, 0], [out_w - 1, out_h - 1], [0, out_h - 1]])
+    mat = cv2.getPerspectiveTransform(src, dst)
+
+    # Warp in ink-space (255 == ink) so the margin outside the frame comes in as
+    # 0 (background), then re-binarize to the 0=ink / 1=bg convention.
+    ink = ((1 - a) * 255).astype(np.uint8)
+    warp = cv2.warpPerspective(
+        ink, mat, (out_w, out_h), flags=cv2.INTER_NEAREST, borderValue=0
+    )
+    return (warp < 128).astype(np.uint8)
+
+
+# On a correctly normalized page the frame sits at the very edge, so re-detecting
+# it should put every corner within this fraction of the page size from its own
+# corner of the image. A larger gap means the crop kept margin or sliced content
+# (a bad detection), and the page is rejected.
+VERIFY_CORNER_TOL = 0.02
+
+
+def verify_normalized(a: np.ndarray) -> None:
+    """Confirm a normalized page's frame really landed at the page edges.
+
+    Re-runs frame detection on the *output* of :func:`deskew_to_frame`: if the
+    warp was correct the frame is now the page boundary, so each detected corner
+    must fall within :data:`VERIFY_CORNER_TOL` of the matching image corner. This
+    catches a mis-detected source frame (e.g. a diagonal side that cropped
+    through content) without any human review -- a wrongly cropped page leaves
+    its re-detected frame inset or slanted, and a corner drifts past tolerance.
+
+    Args:
+        a: A normalized page from :func:`deskew_to_frame` (0 == ink, 1 == bg).
+
+    Raises:
+        ValueError: If the frame cannot be re-detected, or any corner sits
+            farther than the tolerance from its image corner.
+    """
+    h, w = a.shape
+    try:
+        tl, tr, br, bl = find_frame_corners(a)
+    except ValueError as exc:
+        raise ValueError(f"post-normalize frame re-detection failed: {exc}") from exc
+
+    tol_x = VERIFY_CORNER_TOL * w
+    tol_y = VERIFY_CORNER_TOL * h
+    targets = {"tl": (tl, (0, 0)), "tr": (tr, (w - 1, 0)),
+               "br": (br, (w - 1, h - 1)), "bl": (bl, (0, h - 1))}
+    for name, ((cx, cy), (ex, ey)) in targets.items():
+        if abs(cx - ex) > tol_x or abs(cy - ey) > tol_y:
+            raise ValueError(
+                f"normalized frame corner {name} at ({cx},{cy}) is more than "
+                f"{VERIFY_CORNER_TOL:.0%} from the page corner ({ex},{ey}) -- "
+                f"the source frame was likely mis-detected and the crop is wrong"
+            )
+
+
+def render_page_binary(
+    doc: pymupdf.Document,
+    page_index: int,
+    threshold: int = GRAY_THRESHOLD,
+    scale: float = RENDER_SCALE,
+) -> np.ndarray:
+    """Render one PDF page to a full-resolution binary ink grid.
+
+    Renders via ``get_pixmap`` so the page's ``/Rotate`` flag is applied (the
+    ADF alternates 90/270 per sheet; honoring it yields an upright page). The
+    grayscale render is thresholded to the pipeline's ink convention.
+
+    Args:
+        doc: An open PyMuPDF document.
+        page_index: Zero-based page index to render.
+        threshold: Pixels <= this (0..255) become ink.
+        scale: Render matrix scale factor.
+
+    Returns:
+        A ``uint8`` grid, 0 == ink, 1 == background.
+    """
+    page = doc[page_index]
+    pix = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale))
+    mode = "L" if pix.n == 1 else "RGB"
+    gray = np.asarray(
+        Image.frombytes(mode, (pix.width, pix.height), pix.samples).convert("L")
+    )
+    # imaging convention: 0 == ink, 1 == background.
+    return (gray > threshold).astype(np.uint8)
 
 
 def extract_pages(
     book: str,
+    pdf_path: str,
+    pages_dir: str,
+    first_page: int | None = None,
+    last_page: int | None = None,
+    threshold: int = GRAY_THRESHOLD,
     books_dir: str = "books",
-    config: BookConfig | None = None,
 ) -> list[str]:
-    """Split every spread of ``book`` into deskewed single pages.
-
-    Reads ``{books_dir}/{book}/original/{i}.png`` for the spreads named by the
-    book's config, deskews the right then left page of each, and writes them to
-    ``{books_dir}/{book}/pages/{n}.png``. The output directory is created if
-    needed.
+    """Render a range of v1 PDF pages to full-resolution single-page PNGs.
 
     Args:
-        book: Book name, e.g. ``"book1"``. Used to look up :data:`BOOK_CONFIGS`
-            when ``config`` is not given, and to locate the book directory.
-        books_dir: Root directory containing per-book asset folders.
-        config: Explicit config, overriding the :data:`BOOK_CONFIGS` lookup.
+        book: Book name, e.g. ``"book1"`` (used to locate the output dir).
+        pdf_path: Path to the v1 source PDF.
+        pages_dir: Output subdirectory name under ``{books_dir}/{book}/``
+            (e.g. ``pages_gray`` or ``pages_bw``).
+        first_page: First content page index (inclusive, zero-based). Defaults to
+            the book's entry in :data:`BOOK_PAGE_RANGES`.
+        last_page: Last content page index (inclusive). Defaults to the book's
+            entry in :data:`BOOK_PAGE_RANGES`.
+        threshold: Grayscale binarization cutoff.
+        books_dir: Root directory of per-book asset folders.
 
     Returns:
-        The list of output page file paths, in emission order.
+        The output page file paths, page 0 first.
     """
-    if config is None:
-        if book not in BOOK_CONFIGS:
+    if first_page is None or last_page is None:
+        if book not in BOOK_PAGE_RANGES:
             raise KeyError(
-                f"no BookConfig for {book!r}; known books: {sorted(BOOK_CONFIGS)}"
+                f"no page range for {book!r}; pass --first-page/--last-page or "
+                f"add it to BOOK_PAGE_RANGES (known: {sorted(BOOK_PAGE_RANGES)})"
             )
-        config = BOOK_CONFIGS[book]
+        default_first, default_last = BOOK_PAGE_RANGES[book]
+        first_page = default_first if first_page is None else first_page
+        last_page = default_last if last_page is None else last_page
 
-    original_dir = os.path.join(books_dir, book, "original")
-    pages_dir = os.path.join(books_dir, book, "pages")
-    os.makedirs(pages_dir, exist_ok=True)
+    out_dir = os.path.join(books_dir, book, pages_dir)
+    os.makedirs(out_dir, exist_ok=True)
 
+    doc = pymupdf.open(pdf_path)
     logger.info(
-        "Extracting pages for %s: spreads %d..%d -> %s (start index %d)",
+        "v1 extract %s: %s pages %d..%d -> %s (threshold %d)",
         book,
-        config.first_spread,
-        config.last_spread - 1,
-        pages_dir,
-        config.start_index,
+        pdf_path,
+        first_page,
+        last_page,
+        out_dir,
+        threshold,
     )
 
     written: list[str] = []
-    idx = config.start_index
-
-    for spread in range(config.first_spread, config.last_spread):
-        filepath = os.path.join(original_dir, f"{spread}.png")
-        logger.info("Processing spread %d: %s", spread, filepath)
-
-        a = get_image(filepath)
-        a = remove_small_islands(a)
-
-        # Right page first (book reads right-to-left), unless this is the first
-        # processed spread and the book skips its right half.
-        skip_right = config.skip_right_on_first_spread and spread == config.first_spread
-        if skip_right:
-            logger.info("Skipping right half of first spread %d per book config", spread)
-        else:
-            right_page = extract_page_from_side(a, "right")
-            out_path = os.path.join(pages_dir, f"{idx}.png")
-            save_image(right_page, out_path)
-            logger.info("Wrote right page -> %s", out_path)
-            written.append(out_path)
-            idx += 1
-
-        left_page = extract_page_from_side(a, "left")
-        out_path = os.path.join(pages_dir, f"{idx}.png")
-        save_image(left_page, out_path)
-        logger.info("Wrote left page -> %s", out_path)
+    failures: list[str] = []
+    corner_meta: dict[str, dict] = {}
+    for out_idx, src_idx in enumerate(range(first_page, last_page + 1)):
+        # page identifier in every convention, so a failure is checkable at source.
+        tag = f"content page {out_idx} (PDF index {src_idx}, viewer page {src_idx + 1})"
+        a = render_page_binary(doc, src_idx, threshold=threshold)
+        try:
+            corners = find_frame_corners(a)
+            a = deskew_to_frame(a, corners)
+            verify_normalized(a)
+        except ValueError as exc:
+            failures.append(f"{tag}: {exc}")
+            corner_meta[str(out_idx)] = {"pdf_index": src_idx, "viewer_page": src_idx + 1,
+                                         "corners": None, "error": str(exc)}
+            logger.warning("SKIPPED %s: %s", tag, exc)
+            continue
+        out_path = os.path.join(out_dir, f"{out_idx}.png")
+        save_image(a, out_path)
+        tl, tr, br, bl = corners
+        corner_meta[str(out_idx)] = {
+            "pdf_index": src_idx, "viewer_page": src_idx + 1,
+            "corners": {"tl": list(tl), "tr": list(tr), "br": list(br), "bl": list(bl)},
+        }
+        logger.info("%s  %dx%d -> %s", tag, a.shape[1], a.shape[0], out_path)
         written.append(out_path)
-        idx += 1
 
-    logger.info("Extracted %d pages for %s", len(written), book)
+    doc.close()
+
+    # Persist per-page corner coordinates as metadata for every run.
+    meta_path = os.path.join(out_dir, "corners.json")
+    with open(meta_path, "w") as fh:
+        json.dump({"book": book, "pdf": pdf_path, "pages": corner_meta}, fh, indent=2)
+    logger.info("Wrote corner metadata -> %s", meta_path)
+
+    logger.info("Wrote %d pages for %s (%d skipped)", len(written), book, len(failures))
+    if failures:
+        logger.warning("%d page(s) failed verification for %s:", len(failures), book)
+        for f in failures:
+            logger.warning("  %s", f)
     return written
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--book", required=True, help="Book name, e.g. book1.")
+    parser.add_argument("--pdf", required=True, help="Path to the v1 source PDF.")
     parser.add_argument(
-        "--book",
-        required=True,
-        choices=sorted(BOOK_CONFIGS),
-        help="Book to process (e.g. book1).",
+        "--first-page", type=int, default=None,
+        help="First content page (0-based, inclusive). Default: book's BOOK_PAGE_RANGES entry.",
     )
     parser.add_argument(
-        "--books-dir",
-        default="books",
-        help="Root directory containing per-book asset folders (default: books).",
+        "--last-page", type=int, default=None,
+        help="Last content page (inclusive). Default: book's BOOK_PAGE_RANGES entry.",
     )
     parser.add_argument(
-        "--log-level",
-        default="INFO",
-        help="Logging level (default: INFO).",
+        "--pages-dir", required=True, help="Output subdir under books/{book}/ (e.g. pages_gray)."
     )
+    parser.add_argument(
+        "--threshold", type=int, default=GRAY_THRESHOLD, help="Grayscale ink cutoff (default 128)."
+    )
+    parser.add_argument("--books-dir", default="books")
+    parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 
 
@@ -386,8 +535,15 @@ def main(argv: list[str] | None = None) -> None:
         level=getattr(logging, args.log_level.upper(), logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    written = extract_pages(args.book, books_dir=args.books_dir)
-    logger.info("Done. %d pages written for %s.", len(written), args.book)
+    extract_pages(
+        args.book,
+        args.pdf,
+        args.pages_dir,
+        first_page=args.first_page,
+        last_page=args.last_page,
+        threshold=args.threshold,
+        books_dir=args.books_dir,
+    )
 
 
 if __name__ == "__main__":

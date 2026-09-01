@@ -100,16 +100,63 @@ The big push (full blow-by-blow in `docs/overnight-worklog.md`, A1–A14):
   overlaps, green bridges match ground truth, Book 1 byte-identical.
 - Branch `book2-bridge-trace-right` (commits 0d5ef40 → 32bf348). William to push.
 
-**Next step:** William reviews OCR (via `scripts/ocr_review.py`), then graph merge
+**Next step:** William reviews OCR (via `scripts/qa/ocr.py`), then graph merge
 (stitching Book 2 + connecting Book 1), then render the website.
+
+## Era 7 — New scans (v1: cut-spine ADF) + Stage-1 rebuild for all 4 books (2026-08-26 → 2026-09-01)
+
+William re-scanned every book via cut spine + automatic document feeder (ADF): one
+page per PDF page, 600 dpi, bitonal (canonical) + grayscale fallback. Books 3 & 4
+exist only as these new scans. Naming: `bookN.pdf` = v1 bitonal (parse target),
+`bookN_gray.pdf` = v1 grayscale, `bookN_v0.pdf` = the old glass-top scan. The old
+glass pipeline is archived in `src/v0/`; `src/` is the canonical v1 pipeline. Work
+at **full native resolution** (no downsize) for max OCR fidelity.
+
+**Stage 1 (`src/extract_pages.py`) — rebuilt around finding the printed FRAME.** Each
+page is boxed by a closed double-line rectangle; we detect it, then perspective-warp
+its 4 corners to a clean rectangle — deskewing, cropping to the frame, and dropping the
+scanner margin in one step (v0-style; frame line kept). Detection: seed from each of
+the 4 edge midpoints, flood-fill the ink (O(perimeter)), morph-open to kill whiskers,
+directional morph-close to bridge small gaps, robust per-side line fit → corners. A
+`verify_normalized` re-detect gates the crop. Per-book content page ranges + per-page
+corner metadata (`corners.json`) are written every run.
+
+Degraded frames (broken/faded borders, mostly books 3–4) fail flood-fill, so a second
+detector — a **Hough + scored geometric model** (double-line 35–40px apart = strongest
+signal, outermost line, derive the 4th side from the other 3) — rescues them. A
+comparison run flags pages where the two detectors disagree or one fails.
+
+**Human QA layer.** `scripts/qa/` unifies all QA tools (border-corner review server on
+8760, OCR filmstrip on 8761, static overlay/artifact generators). William reviewed
+every flagged page by dragging corners; saved to `corners_review.json`.
+`src/apply_corners.py` does the final generation: per page, corners resolve as review
+override → agreed detector → Hough fallback, then warp + write.
+
+**Result: Stage 1 complete for all 4 books** — book1 17, book2 134, book3 292, book4
+317 pages. book3 had 12 reviewed pages, book4 46. Stage 2 was also split into two steps
+(`src/segment.py` crop → `crops_bw/` + `starts.json`; `src/merge_pages.py` merge →
+`graphs_bw/`), done for book1 (14 subtree graphs). Image output is gitignored
+(regenerable from PDFs + corners); the corner JSONs are tracked (the review layer is not
+reproducible).
+
+**Next step:** Stage 2 (crop + merge) for books 2/3/4, then Stage 3 (`build_tree`) on
+the v1 pipeline.
 
 ---
 
 ## Pipeline status (snapshot)
 
-| Book | 1 pages | 2 graphs | 3 tree | 3.5 stitch | 3.6 OCR |
-|------|---------|----------|--------|------------|---------|
-| 1 | done | done | done (100% match) | done (hand) | populated |
-| 2 | done | **done — subgraphs locked** | done | not yet (auto matcher TODO) | populated, review pending |
-| 3 | not started | — | — | — | — |
-| 4 | not started | — | — | — | — |
+Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1
+rebuild (new ADF scans, `src/`) is redoing every stage from clean scans.
+
+**v1 pipeline (current):**
+
+| Book | 1 pages | 2 crop+merge | 3 tree | 3.5 stitch | 3.6 OCR |
+|------|---------|--------------|--------|------------|---------|
+| 1 | done (17) | done (14 graphs) | not started | — | — |
+| 2 | done (134) | not started | — | — | — |
+| 3 | done (292) | not started | — | — | — |
+| 4 | done (317) | not started | — | — | — |
+
+**v0 pipeline (prior, archived):** books 1–2 reached tree + OCR (book 1 stitched by
+hand); superseded by the v1 rebuild above.

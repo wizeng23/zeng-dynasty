@@ -116,25 +116,22 @@ class BookConfig:
 # 25 admits those; Book 2's smallest genuine non-merge shift is 35 (the 8_10
 # stray-ink vertical), and Book 1 has no near-miss merges in [15,30), so the
 # looser bound is safe and scoped to Book 2 only.
-# v1-scan configs: full-native 600dpi resolution. Pixel constants are the old
-# v0 values scaled up ~3x (v0 trimmed width ~1150; v1 native tree width ~3500).
-# Confirmed against native Book 1 graphs: generation drops measured ~886-939px
-# (vs v0's ~300px, ratio ~2.95); node heights ~190-205px (vs v0's ~60-70).
 BOOK_CONFIGS: dict[str, BookConfig] = {
-    "book1": BookConfig(
-        line_threshold=200,
-        end_threshold=150,
-        merge_max_drop=600,
-        merge_max_shift=60,
-        node_min_height=150,
-        node_max_height=750,
-        gen_row_min=800,
-        gen_row_max=1050,
+    "book1": BookConfig(),
+    "book2": BookConfig(
+        merge_max_shift=25,
+        # A family member's handwritten ink in the margin of 8_10 (grandpa's)
+        # reads as phantom lines. Two rectangles, both clear of any printed name
+        # or connector: (1) a stray vertical stroke between 貞院 and 貞冠 -- cols
+        # 274-288, below the real bar at row ~1641; (2) the two-column brush note
+        # 祖祠對坟口 / 欽秀堂 to the LEFT of 聞詣 -- cols 550-728, stopping short of
+        # 聞詣's glyph/connector at col ~761. The note's text is recorded in
+        # docs/final_manual_steps.md for manual attachment to 聞詣 post-parse.
+        ignore_regions={
+            "8_10": [(1643, 274, 1865, 288), (1290, 550, 1580, 728)],
+        },
     ),
 }
-
-# Linear-resolution ratio of a v1 native page to the v0 normalized canvas.
-V1_SCALE = 3.0
 
 
 @dataclasses.dataclass
@@ -155,6 +152,87 @@ class LineNode:
 
     def __str__(self) -> str:
         return f"LineNode(id={self.id}, top={self.top}, bot={self.bot})"
+
+
+def bridge_horizontal_gaps(foreground: np.ndarray, max_gap: int = 9) -> np.ndarray:
+    """Fill short horizontal gaps in a binary ink mask (ink == 1).
+
+    The scans' long horizontal connector lines carry occasional tiny breaks
+    (faint ink / where a vertical crosses), which split one line into two
+    connected components. The broken-off end then reads as a parent hang-point
+    with no name above it -- a phantom empty node the real children mis-attach to.
+
+    A background pixel is filled only when it lies in a horizontal gap of at most
+    ``max_gap`` columns with ink on BOTH sides in the SAME row -- i.e. a break in
+    a continuing horizontal line. This is safe because distinct elements in the
+    grid are spaced far apart: measured across Book 2, real horizontal separations
+    are >=~50px while line-breaks are <=~19px, a clean valley. Bridging <10px thus
+    can only rejoin a broken line -- it never connects two characters (>=50px
+    apart) and never touches vertical strokes (this scans row-wise only), so the
+    name glyphs are left intact.
+
+    Args:
+        foreground: Binary mask, 1 == ink, 0 == background.
+        max_gap: Maximum gap width (columns) to bridge.
+
+    Returns:
+        A copy of ``foreground`` with qualifying short horizontal gaps filled.
+    """
+    out = foreground.copy()
+    h, w = foreground.shape
+    for r in range(h):
+        row = foreground[r]
+        ink_cols = np.flatnonzero(row)
+        if ink_cols.size < 2:
+            continue
+        # Between consecutive ink pixels, fill the gap if it is short enough.
+        prev = ink_cols[0]
+        for c in ink_cols[1:]:
+            gap = c - prev - 1
+            if 0 < gap <= max_gap:
+                out[r, prev + 1 : c] = 1
+            prev = c
+    return out
+
+
+def bridge_vertical_gaps(foreground: np.ndarray, max_gap: int = 3) -> np.ndarray:
+    """Fill short vertical gaps in a binary ink mask (ink == 1).
+
+    The mirror of :func:`bridge_horizontal_gaps` for the vertical strokes -- the
+    hang-lines that connect a name to the connector bar above and to the child
+    bar below. A faint 1-3px break in such a stroke (e.g. 114_120's col-6807
+    hang-line, broken at a single row) splits one line into two components: the
+    lower stub then reads as a childless phantom node overlapping the real one.
+
+    A background pixel is filled only when it lies in a vertical gap of at most
+    ``max_gap`` rows with ink on BOTH sides in the SAME column -- a break in a
+    continuing vertical line. ``max_gap`` is kept very small (3) on purpose:
+    unlike the horizontal case, name glyphs DO contain vertical strokes with
+    small internal gaps, so a large bound could weld a glyph to a line. At 3px it
+    only rejoins hairline breaks in the grid's own strokes; verified across both
+    books to leave every parse byte-identical except the intended 114_120 rejoin.
+
+    Args:
+        foreground: Binary mask, 1 == ink, 0 == background.
+        max_gap: Maximum gap height (rows) to bridge.
+
+    Returns:
+        A copy of ``foreground`` with qualifying short vertical gaps filled.
+    """
+    out = foreground.copy()
+    h, w = foreground.shape
+    for c in range(w):
+        col = foreground[:, c]
+        ink_rows = np.flatnonzero(col)
+        if ink_rows.size < 2:
+            continue
+        prev = ink_rows[0]
+        for r in ink_rows[1:]:
+            gap = r - prev - 1
+            if 0 < gap <= max_gap:
+                out[prev + 1 : r, c] = 1
+            prev = r
+    return out
 
 
 def find_lines(
@@ -181,6 +259,8 @@ def find_lines(
 
     # cv2 labels the nonzero foreground; our ink is 0, so invert to make ink 1.
     foreground = (1 - image).astype(np.uint8)
+    foreground = bridge_horizontal_gaps(foreground)
+    foreground = bridge_vertical_gaps(foreground)
     num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(
         foreground, connectivity=4
     )
@@ -668,9 +748,6 @@ def build_tree(
     books_dir: str = "books",
     data_dir: str = "data",
     config: BookConfig | None = None,
-    graphs_dir_name: str = "graphs",
-    names_dir_name: str = "names",
-    data_stem: str | None = None,
 ) -> list[Node]:
     """Parse every subtree graph of ``book`` into domain nodes and name crops.
 
@@ -699,8 +776,8 @@ def build_tree(
             )
         config = BOOK_CONFIGS[book]
 
-    graphs_dir = os.path.join(books_dir, book, graphs_dir_name)
-    names_dir = os.path.join(books_dir, book, names_dir_name)
+    graphs_dir = os.path.join(books_dir, book, "graphs")
+    names_dir = os.path.join(books_dir, book, "names")
     os.makedirs(names_dir, exist_ok=True)
     os.makedirs(data_dir, exist_ok=True)
 
@@ -760,25 +837,12 @@ def build_tree(
 
         # Record parent/child relations by ID. ``local_index`` is the node's
         # position within this graph (post-sort, so RTL/eldest-first order).
-        # A child reference can dangle when ``merge_nodes`` folded that child
-        # into another node (its object left the flat list, so it never got an
-        # id). Skip such stale references rather than crash -- they are an
-        # artifact of a noisier parse (common on the bitonal variant, whose 1-bit
-        # thresholding fragments connector lines) and the real edge survives via
-        # the node the child was merged into.
-        id_set = {id(n) for n in nodes}
         for local_index, n in enumerate(nodes):
             assert n.id is not None
-            live_children = [c for c in n.children if id(c) in id_set and c.id is not None]
-            if len(live_children) != len(n.children):
-                logger.warning(
-                    "graph %s node %d: dropped %d dangling child ref(s)",
-                    filename,
-                    n.id,
-                    len(n.children) - len(live_children),
-                )
-            children_of[n.id] = [c.id for c in live_children]
-            for c in live_children:
+            child_ids = [c.id for c in n.children]
+            children_of[n.id] = child_ids
+            for c in n.children:
+                assert c.id is not None
                 father_of[c.id] = n.id
             node_records.append((n.id, a, n, f"{filename}_{local_index}"))
 
@@ -787,7 +851,7 @@ def build_tree(
     generation_of = _infer_generations(children_of, father_of)
 
     # Emit domain nodes and crop name images.
-    data_path = os.path.join(data_dir, f"{data_stem or book}.jsonl")
+    data_path = os.path.join(data_dir, f"{book}.jsonl")
     with open(data_path, "w") as data_file:
         for node_id, grid, line_node, provenance in node_records:
             name_img = get_name_image(line_node, grid)

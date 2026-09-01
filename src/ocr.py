@@ -375,7 +375,7 @@ def apply_names(book: str, data_dir: str = "data") -> int:
     """Merge OCR names + manual per-character overrides into ``{book}.jsonl``.
 
     Precedence: manual overrides in ``{book}_overrides.json`` (the human
-    ground-truth layer written by ``scripts/ocr_review.py``, keyed
+    ground-truth layer written by ``scripts/qa/ocr.py``, keyed
     ``{provenance}#{charIndex}``) win, character by character, over the OCR reading
     in ``{book}_names.json``. Sets each node's ``name`` and rewrites the ``ocr_*``
     tags in ``notes`` (idempotent): ``ocr_conf=<score>`` always, ``ocr_low_conf``
