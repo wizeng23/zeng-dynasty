@@ -94,7 +94,7 @@ BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(num_pages=17),
     "book2": BookConfig(num_pages=134),
     "book3": BookConfig(num_pages=292),
-    "book4": BookConfig(num_pages=317),
+    "book4": BookConfig(num_pages=316),
 }
 
 

@@ -3,31 +3,6 @@
   "pdf": "books/book4/book4.pdf",
   "pages": {
     "0": {
-      "pdf_index": 13,
-      "viewer_page": 14,
-      "status": "agreed",
-      "method": "hough",
-      "worst_px": 60.1,
-      "corners": {
-        "tl": [
-          651,
-          495
-        ],
-        "tr": [
-          4382,
-          495
-        ],
-        "br": [
-          4362,
-          6268
-        ],
-        "bl": [
-          621,
-          6254
-        ]
-      }
-    },
-    "1": {
       "pdf_index": 14,
       "viewer_page": 15,
       "status": "flagged",
@@ -53,7 +28,7 @@
       },
       "worst_px": null
     },
-    "2": {
+    "1": {
       "pdf_index": 15,
       "viewer_page": 16,
       "status": "agreed",
@@ -78,7 +53,7 @@
         ]
       }
     },
-    "3": {
+    "2": {
       "pdf_index": 16,
       "viewer_page": 17,
       "status": "agreed",
@@ -103,7 +78,7 @@
         ]
       }
     },
-    "4": {
+    "3": {
       "pdf_index": 17,
       "viewer_page": 18,
       "status": "agreed",
@@ -128,7 +103,7 @@
         ]
       }
     },
-    "5": {
+    "4": {
       "pdf_index": 18,
       "viewer_page": 19,
       "status": "agreed",
@@ -153,7 +128,7 @@
         ]
       }
     },
-    "6": {
+    "5": {
       "pdf_index": 19,
       "viewer_page": 20,
       "status": "agreed",
@@ -178,7 +153,7 @@
         ]
       }
     },
-    "7": {
+    "6": {
       "pdf_index": 20,
       "viewer_page": 21,
       "status": "agreed",
@@ -203,7 +178,7 @@
         ]
       }
     },
-    "8": {
+    "7": {
       "pdf_index": 21,
       "viewer_page": 22,
       "status": "agreed",
@@ -228,7 +203,7 @@
         ]
       }
     },
-    "9": {
+    "8": {
       "pdf_index": 22,
       "viewer_page": 23,
       "status": "flagged",
@@ -254,7 +229,7 @@
       },
       "worst_px": null
     },
-    "10": {
+    "9": {
       "pdf_index": 23,
       "viewer_page": 24,
       "status": "agreed",
@@ -279,7 +254,7 @@
         ]
       }
     },
-    "11": {
+    "10": {
       "pdf_index": 24,
       "viewer_page": 25,
       "status": "agreed",
@@ -304,7 +279,7 @@
         ]
       }
     },
-    "12": {
+    "11": {
       "pdf_index": 25,
       "viewer_page": 26,
       "status": "agreed",
@@ -329,7 +304,7 @@
         ]
       }
     },
-    "13": {
+    "12": {
       "pdf_index": 26,
       "viewer_page": 27,
       "status": "flagged",
@@ -355,7 +330,7 @@
       },
       "worst_px": null
     },
-    "14": {
+    "13": {
       "pdf_index": 27,
       "viewer_page": 28,
       "status": "agreed",
@@ -380,7 +355,7 @@
         ]
       }
     },
-    "15": {
+    "14": {
       "pdf_index": 28,
       "viewer_page": 29,
       "status": "flagged",
@@ -406,7 +381,7 @@
       },
       "worst_px": null
     },
-    "16": {
+    "15": {
       "pdf_index": 29,
       "viewer_page": 30,
       "status": "agreed",
@@ -431,7 +406,7 @@
         ]
       }
     },
-    "17": {
+    "16": {
       "pdf_index": 30,
       "viewer_page": 31,
       "status": "flagged",
@@ -457,7 +432,7 @@
       },
       "worst_px": null
     },
-    "18": {
+    "17": {
       "pdf_index": 31,
       "viewer_page": 32,
       "status": "agreed",
@@ -482,7 +457,7 @@
         ]
       }
     },
-    "19": {
+    "18": {
       "pdf_index": 32,
       "viewer_page": 33,
       "status": "agreed",
@@ -507,7 +482,7 @@
         ]
       }
     },
-    "20": {
+    "19": {
       "pdf_index": 33,
       "viewer_page": 34,
       "status": "agreed",
@@ -532,7 +507,7 @@
         ]
       }
     },
-    "21": {
+    "20": {
       "pdf_index": 34,
       "viewer_page": 35,
       "status": "flagged",
@@ -558,7 +533,7 @@
       },
       "worst_px": null
     },
-    "22": {
+    "21": {
       "pdf_index": 35,
       "viewer_page": 36,
       "status": "flagged",
@@ -601,7 +576,7 @@
       },
       "worst_px": 3740.2
     },
-    "23": {
+    "22": {
       "pdf_index": 36,
       "viewer_page": 37,
       "status": "flagged",
@@ -627,7 +602,7 @@
       },
       "worst_px": null
     },
-    "24": {
+    "23": {
       "pdf_index": 37,
       "viewer_page": 38,
       "status": "agreed",
@@ -652,7 +627,7 @@
         ]
       }
     },
-    "25": {
+    "24": {
       "pdf_index": 38,
       "viewer_page": 39,
       "status": "agreed",
@@ -677,7 +652,7 @@
         ]
       }
     },
-    "26": {
+    "25": {
       "pdf_index": 39,
       "viewer_page": 40,
       "status": "agreed",
@@ -702,7 +677,7 @@
         ]
       }
     },
-    "27": {
+    "26": {
       "pdf_index": 40,
       "viewer_page": 41,
       "status": "agreed",
@@ -727,7 +702,7 @@
         ]
       }
     },
-    "28": {
+    "27": {
       "pdf_index": 41,
       "viewer_page": 42,
       "status": "agreed",
@@ -752,7 +727,7 @@
         ]
       }
     },
-    "29": {
+    "28": {
       "pdf_index": 42,
       "viewer_page": 43,
       "status": "agreed",
@@ -777,7 +752,7 @@
         ]
       }
     },
-    "30": {
+    "29": {
       "pdf_index": 43,
       "viewer_page": 44,
       "status": "agreed",
@@ -802,7 +777,7 @@
         ]
       }
     },
-    "31": {
+    "30": {
       "pdf_index": 44,
       "viewer_page": 45,
       "status": "agreed",
@@ -827,7 +802,7 @@
         ]
       }
     },
-    "32": {
+    "31": {
       "pdf_index": 45,
       "viewer_page": 46,
       "status": "agreed",
@@ -852,7 +827,7 @@
         ]
       }
     },
-    "33": {
+    "32": {
       "pdf_index": 46,
       "viewer_page": 47,
       "status": "agreed",
@@ -877,7 +852,7 @@
         ]
       }
     },
-    "34": {
+    "33": {
       "pdf_index": 47,
       "viewer_page": 48,
       "status": "agreed",
@@ -902,7 +877,7 @@
         ]
       }
     },
-    "35": {
+    "34": {
       "pdf_index": 48,
       "viewer_page": 49,
       "status": "flagged",
@@ -928,7 +903,7 @@
       },
       "worst_px": null
     },
-    "36": {
+    "35": {
       "pdf_index": 49,
       "viewer_page": 50,
       "status": "agreed",
@@ -953,7 +928,7 @@
         ]
       }
     },
-    "37": {
+    "36": {
       "pdf_index": 50,
       "viewer_page": 51,
       "status": "agreed",
@@ -978,7 +953,7 @@
         ]
       }
     },
-    "38": {
+    "37": {
       "pdf_index": 51,
       "viewer_page": 52,
       "status": "agreed",
@@ -1003,7 +978,7 @@
         ]
       }
     },
-    "39": {
+    "38": {
       "pdf_index": 52,
       "viewer_page": 53,
       "status": "agreed",
@@ -1028,7 +1003,7 @@
         ]
       }
     },
-    "40": {
+    "39": {
       "pdf_index": 53,
       "viewer_page": 54,
       "status": "agreed",
@@ -1053,7 +1028,7 @@
         ]
       }
     },
-    "41": {
+    "40": {
       "pdf_index": 54,
       "viewer_page": 55,
       "status": "flagged",
@@ -1096,7 +1071,7 @@
       },
       "worst_px": 6879.6
     },
-    "42": {
+    "41": {
       "pdf_index": 55,
       "viewer_page": 56,
       "status": "agreed",
@@ -1121,7 +1096,7 @@
         ]
       }
     },
-    "43": {
+    "42": {
       "pdf_index": 56,
       "viewer_page": 57,
       "status": "agreed",
@@ -1146,7 +1121,7 @@
         ]
       }
     },
-    "44": {
+    "43": {
       "pdf_index": 57,
       "viewer_page": 58,
       "status": "agreed",
@@ -1171,7 +1146,7 @@
         ]
       }
     },
-    "45": {
+    "44": {
       "pdf_index": 58,
       "viewer_page": 59,
       "status": "flagged",
@@ -1214,7 +1189,7 @@
       },
       "worst_px": 3781.0
     },
-    "46": {
+    "45": {
       "pdf_index": 59,
       "viewer_page": 60,
       "status": "agreed",
@@ -1239,7 +1214,7 @@
         ]
       }
     },
-    "47": {
+    "46": {
       "pdf_index": 60,
       "viewer_page": 61,
       "status": "agreed",
@@ -1264,7 +1239,7 @@
         ]
       }
     },
-    "48": {
+    "47": {
       "pdf_index": 61,
       "viewer_page": 62,
       "status": "agreed",
@@ -1289,7 +1264,7 @@
         ]
       }
     },
-    "49": {
+    "48": {
       "pdf_index": 62,
       "viewer_page": 63,
       "status": "agreed",
@@ -1314,7 +1289,7 @@
         ]
       }
     },
-    "50": {
+    "49": {
       "pdf_index": 63,
       "viewer_page": 64,
       "status": "agreed",
@@ -1339,7 +1314,7 @@
         ]
       }
     },
-    "51": {
+    "50": {
       "pdf_index": 64,
       "viewer_page": 65,
       "status": "flagged",
@@ -1365,7 +1340,7 @@
       },
       "worst_px": null
     },
-    "52": {
+    "51": {
       "pdf_index": 65,
       "viewer_page": 66,
       "status": "agreed",
@@ -1390,7 +1365,7 @@
         ]
       }
     },
-    "53": {
+    "52": {
       "pdf_index": 66,
       "viewer_page": 67,
       "status": "flagged",
@@ -1416,7 +1391,7 @@
       },
       "worst_px": null
     },
-    "54": {
+    "53": {
       "pdf_index": 67,
       "viewer_page": 68,
       "status": "agreed",
@@ -1441,7 +1416,7 @@
         ]
       }
     },
-    "55": {
+    "54": {
       "pdf_index": 68,
       "viewer_page": 69,
       "status": "agreed",
@@ -1466,7 +1441,7 @@
         ]
       }
     },
-    "56": {
+    "55": {
       "pdf_index": 69,
       "viewer_page": 70,
       "status": "agreed",
@@ -1491,7 +1466,7 @@
         ]
       }
     },
-    "57": {
+    "56": {
       "pdf_index": 70,
       "viewer_page": 71,
       "status": "agreed",
@@ -1516,7 +1491,7 @@
         ]
       }
     },
-    "58": {
+    "57": {
       "pdf_index": 71,
       "viewer_page": 72,
       "status": "agreed",
@@ -1541,7 +1516,7 @@
         ]
       }
     },
-    "59": {
+    "58": {
       "pdf_index": 72,
       "viewer_page": 73,
       "status": "flagged",
@@ -1567,7 +1542,7 @@
       },
       "worst_px": null
     },
-    "60": {
+    "59": {
       "pdf_index": 73,
       "viewer_page": 74,
       "status": "agreed",
@@ -1592,7 +1567,7 @@
         ]
       }
     },
-    "61": {
+    "60": {
       "pdf_index": 74,
       "viewer_page": 75,
       "status": "agreed",
@@ -1617,7 +1592,7 @@
         ]
       }
     },
-    "62": {
+    "61": {
       "pdf_index": 75,
       "viewer_page": 76,
       "status": "agreed",
@@ -1642,7 +1617,7 @@
         ]
       }
     },
-    "63": {
+    "62": {
       "pdf_index": 76,
       "viewer_page": 77,
       "status": "flagged",
@@ -1668,7 +1643,7 @@
       },
       "worst_px": null
     },
-    "64": {
+    "63": {
       "pdf_index": 77,
       "viewer_page": 78,
       "status": "agreed",
@@ -1693,7 +1668,7 @@
         ]
       }
     },
-    "65": {
+    "64": {
       "pdf_index": 78,
       "viewer_page": 79,
       "status": "flagged",
@@ -1719,7 +1694,7 @@
       },
       "worst_px": null
     },
-    "66": {
+    "65": {
       "pdf_index": 79,
       "viewer_page": 80,
       "status": "agreed",
@@ -1744,7 +1719,7 @@
         ]
       }
     },
-    "67": {
+    "66": {
       "pdf_index": 80,
       "viewer_page": 81,
       "status": "agreed",
@@ -1769,7 +1744,7 @@
         ]
       }
     },
-    "68": {
+    "67": {
       "pdf_index": 81,
       "viewer_page": 82,
       "status": "agreed",
@@ -1794,7 +1769,7 @@
         ]
       }
     },
-    "69": {
+    "68": {
       "pdf_index": 82,
       "viewer_page": 83,
       "status": "flagged",
@@ -1820,7 +1795,7 @@
       },
       "worst_px": null
     },
-    "70": {
+    "69": {
       "pdf_index": 83,
       "viewer_page": 84,
       "status": "agreed",
@@ -1845,7 +1820,7 @@
         ]
       }
     },
-    "71": {
+    "70": {
       "pdf_index": 84,
       "viewer_page": 85,
       "status": "agreed",
@@ -1870,7 +1845,7 @@
         ]
       }
     },
-    "72": {
+    "71": {
       "pdf_index": 85,
       "viewer_page": 86,
       "status": "agreed",
@@ -1895,7 +1870,7 @@
         ]
       }
     },
-    "73": {
+    "72": {
       "pdf_index": 86,
       "viewer_page": 87,
       "status": "agreed",
@@ -1920,7 +1895,7 @@
         ]
       }
     },
-    "74": {
+    "73": {
       "pdf_index": 87,
       "viewer_page": 88,
       "status": "agreed",
@@ -1945,7 +1920,7 @@
         ]
       }
     },
-    "75": {
+    "74": {
       "pdf_index": 88,
       "viewer_page": 89,
       "status": "agreed",
@@ -1970,7 +1945,7 @@
         ]
       }
     },
-    "76": {
+    "75": {
       "pdf_index": 89,
       "viewer_page": 90,
       "status": "agreed",
@@ -1995,7 +1970,7 @@
         ]
       }
     },
-    "77": {
+    "76": {
       "pdf_index": 90,
       "viewer_page": 91,
       "status": "agreed",
@@ -2020,7 +1995,7 @@
         ]
       }
     },
-    "78": {
+    "77": {
       "pdf_index": 91,
       "viewer_page": 92,
       "status": "agreed",
@@ -2045,7 +2020,7 @@
         ]
       }
     },
-    "79": {
+    "78": {
       "pdf_index": 92,
       "viewer_page": 93,
       "status": "agreed",
@@ -2070,7 +2045,7 @@
         ]
       }
     },
-    "80": {
+    "79": {
       "pdf_index": 93,
       "viewer_page": 94,
       "status": "agreed",
@@ -2095,7 +2070,7 @@
         ]
       }
     },
-    "81": {
+    "80": {
       "pdf_index": 94,
       "viewer_page": 95,
       "status": "agreed",
@@ -2120,7 +2095,7 @@
         ]
       }
     },
-    "82": {
+    "81": {
       "pdf_index": 95,
       "viewer_page": 96,
       "status": "agreed",
@@ -2145,7 +2120,7 @@
         ]
       }
     },
-    "83": {
+    "82": {
       "pdf_index": 96,
       "viewer_page": 97,
       "status": "agreed",
@@ -2170,7 +2145,7 @@
         ]
       }
     },
-    "84": {
+    "83": {
       "pdf_index": 97,
       "viewer_page": 98,
       "status": "agreed",
@@ -2195,7 +2170,7 @@
         ]
       }
     },
-    "85": {
+    "84": {
       "pdf_index": 98,
       "viewer_page": 99,
       "status": "agreed",
@@ -2220,7 +2195,7 @@
         ]
       }
     },
-    "86": {
+    "85": {
       "pdf_index": 99,
       "viewer_page": 100,
       "status": "agreed",
@@ -2245,7 +2220,7 @@
         ]
       }
     },
-    "87": {
+    "86": {
       "pdf_index": 100,
       "viewer_page": 101,
       "status": "agreed",
@@ -2270,7 +2245,7 @@
         ]
       }
     },
-    "88": {
+    "87": {
       "pdf_index": 101,
       "viewer_page": 102,
       "status": "agreed",
@@ -2295,7 +2270,7 @@
         ]
       }
     },
-    "89": {
+    "88": {
       "pdf_index": 102,
       "viewer_page": 103,
       "status": "agreed",
@@ -2320,7 +2295,7 @@
         ]
       }
     },
-    "90": {
+    "89": {
       "pdf_index": 103,
       "viewer_page": 104,
       "status": "agreed",
@@ -2345,7 +2320,7 @@
         ]
       }
     },
-    "91": {
+    "90": {
       "pdf_index": 104,
       "viewer_page": 105,
       "status": "agreed",
@@ -2370,7 +2345,7 @@
         ]
       }
     },
-    "92": {
+    "91": {
       "pdf_index": 105,
       "viewer_page": 106,
       "status": "agreed",
@@ -2395,7 +2370,7 @@
         ]
       }
     },
-    "93": {
+    "92": {
       "pdf_index": 106,
       "viewer_page": 107,
       "status": "agreed",
@@ -2420,7 +2395,7 @@
         ]
       }
     },
-    "94": {
+    "93": {
       "pdf_index": 107,
       "viewer_page": 108,
       "status": "agreed",
@@ -2445,7 +2420,7 @@
         ]
       }
     },
-    "95": {
+    "94": {
       "pdf_index": 108,
       "viewer_page": 109,
       "status": "agreed",
@@ -2470,7 +2445,7 @@
         ]
       }
     },
-    "96": {
+    "95": {
       "pdf_index": 109,
       "viewer_page": 110,
       "status": "agreed",
@@ -2495,7 +2470,7 @@
         ]
       }
     },
-    "97": {
+    "96": {
       "pdf_index": 110,
       "viewer_page": 111,
       "status": "agreed",
@@ -2520,7 +2495,7 @@
         ]
       }
     },
-    "98": {
+    "97": {
       "pdf_index": 111,
       "viewer_page": 112,
       "status": "agreed",
@@ -2545,7 +2520,7 @@
         ]
       }
     },
-    "99": {
+    "98": {
       "pdf_index": 112,
       "viewer_page": 113,
       "status": "agreed",
@@ -2570,7 +2545,7 @@
         ]
       }
     },
-    "100": {
+    "99": {
       "pdf_index": 113,
       "viewer_page": 114,
       "status": "agreed",
@@ -2595,7 +2570,7 @@
         ]
       }
     },
-    "101": {
+    "100": {
       "pdf_index": 114,
       "viewer_page": 115,
       "status": "agreed",
@@ -2620,7 +2595,7 @@
         ]
       }
     },
-    "102": {
+    "101": {
       "pdf_index": 115,
       "viewer_page": 116,
       "status": "agreed",
@@ -2645,7 +2620,7 @@
         ]
       }
     },
-    "103": {
+    "102": {
       "pdf_index": 116,
       "viewer_page": 117,
       "status": "agreed",
@@ -2670,7 +2645,7 @@
         ]
       }
     },
-    "104": {
+    "103": {
       "pdf_index": 117,
       "viewer_page": 118,
       "status": "agreed",
@@ -2695,7 +2670,7 @@
         ]
       }
     },
-    "105": {
+    "104": {
       "pdf_index": 118,
       "viewer_page": 119,
       "status": "agreed",
@@ -2720,7 +2695,7 @@
         ]
       }
     },
-    "106": {
+    "105": {
       "pdf_index": 119,
       "viewer_page": 120,
       "status": "agreed",
@@ -2745,7 +2720,7 @@
         ]
       }
     },
-    "107": {
+    "106": {
       "pdf_index": 120,
       "viewer_page": 121,
       "status": "agreed",
@@ -2770,7 +2745,7 @@
         ]
       }
     },
-    "108": {
+    "107": {
       "pdf_index": 121,
       "viewer_page": 122,
       "status": "agreed",
@@ -2795,7 +2770,7 @@
         ]
       }
     },
-    "109": {
+    "108": {
       "pdf_index": 122,
       "viewer_page": 123,
       "status": "agreed",
@@ -2820,7 +2795,7 @@
         ]
       }
     },
-    "110": {
+    "109": {
       "pdf_index": 123,
       "viewer_page": 124,
       "status": "agreed",
@@ -2845,7 +2820,7 @@
         ]
       }
     },
-    "111": {
+    "110": {
       "pdf_index": 124,
       "viewer_page": 125,
       "status": "agreed",
@@ -2870,7 +2845,7 @@
         ]
       }
     },
-    "112": {
+    "111": {
       "pdf_index": 125,
       "viewer_page": 126,
       "status": "agreed",
@@ -2895,7 +2870,7 @@
         ]
       }
     },
-    "113": {
+    "112": {
       "pdf_index": 126,
       "viewer_page": 127,
       "status": "agreed",
@@ -2920,7 +2895,7 @@
         ]
       }
     },
-    "114": {
+    "113": {
       "pdf_index": 127,
       "viewer_page": 128,
       "status": "agreed",
@@ -2945,7 +2920,7 @@
         ]
       }
     },
-    "115": {
+    "114": {
       "pdf_index": 128,
       "viewer_page": 129,
       "status": "agreed",
@@ -2970,7 +2945,7 @@
         ]
       }
     },
-    "116": {
+    "115": {
       "pdf_index": 129,
       "viewer_page": 130,
       "status": "agreed",
@@ -2995,7 +2970,7 @@
         ]
       }
     },
-    "117": {
+    "116": {
       "pdf_index": 130,
       "viewer_page": 131,
       "status": "agreed",
@@ -3020,7 +2995,7 @@
         ]
       }
     },
-    "118": {
+    "117": {
       "pdf_index": 131,
       "viewer_page": 132,
       "status": "agreed",
@@ -3045,7 +3020,7 @@
         ]
       }
     },
-    "119": {
+    "118": {
       "pdf_index": 132,
       "viewer_page": 133,
       "status": "agreed",
@@ -3070,7 +3045,7 @@
         ]
       }
     },
-    "120": {
+    "119": {
       "pdf_index": 133,
       "viewer_page": 134,
       "status": "agreed",
@@ -3095,7 +3070,7 @@
         ]
       }
     },
-    "121": {
+    "120": {
       "pdf_index": 134,
       "viewer_page": 135,
       "status": "agreed",
@@ -3120,7 +3095,7 @@
         ]
       }
     },
-    "122": {
+    "121": {
       "pdf_index": 135,
       "viewer_page": 136,
       "status": "agreed",
@@ -3145,7 +3120,7 @@
         ]
       }
     },
-    "123": {
+    "122": {
       "pdf_index": 136,
       "viewer_page": 137,
       "status": "agreed",
@@ -3170,7 +3145,7 @@
         ]
       }
     },
-    "124": {
+    "123": {
       "pdf_index": 137,
       "viewer_page": 138,
       "status": "agreed",
@@ -3195,7 +3170,7 @@
         ]
       }
     },
-    "125": {
+    "124": {
       "pdf_index": 138,
       "viewer_page": 139,
       "status": "agreed",
@@ -3220,7 +3195,7 @@
         ]
       }
     },
-    "126": {
+    "125": {
       "pdf_index": 139,
       "viewer_page": 140,
       "status": "agreed",
@@ -3245,7 +3220,7 @@
         ]
       }
     },
-    "127": {
+    "126": {
       "pdf_index": 140,
       "viewer_page": 141,
       "status": "agreed",
@@ -3270,7 +3245,7 @@
         ]
       }
     },
-    "128": {
+    "127": {
       "pdf_index": 141,
       "viewer_page": 142,
       "status": "agreed",
@@ -3295,7 +3270,7 @@
         ]
       }
     },
-    "129": {
+    "128": {
       "pdf_index": 142,
       "viewer_page": 143,
       "status": "agreed",
@@ -3320,7 +3295,7 @@
         ]
       }
     },
-    "130": {
+    "129": {
       "pdf_index": 143,
       "viewer_page": 144,
       "status": "agreed",
@@ -3345,7 +3320,7 @@
         ]
       }
     },
-    "131": {
+    "130": {
       "pdf_index": 144,
       "viewer_page": 145,
       "status": "agreed",
@@ -3370,7 +3345,7 @@
         ]
       }
     },
-    "132": {
+    "131": {
       "pdf_index": 145,
       "viewer_page": 146,
       "status": "agreed",
@@ -3395,7 +3370,7 @@
         ]
       }
     },
-    "133": {
+    "132": {
       "pdf_index": 146,
       "viewer_page": 147,
       "status": "flagged",
@@ -3421,7 +3396,7 @@
       },
       "worst_px": null
     },
-    "134": {
+    "133": {
       "pdf_index": 147,
       "viewer_page": 148,
       "status": "agreed",
@@ -3446,7 +3421,7 @@
         ]
       }
     },
-    "135": {
+    "134": {
       "pdf_index": 148,
       "viewer_page": 149,
       "status": "agreed",
@@ -3471,7 +3446,7 @@
         ]
       }
     },
-    "136": {
+    "135": {
       "pdf_index": 149,
       "viewer_page": 150,
       "status": "agreed",
@@ -3496,7 +3471,7 @@
         ]
       }
     },
-    "137": {
+    "136": {
       "pdf_index": 150,
       "viewer_page": 151,
       "status": "agreed",
@@ -3521,7 +3496,7 @@
         ]
       }
     },
-    "138": {
+    "137": {
       "pdf_index": 151,
       "viewer_page": 152,
       "status": "agreed",
@@ -3546,7 +3521,7 @@
         ]
       }
     },
-    "139": {
+    "138": {
       "pdf_index": 152,
       "viewer_page": 153,
       "status": "agreed",
@@ -3571,7 +3546,7 @@
         ]
       }
     },
-    "140": {
+    "139": {
       "pdf_index": 153,
       "viewer_page": 154,
       "status": "agreed",
@@ -3596,7 +3571,7 @@
         ]
       }
     },
-    "141": {
+    "140": {
       "pdf_index": 154,
       "viewer_page": 155,
       "status": "flagged",
@@ -3622,7 +3597,7 @@
       },
       "worst_px": null
     },
-    "142": {
+    "141": {
       "pdf_index": 155,
       "viewer_page": 156,
       "status": "agreed",
@@ -3647,7 +3622,7 @@
         ]
       }
     },
-    "143": {
+    "142": {
       "pdf_index": 156,
       "viewer_page": 157,
       "status": "agreed",
@@ -3672,7 +3647,7 @@
         ]
       }
     },
-    "144": {
+    "143": {
       "pdf_index": 157,
       "viewer_page": 158,
       "status": "agreed",
@@ -3697,7 +3672,7 @@
         ]
       }
     },
-    "145": {
+    "144": {
       "pdf_index": 158,
       "viewer_page": 159,
       "status": "agreed",
@@ -3722,7 +3697,7 @@
         ]
       }
     },
-    "146": {
+    "145": {
       "pdf_index": 159,
       "viewer_page": 160,
       "status": "agreed",
@@ -3747,7 +3722,7 @@
         ]
       }
     },
-    "147": {
+    "146": {
       "pdf_index": 160,
       "viewer_page": 161,
       "status": "agreed",
@@ -3772,7 +3747,7 @@
         ]
       }
     },
-    "148": {
+    "147": {
       "pdf_index": 161,
       "viewer_page": 162,
       "status": "flagged",
@@ -3798,7 +3773,7 @@
       },
       "worst_px": null
     },
-    "149": {
+    "148": {
       "pdf_index": 162,
       "viewer_page": 163,
       "status": "agreed",
@@ -3823,7 +3798,7 @@
         ]
       }
     },
-    "150": {
+    "149": {
       "pdf_index": 163,
       "viewer_page": 164,
       "status": "agreed",
@@ -3848,7 +3823,7 @@
         ]
       }
     },
-    "151": {
+    "150": {
       "pdf_index": 164,
       "viewer_page": 165,
       "status": "agreed",
@@ -3873,7 +3848,7 @@
         ]
       }
     },
-    "152": {
+    "151": {
       "pdf_index": 165,
       "viewer_page": 166,
       "status": "flagged",
@@ -3899,7 +3874,7 @@
       },
       "worst_px": null
     },
-    "153": {
+    "152": {
       "pdf_index": 166,
       "viewer_page": 167,
       "status": "agreed",
@@ -3924,7 +3899,7 @@
         ]
       }
     },
-    "154": {
+    "153": {
       "pdf_index": 167,
       "viewer_page": 168,
       "status": "agreed",
@@ -3949,7 +3924,7 @@
         ]
       }
     },
-    "155": {
+    "154": {
       "pdf_index": 168,
       "viewer_page": 169,
       "status": "agreed",
@@ -3974,7 +3949,7 @@
         ]
       }
     },
-    "156": {
+    "155": {
       "pdf_index": 169,
       "viewer_page": 170,
       "status": "agreed",
@@ -3999,7 +3974,7 @@
         ]
       }
     },
-    "157": {
+    "156": {
       "pdf_index": 170,
       "viewer_page": 171,
       "status": "agreed",
@@ -4024,7 +3999,7 @@
         ]
       }
     },
-    "158": {
+    "157": {
       "pdf_index": 171,
       "viewer_page": 172,
       "status": "agreed",
@@ -4049,7 +4024,7 @@
         ]
       }
     },
-    "159": {
+    "158": {
       "pdf_index": 172,
       "viewer_page": 173,
       "status": "agreed",
@@ -4074,7 +4049,7 @@
         ]
       }
     },
-    "160": {
+    "159": {
       "pdf_index": 173,
       "viewer_page": 174,
       "status": "agreed",
@@ -4099,7 +4074,7 @@
         ]
       }
     },
-    "161": {
+    "160": {
       "pdf_index": 174,
       "viewer_page": 175,
       "status": "flagged",
@@ -4125,7 +4100,7 @@
       },
       "worst_px": null
     },
-    "162": {
+    "161": {
       "pdf_index": 175,
       "viewer_page": 176,
       "status": "agreed",
@@ -4150,7 +4125,7 @@
         ]
       }
     },
-    "163": {
+    "162": {
       "pdf_index": 176,
       "viewer_page": 177,
       "status": "flagged",
@@ -4176,7 +4151,7 @@
       },
       "worst_px": null
     },
-    "164": {
+    "163": {
       "pdf_index": 177,
       "viewer_page": 178,
       "status": "agreed",
@@ -4201,7 +4176,7 @@
         ]
       }
     },
-    "165": {
+    "164": {
       "pdf_index": 178,
       "viewer_page": 179,
       "status": "agreed",
@@ -4226,7 +4201,7 @@
         ]
       }
     },
-    "166": {
+    "165": {
       "pdf_index": 179,
       "viewer_page": 180,
       "status": "agreed",
@@ -4251,7 +4226,7 @@
         ]
       }
     },
-    "167": {
+    "166": {
       "pdf_index": 180,
       "viewer_page": 181,
       "status": "agreed",
@@ -4276,7 +4251,7 @@
         ]
       }
     },
-    "168": {
+    "167": {
       "pdf_index": 181,
       "viewer_page": 182,
       "status": "flagged",
@@ -4302,7 +4277,7 @@
       },
       "worst_px": null
     },
-    "169": {
+    "168": {
       "pdf_index": 182,
       "viewer_page": 183,
       "status": "agreed",
@@ -4327,7 +4302,7 @@
         ]
       }
     },
-    "170": {
+    "169": {
       "pdf_index": 183,
       "viewer_page": 184,
       "status": "agreed",
@@ -4352,7 +4327,7 @@
         ]
       }
     },
-    "171": {
+    "170": {
       "pdf_index": 184,
       "viewer_page": 185,
       "status": "agreed",
@@ -4377,7 +4352,7 @@
         ]
       }
     },
-    "172": {
+    "171": {
       "pdf_index": 185,
       "viewer_page": 186,
       "status": "agreed",
@@ -4402,7 +4377,7 @@
         ]
       }
     },
-    "173": {
+    "172": {
       "pdf_index": 186,
       "viewer_page": 187,
       "status": "flagged",
@@ -4428,7 +4403,7 @@
       },
       "worst_px": null
     },
-    "174": {
+    "173": {
       "pdf_index": 187,
       "viewer_page": 188,
       "status": "agreed",
@@ -4453,7 +4428,7 @@
         ]
       }
     },
-    "175": {
+    "174": {
       "pdf_index": 188,
       "viewer_page": 189,
       "status": "agreed",
@@ -4478,7 +4453,7 @@
         ]
       }
     },
-    "176": {
+    "175": {
       "pdf_index": 189,
       "viewer_page": 190,
       "status": "agreed",
@@ -4503,7 +4478,7 @@
         ]
       }
     },
-    "177": {
+    "176": {
       "pdf_index": 190,
       "viewer_page": 191,
       "status": "agreed",
@@ -4528,7 +4503,7 @@
         ]
       }
     },
-    "178": {
+    "177": {
       "pdf_index": 191,
       "viewer_page": 192,
       "status": "agreed",
@@ -4553,7 +4528,7 @@
         ]
       }
     },
-    "179": {
+    "178": {
       "pdf_index": 192,
       "viewer_page": 193,
       "status": "agreed",
@@ -4578,7 +4553,7 @@
         ]
       }
     },
-    "180": {
+    "179": {
       "pdf_index": 193,
       "viewer_page": 194,
       "status": "agreed",
@@ -4603,7 +4578,7 @@
         ]
       }
     },
-    "181": {
+    "180": {
       "pdf_index": 194,
       "viewer_page": 195,
       "status": "agreed",
@@ -4628,7 +4603,7 @@
         ]
       }
     },
-    "182": {
+    "181": {
       "pdf_index": 195,
       "viewer_page": 196,
       "status": "flagged",
@@ -4671,7 +4646,7 @@
       },
       "worst_px": 3738.0
     },
-    "183": {
+    "182": {
       "pdf_index": 196,
       "viewer_page": 197,
       "status": "agreed",
@@ -4696,7 +4671,7 @@
         ]
       }
     },
-    "184": {
+    "183": {
       "pdf_index": 197,
       "viewer_page": 198,
       "status": "agreed",
@@ -4721,7 +4696,7 @@
         ]
       }
     },
-    "185": {
+    "184": {
       "pdf_index": 198,
       "viewer_page": 199,
       "status": "agreed",
@@ -4746,7 +4721,7 @@
         ]
       }
     },
-    "186": {
+    "185": {
       "pdf_index": 199,
       "viewer_page": 200,
       "status": "agreed",
@@ -4771,7 +4746,7 @@
         ]
       }
     },
-    "187": {
+    "186": {
       "pdf_index": 200,
       "viewer_page": 201,
       "status": "agreed",
@@ -4796,7 +4771,7 @@
         ]
       }
     },
-    "188": {
+    "187": {
       "pdf_index": 201,
       "viewer_page": 202,
       "status": "agreed",
@@ -4821,7 +4796,7 @@
         ]
       }
     },
-    "189": {
+    "188": {
       "pdf_index": 202,
       "viewer_page": 203,
       "status": "agreed",
@@ -4846,7 +4821,7 @@
         ]
       }
     },
-    "190": {
+    "189": {
       "pdf_index": 203,
       "viewer_page": 204,
       "status": "agreed",
@@ -4871,7 +4846,7 @@
         ]
       }
     },
-    "191": {
+    "190": {
       "pdf_index": 204,
       "viewer_page": 205,
       "status": "agreed",
@@ -4896,7 +4871,7 @@
         ]
       }
     },
-    "192": {
+    "191": {
       "pdf_index": 205,
       "viewer_page": 206,
       "status": "agreed",
@@ -4921,7 +4896,7 @@
         ]
       }
     },
-    "193": {
+    "192": {
       "pdf_index": 206,
       "viewer_page": 207,
       "status": "agreed",
@@ -4946,7 +4921,7 @@
         ]
       }
     },
-    "194": {
+    "193": {
       "pdf_index": 207,
       "viewer_page": 208,
       "status": "agreed",
@@ -4971,7 +4946,7 @@
         ]
       }
     },
-    "195": {
+    "194": {
       "pdf_index": 208,
       "viewer_page": 209,
       "status": "agreed",
@@ -4996,7 +4971,7 @@
         ]
       }
     },
-    "196": {
+    "195": {
       "pdf_index": 209,
       "viewer_page": 210,
       "status": "agreed",
@@ -5021,7 +4996,7 @@
         ]
       }
     },
-    "197": {
+    "196": {
       "pdf_index": 210,
       "viewer_page": 211,
       "status": "agreed",
@@ -5046,7 +5021,7 @@
         ]
       }
     },
-    "198": {
+    "197": {
       "pdf_index": 211,
       "viewer_page": 212,
       "status": "agreed",
@@ -5071,7 +5046,7 @@
         ]
       }
     },
-    "199": {
+    "198": {
       "pdf_index": 212,
       "viewer_page": 213,
       "status": "agreed",
@@ -5096,7 +5071,7 @@
         ]
       }
     },
-    "200": {
+    "199": {
       "pdf_index": 213,
       "viewer_page": 214,
       "status": "agreed",
@@ -5121,7 +5096,7 @@
         ]
       }
     },
-    "201": {
+    "200": {
       "pdf_index": 214,
       "viewer_page": 215,
       "status": "agreed",
@@ -5146,7 +5121,7 @@
         ]
       }
     },
-    "202": {
+    "201": {
       "pdf_index": 215,
       "viewer_page": 216,
       "status": "agreed",
@@ -5171,7 +5146,7 @@
         ]
       }
     },
-    "203": {
+    "202": {
       "pdf_index": 216,
       "viewer_page": 217,
       "status": "agreed",
@@ -5196,7 +5171,7 @@
         ]
       }
     },
-    "204": {
+    "203": {
       "pdf_index": 217,
       "viewer_page": 218,
       "status": "agreed",
@@ -5221,7 +5196,7 @@
         ]
       }
     },
-    "205": {
+    "204": {
       "pdf_index": 218,
       "viewer_page": 219,
       "status": "agreed",
@@ -5246,7 +5221,7 @@
         ]
       }
     },
-    "206": {
+    "205": {
       "pdf_index": 219,
       "viewer_page": 220,
       "status": "agreed",
@@ -5271,7 +5246,7 @@
         ]
       }
     },
-    "207": {
+    "206": {
       "pdf_index": 220,
       "viewer_page": 221,
       "status": "agreed",
@@ -5296,7 +5271,7 @@
         ]
       }
     },
-    "208": {
+    "207": {
       "pdf_index": 221,
       "viewer_page": 222,
       "status": "agreed",
@@ -5321,7 +5296,7 @@
         ]
       }
     },
-    "209": {
+    "208": {
       "pdf_index": 222,
       "viewer_page": 223,
       "status": "agreed",
@@ -5346,7 +5321,7 @@
         ]
       }
     },
-    "210": {
+    "209": {
       "pdf_index": 223,
       "viewer_page": 224,
       "status": "agreed",
@@ -5371,7 +5346,7 @@
         ]
       }
     },
-    "211": {
+    "210": {
       "pdf_index": 224,
       "viewer_page": 225,
       "status": "agreed",
@@ -5396,7 +5371,7 @@
         ]
       }
     },
-    "212": {
+    "211": {
       "pdf_index": 225,
       "viewer_page": 226,
       "status": "agreed",
@@ -5421,7 +5396,7 @@
         ]
       }
     },
-    "213": {
+    "212": {
       "pdf_index": 226,
       "viewer_page": 227,
       "status": "agreed",
@@ -5446,7 +5421,7 @@
         ]
       }
     },
-    "214": {
+    "213": {
       "pdf_index": 227,
       "viewer_page": 228,
       "status": "flagged",
@@ -5489,7 +5464,7 @@
       },
       "worst_px": 3736.0
     },
-    "215": {
+    "214": {
       "pdf_index": 228,
       "viewer_page": 229,
       "status": "agreed",
@@ -5514,7 +5489,7 @@
         ]
       }
     },
-    "216": {
+    "215": {
       "pdf_index": 229,
       "viewer_page": 230,
       "status": "agreed",
@@ -5539,7 +5514,7 @@
         ]
       }
     },
-    "217": {
+    "216": {
       "pdf_index": 230,
       "viewer_page": 231,
       "status": "agreed",
@@ -5564,7 +5539,7 @@
         ]
       }
     },
-    "218": {
+    "217": {
       "pdf_index": 231,
       "viewer_page": 232,
       "status": "flagged",
@@ -5590,7 +5565,7 @@
       },
       "worst_px": null
     },
-    "219": {
+    "218": {
       "pdf_index": 232,
       "viewer_page": 233,
       "status": "agreed",
@@ -5615,7 +5590,7 @@
         ]
       }
     },
-    "220": {
+    "219": {
       "pdf_index": 233,
       "viewer_page": 234,
       "status": "agreed",
@@ -5640,7 +5615,7 @@
         ]
       }
     },
-    "221": {
+    "220": {
       "pdf_index": 234,
       "viewer_page": 235,
       "status": "agreed",
@@ -5665,7 +5640,7 @@
         ]
       }
     },
-    "222": {
+    "221": {
       "pdf_index": 235,
       "viewer_page": 236,
       "status": "agreed",
@@ -5690,7 +5665,7 @@
         ]
       }
     },
-    "223": {
+    "222": {
       "pdf_index": 236,
       "viewer_page": 237,
       "status": "agreed",
@@ -5715,7 +5690,7 @@
         ]
       }
     },
-    "224": {
+    "223": {
       "pdf_index": 237,
       "viewer_page": 238,
       "status": "agreed",
@@ -5740,7 +5715,7 @@
         ]
       }
     },
-    "225": {
+    "224": {
       "pdf_index": 238,
       "viewer_page": 239,
       "status": "agreed",
@@ -5765,7 +5740,7 @@
         ]
       }
     },
-    "226": {
+    "225": {
       "pdf_index": 239,
       "viewer_page": 240,
       "status": "agreed",
@@ -5790,7 +5765,7 @@
         ]
       }
     },
-    "227": {
+    "226": {
       "pdf_index": 240,
       "viewer_page": 241,
       "status": "agreed",
@@ -5815,7 +5790,7 @@
         ]
       }
     },
-    "228": {
+    "227": {
       "pdf_index": 241,
       "viewer_page": 242,
       "status": "agreed",
@@ -5840,7 +5815,7 @@
         ]
       }
     },
-    "229": {
+    "228": {
       "pdf_index": 242,
       "viewer_page": 243,
       "status": "flagged",
@@ -5866,7 +5841,7 @@
       },
       "worst_px": null
     },
-    "230": {
+    "229": {
       "pdf_index": 243,
       "viewer_page": 244,
       "status": "agreed",
@@ -5891,7 +5866,7 @@
         ]
       }
     },
-    "231": {
+    "230": {
       "pdf_index": 244,
       "viewer_page": 245,
       "status": "agreed",
@@ -5916,7 +5891,7 @@
         ]
       }
     },
-    "232": {
+    "231": {
       "pdf_index": 245,
       "viewer_page": 246,
       "status": "agreed",
@@ -5941,7 +5916,7 @@
         ]
       }
     },
-    "233": {
+    "232": {
       "pdf_index": 246,
       "viewer_page": 247,
       "status": "agreed",
@@ -5966,7 +5941,7 @@
         ]
       }
     },
-    "234": {
+    "233": {
       "pdf_index": 247,
       "viewer_page": 248,
       "status": "agreed",
@@ -5991,7 +5966,7 @@
         ]
       }
     },
-    "235": {
+    "234": {
       "pdf_index": 248,
       "viewer_page": 249,
       "status": "flagged",
@@ -6017,7 +5992,7 @@
       },
       "worst_px": null
     },
-    "236": {
+    "235": {
       "pdf_index": 249,
       "viewer_page": 250,
       "status": "agreed",
@@ -6042,7 +6017,7 @@
         ]
       }
     },
-    "237": {
+    "236": {
       "pdf_index": 250,
       "viewer_page": 251,
       "status": "flagged",
@@ -6085,7 +6060,7 @@
       },
       "worst_px": 3784.0
     },
-    "238": {
+    "237": {
       "pdf_index": 251,
       "viewer_page": 252,
       "status": "agreed",
@@ -6110,7 +6085,7 @@
         ]
       }
     },
-    "239": {
+    "238": {
       "pdf_index": 252,
       "viewer_page": 253,
       "status": "flagged",
@@ -6153,7 +6128,7 @@
       },
       "worst_px": 3777.0
     },
-    "240": {
+    "239": {
       "pdf_index": 253,
       "viewer_page": 254,
       "status": "agreed",
@@ -6178,7 +6153,7 @@
         ]
       }
     },
-    "241": {
+    "240": {
       "pdf_index": 254,
       "viewer_page": 255,
       "status": "flagged",
@@ -6204,7 +6179,7 @@
       },
       "worst_px": null
     },
-    "242": {
+    "241": {
       "pdf_index": 255,
       "viewer_page": 256,
       "status": "agreed",
@@ -6229,7 +6204,7 @@
         ]
       }
     },
-    "243": {
+    "242": {
       "pdf_index": 256,
       "viewer_page": 257,
       "status": "agreed",
@@ -6254,7 +6229,7 @@
         ]
       }
     },
-    "244": {
+    "243": {
       "pdf_index": 257,
       "viewer_page": 258,
       "status": "agreed",
@@ -6279,7 +6254,7 @@
         ]
       }
     },
-    "245": {
+    "244": {
       "pdf_index": 258,
       "viewer_page": 259,
       "status": "agreed",
@@ -6304,7 +6279,7 @@
         ]
       }
     },
-    "246": {
+    "245": {
       "pdf_index": 259,
       "viewer_page": 260,
       "status": "agreed",
@@ -6329,7 +6304,7 @@
         ]
       }
     },
-    "247": {
+    "246": {
       "pdf_index": 260,
       "viewer_page": 261,
       "status": "flagged",
@@ -6355,7 +6330,7 @@
       },
       "worst_px": null
     },
-    "248": {
+    "247": {
       "pdf_index": 261,
       "viewer_page": 262,
       "status": "agreed",
@@ -6380,7 +6355,7 @@
         ]
       }
     },
-    "249": {
+    "248": {
       "pdf_index": 262,
       "viewer_page": 263,
       "status": "agreed",
@@ -6405,7 +6380,7 @@
         ]
       }
     },
-    "250": {
+    "249": {
       "pdf_index": 263,
       "viewer_page": 264,
       "status": "agreed",
@@ -6430,7 +6405,7 @@
         ]
       }
     },
-    "251": {
+    "250": {
       "pdf_index": 264,
       "viewer_page": 265,
       "status": "flagged",
@@ -6456,7 +6431,7 @@
       },
       "worst_px": null
     },
-    "252": {
+    "251": {
       "pdf_index": 265,
       "viewer_page": 266,
       "status": "agreed",
@@ -6481,7 +6456,7 @@
         ]
       }
     },
-    "253": {
+    "252": {
       "pdf_index": 266,
       "viewer_page": 267,
       "status": "flagged",
@@ -6507,7 +6482,7 @@
       },
       "worst_px": null
     },
-    "254": {
+    "253": {
       "pdf_index": 267,
       "viewer_page": 268,
       "status": "agreed",
@@ -6532,7 +6507,7 @@
         ]
       }
     },
-    "255": {
+    "254": {
       "pdf_index": 268,
       "viewer_page": 269,
       "status": "agreed",
@@ -6557,7 +6532,7 @@
         ]
       }
     },
-    "256": {
+    "255": {
       "pdf_index": 269,
       "viewer_page": 270,
       "status": "agreed",
@@ -6582,7 +6557,7 @@
         ]
       }
     },
-    "257": {
+    "256": {
       "pdf_index": 270,
       "viewer_page": 271,
       "status": "agreed",
@@ -6607,7 +6582,7 @@
         ]
       }
     },
-    "258": {
+    "257": {
       "pdf_index": 271,
       "viewer_page": 272,
       "status": "agreed",
@@ -6632,7 +6607,7 @@
         ]
       }
     },
-    "259": {
+    "258": {
       "pdf_index": 272,
       "viewer_page": 273,
       "status": "flagged",
@@ -6675,7 +6650,7 @@
       },
       "worst_px": 3768.0
     },
-    "260": {
+    "259": {
       "pdf_index": 273,
       "viewer_page": 274,
       "status": "agreed",
@@ -6700,7 +6675,7 @@
         ]
       }
     },
-    "261": {
+    "260": {
       "pdf_index": 274,
       "viewer_page": 275,
       "status": "agreed",
@@ -6725,7 +6700,7 @@
         ]
       }
     },
-    "262": {
+    "261": {
       "pdf_index": 275,
       "viewer_page": 276,
       "status": "flagged",
@@ -6768,7 +6743,7 @@
       },
       "worst_px": 73.7
     },
-    "263": {
+    "262": {
       "pdf_index": 276,
       "viewer_page": 277,
       "status": "flagged",
@@ -6794,7 +6769,7 @@
       },
       "worst_px": null
     },
-    "264": {
+    "263": {
       "pdf_index": 277,
       "viewer_page": 278,
       "status": "agreed",
@@ -6819,7 +6794,7 @@
         ]
       }
     },
-    "265": {
+    "264": {
       "pdf_index": 278,
       "viewer_page": 279,
       "status": "agreed",
@@ -6844,7 +6819,7 @@
         ]
       }
     },
-    "266": {
+    "265": {
       "pdf_index": 279,
       "viewer_page": 280,
       "status": "agreed",
@@ -6869,7 +6844,7 @@
         ]
       }
     },
-    "267": {
+    "266": {
       "pdf_index": 280,
       "viewer_page": 281,
       "status": "flagged",
@@ -6895,7 +6870,7 @@
       },
       "worst_px": null
     },
-    "268": {
+    "267": {
       "pdf_index": 281,
       "viewer_page": 282,
       "status": "agreed",
@@ -6920,7 +6895,7 @@
         ]
       }
     },
-    "269": {
+    "268": {
       "pdf_index": 282,
       "viewer_page": 283,
       "status": "flagged",
@@ -6963,7 +6938,7 @@
       },
       "worst_px": 3764.0
     },
-    "270": {
+    "269": {
       "pdf_index": 283,
       "viewer_page": 284,
       "status": "agreed",
@@ -6988,7 +6963,7 @@
         ]
       }
     },
-    "271": {
+    "270": {
       "pdf_index": 284,
       "viewer_page": 285,
       "status": "agreed",
@@ -7013,7 +6988,7 @@
         ]
       }
     },
-    "272": {
+    "271": {
       "pdf_index": 285,
       "viewer_page": 286,
       "status": "agreed",
@@ -7038,7 +7013,7 @@
         ]
       }
     },
-    "273": {
+    "272": {
       "pdf_index": 286,
       "viewer_page": 287,
       "status": "agreed",
@@ -7063,7 +7038,7 @@
         ]
       }
     },
-    "274": {
+    "273": {
       "pdf_index": 287,
       "viewer_page": 288,
       "status": "agreed",
@@ -7088,7 +7063,7 @@
         ]
       }
     },
-    "275": {
+    "274": {
       "pdf_index": 288,
       "viewer_page": 289,
       "status": "agreed",
@@ -7113,7 +7088,7 @@
         ]
       }
     },
-    "276": {
+    "275": {
       "pdf_index": 289,
       "viewer_page": 290,
       "status": "agreed",
@@ -7138,7 +7113,7 @@
         ]
       }
     },
-    "277": {
+    "276": {
       "pdf_index": 290,
       "viewer_page": 291,
       "status": "agreed",
@@ -7163,7 +7138,7 @@
         ]
       }
     },
-    "278": {
+    "277": {
       "pdf_index": 291,
       "viewer_page": 292,
       "status": "agreed",
@@ -7188,7 +7163,7 @@
         ]
       }
     },
-    "279": {
+    "278": {
       "pdf_index": 292,
       "viewer_page": 293,
       "status": "agreed",
@@ -7213,7 +7188,7 @@
         ]
       }
     },
-    "280": {
+    "279": {
       "pdf_index": 293,
       "viewer_page": 294,
       "status": "agreed",
@@ -7238,7 +7213,7 @@
         ]
       }
     },
-    "281": {
+    "280": {
       "pdf_index": 294,
       "viewer_page": 295,
       "status": "agreed",
@@ -7263,7 +7238,7 @@
         ]
       }
     },
-    "282": {
+    "281": {
       "pdf_index": 295,
       "viewer_page": 296,
       "status": "agreed",
@@ -7288,7 +7263,7 @@
         ]
       }
     },
-    "283": {
+    "282": {
       "pdf_index": 296,
       "viewer_page": 297,
       "status": "agreed",
@@ -7313,7 +7288,7 @@
         ]
       }
     },
-    "284": {
+    "283": {
       "pdf_index": 297,
       "viewer_page": 298,
       "status": "flagged",
@@ -7339,7 +7314,7 @@
       },
       "worst_px": null
     },
-    "285": {
+    "284": {
       "pdf_index": 298,
       "viewer_page": 299,
       "status": "agreed",
@@ -7364,7 +7339,7 @@
         ]
       }
     },
-    "286": {
+    "285": {
       "pdf_index": 299,
       "viewer_page": 300,
       "status": "agreed",
@@ -7389,7 +7364,7 @@
         ]
       }
     },
-    "287": {
+    "286": {
       "pdf_index": 300,
       "viewer_page": 301,
       "status": "agreed",
@@ -7414,7 +7389,7 @@
         ]
       }
     },
-    "288": {
+    "287": {
       "pdf_index": 301,
       "viewer_page": 302,
       "status": "agreed",
@@ -7439,7 +7414,7 @@
         ]
       }
     },
-    "289": {
+    "288": {
       "pdf_index": 302,
       "viewer_page": 303,
       "status": "agreed",
@@ -7464,7 +7439,7 @@
         ]
       }
     },
-    "290": {
+    "289": {
       "pdf_index": 303,
       "viewer_page": 304,
       "status": "agreed",
@@ -7489,7 +7464,7 @@
         ]
       }
     },
-    "291": {
+    "290": {
       "pdf_index": 304,
       "viewer_page": 305,
       "status": "agreed",
@@ -7514,7 +7489,7 @@
         ]
       }
     },
-    "292": {
+    "291": {
       "pdf_index": 305,
       "viewer_page": 306,
       "status": "agreed",
@@ -7539,7 +7514,7 @@
         ]
       }
     },
-    "293": {
+    "292": {
       "pdf_index": 306,
       "viewer_page": 307,
       "status": "agreed",
@@ -7564,7 +7539,7 @@
         ]
       }
     },
-    "294": {
+    "293": {
       "pdf_index": 307,
       "viewer_page": 308,
       "status": "agreed",
@@ -7589,7 +7564,7 @@
         ]
       }
     },
-    "295": {
+    "294": {
       "pdf_index": 308,
       "viewer_page": 309,
       "status": "agreed",
@@ -7614,7 +7589,7 @@
         ]
       }
     },
-    "296": {
+    "295": {
       "pdf_index": 309,
       "viewer_page": 310,
       "status": "flagged",
@@ -7657,7 +7632,7 @@
       },
       "worst_px": 77.2
     },
-    "297": {
+    "296": {
       "pdf_index": 310,
       "viewer_page": 311,
       "status": "agreed",
@@ -7682,7 +7657,7 @@
         ]
       }
     },
-    "298": {
+    "297": {
       "pdf_index": 311,
       "viewer_page": 312,
       "status": "agreed",
@@ -7707,7 +7682,7 @@
         ]
       }
     },
-    "299": {
+    "298": {
       "pdf_index": 312,
       "viewer_page": 313,
       "status": "agreed",
@@ -7732,7 +7707,7 @@
         ]
       }
     },
-    "300": {
+    "299": {
       "pdf_index": 313,
       "viewer_page": 314,
       "status": "agreed",
@@ -7757,7 +7732,7 @@
         ]
       }
     },
-    "301": {
+    "300": {
       "pdf_index": 314,
       "viewer_page": 315,
       "status": "agreed",
@@ -7782,7 +7757,7 @@
         ]
       }
     },
-    "302": {
+    "301": {
       "pdf_index": 315,
       "viewer_page": 316,
       "status": "agreed",
@@ -7807,7 +7782,7 @@
         ]
       }
     },
-    "303": {
+    "302": {
       "pdf_index": 316,
       "viewer_page": 317,
       "status": "agreed",
@@ -7832,7 +7807,7 @@
         ]
       }
     },
-    "304": {
+    "303": {
       "pdf_index": 317,
       "viewer_page": 318,
       "status": "agreed",
@@ -7857,7 +7832,7 @@
         ]
       }
     },
-    "305": {
+    "304": {
       "pdf_index": 318,
       "viewer_page": 319,
       "status": "agreed",
@@ -7882,7 +7857,7 @@
         ]
       }
     },
-    "306": {
+    "305": {
       "pdf_index": 319,
       "viewer_page": 320,
       "status": "agreed",
@@ -7907,7 +7882,7 @@
         ]
       }
     },
-    "307": {
+    "306": {
       "pdf_index": 320,
       "viewer_page": 321,
       "status": "agreed",
@@ -7932,7 +7907,7 @@
         ]
       }
     },
-    "308": {
+    "307": {
       "pdf_index": 321,
       "viewer_page": 322,
       "status": "agreed",
@@ -7957,7 +7932,7 @@
         ]
       }
     },
-    "309": {
+    "308": {
       "pdf_index": 322,
       "viewer_page": 323,
       "status": "agreed",
@@ -7982,7 +7957,7 @@
         ]
       }
     },
-    "310": {
+    "309": {
       "pdf_index": 323,
       "viewer_page": 324,
       "status": "agreed",
@@ -8007,7 +7982,7 @@
         ]
       }
     },
-    "311": {
+    "310": {
       "pdf_index": 324,
       "viewer_page": 325,
       "status": "flagged",
@@ -8033,7 +8008,7 @@
       },
       "worst_px": null
     },
-    "312": {
+    "311": {
       "pdf_index": 325,
       "viewer_page": 326,
       "status": "agreed",
@@ -8058,7 +8033,7 @@
         ]
       }
     },
-    "313": {
+    "312": {
       "pdf_index": 326,
       "viewer_page": 327,
       "status": "flagged",
@@ -8101,7 +8076,7 @@
       },
       "worst_px": 3754.3
     },
-    "314": {
+    "313": {
       "pdf_index": 327,
       "viewer_page": 328,
       "status": "agreed",
@@ -8126,7 +8101,7 @@
         ]
       }
     },
-    "315": {
+    "314": {
       "pdf_index": 328,
       "viewer_page": 329,
       "status": "flagged",
@@ -8152,7 +8127,7 @@
       },
       "worst_px": null
     },
-    "316": {
+    "315": {
       "pdf_index": 329,
       "viewer_page": 330,
       "status": "agreed",

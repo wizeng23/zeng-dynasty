@@ -57,12 +57,14 @@ GRAY_THRESHOLD = 128
 # Content page range per book, as inclusive 0-based PDF page indices. Everything
 # outside is cover / front matter / blank trailing pages -- ignored. (William's
 # ranges, given 1-indexed, converted here: book1 7-23, book2 3-136, book3 7-298,
-# book4 14-330.) Used when --first-page/--last-page are not passed explicitly.
+# book4 15-330.) Used when --first-page/--last-page are not passed explicitly.
+# book4's first content page (old PDF index 13 / viewer 14) was a table of
+# contents, not a tree/bio page -- dropped, so book4 now starts at index 14.
 BOOK_PAGE_RANGES: dict[str, tuple[int, int]] = {
     "book1": (6, 22),
     "book2": (2, 135),
     "book3": (6, 297),
-    "book4": (13, 329),
+    "book4": (14, 329),
 }
 
 # Render scale: the PDF page is ~595x842 pt; x8.2 lands near the native embedded
