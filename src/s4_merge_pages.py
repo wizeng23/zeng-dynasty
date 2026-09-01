@@ -29,7 +29,7 @@ from itertools import combinations
 import numpy as np
 
 from src.imaging import get_image, save_image
-from src.segment import BOOK_CONFIGS, BookConfig, _s
+from src.s3_segment import BOOK_CONFIGS, BookConfig, _s
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +166,8 @@ def merge_pages(
     book: str,
     books_dir: str = "books",
     config: BookConfig | None = None,
-    crops_dir_name: str = "crops",
-    graphs_dir_name: str = "graphs",
+    crops_dir_name: str = "3_crops",
+    graphs_dir_name: str = "4_graphs",
 ) -> list[str]:
     """Merge each subtree's per-page crops into one graph image.
 
@@ -232,8 +232,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True, choices=sorted(BOOK_CONFIGS))
     parser.add_argument("--books-dir", default="books")
-    parser.add_argument("--crops-dir", default="crops")
-    parser.add_argument("--graphs-dir", default="graphs")
+    parser.add_argument("--crops-dir", default="3_crops")
+    parser.add_argument("--graphs-dir", default="4_graphs")
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 

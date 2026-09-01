@@ -13,7 +13,7 @@ import logging
 
 import numpy as np
 
-from src.ocr import Crop
+from src.s7_ocr import Crop
 
 logger = logging.getLogger(__name__)
 

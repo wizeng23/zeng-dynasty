@@ -668,8 +668,8 @@ def build_tree(
     books_dir: str = "books",
     data_dir: str = "data",
     config: BookConfig | None = None,
-    graphs_dir_name: str = "graphs",
-    names_dir_name: str = "names",
+    graphs_dir_name: str = "4_graphs",
+    names_dir_name: str = "5_names",
     data_stem: str | None = None,
 ) -> list[Node]:
     """Parse every subtree graph of ``book`` into domain nodes and name crops.

@@ -27,7 +27,7 @@ from PIL import Image, ImageDraw
 
 Image.MAX_IMAGE_PIXELS = None
 
-from src import build_tree as bt
+from src import s5_build_tree as bt
 from src.imaging import get_image
 
 logger = logging.getLogger(__name__)
@@ -150,9 +150,9 @@ def main(argv=None):
     ap.add_argument("--out", default="worklog/2026-08-20/orphan_probe")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    logging.getLogger("src.build_tree").setLevel(logging.ERROR)
+    logging.getLogger("src.s5_build_tree").setLevel(logging.ERROR)
     cfg = bt.BOOK_CONFIGS[args.book]
-    graphs_dir = os.path.join("books", args.book, "graphs")
+    graphs_dir = os.path.join("books", args.book, "4_graphs")
     os.makedirs(args.out, exist_ok=True)
     affected = ["8_10", "11_17", "22_23", "28_30", "31_35", "36_52",
                 "58_62", "69_82", "114_120", "121_122", "126_128"]

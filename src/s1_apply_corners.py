@@ -10,12 +10,12 @@ Two corner sources feed this, in priority order per page:
    be covered by the review layer.
 
 For each content page in the book's range, the resolved corners are warped with
-:func:`src.extract_pages.deskew_to_frame` (same as the detector path) and written
+:func:`src.s1_extract_pages.deskew_to_frame` (same as the detector path) and written
 to ``books/{book}/pages/{i}.png``. A page with no corners from either source
 is skipped and reported with its page version.
 
 CLI:
-    python -m src.apply_corners --book book3
+    python -m src.s1_apply_corners --book book3
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ import os
 
 import pymupdf
 
-import src.extract_pages as ep
+import src.s1_extract_pages as ep
 from src.imaging import save_image
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def apply_corners(book: str, books_dir: str = "books") -> tuple[int, list[str]]:
     Returns ``(num_written, missing)`` where ``missing`` lists page tags that had
     no corners from either source.
     """
-    out_dir = os.path.join(books_dir, book, "pages")
+    out_dir = os.path.join(books_dir, book, "1_pages")
     corners_path = os.path.join(out_dir, "corners.json")
     review_path = os.path.join(out_dir, "corners_review.json")
 

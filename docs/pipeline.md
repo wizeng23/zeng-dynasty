@@ -6,19 +6,19 @@ How raw scans become a structured family tree. Seven stages (the current
 
 Stages are numbered as whole integers (no `.5`s). The v1 order:
 
-1. **extract_pages** — scan PDF → upright single pages
-2. **classify_pages** — tag each page tree-graph vs biography (`src/classify_pages.py`)
-3. **segment** — crop each tree page to its line-graph (`src/segment.py`)
-4. **merge_pages** — stitch a subtree's pages into one graph (`src/merge_pages.py`)
-5. **build_tree** — parse graphs → tree JSONL + name crops (`src/build_tree.py`)
-6. **stitch** — connect the per-graph subtrees into one lineage (`src/stitch.py`)
-7. **OCR** — name crops → Unicode (`src/ocr.py`)
+1. **extract_pages** — scan PDF → upright single pages (`src/s1_extract_pages.py`)
+2. **classify_pages** — tag each page tree-graph vs biography (`src/s2_classify_pages.py`)
+3. **segment** — crop each tree page to its line-graph (`src/s3_segment.py`)
+4. **merge_pages** — stitch a subtree's pages into one graph (`src/s4_merge_pages.py`)
+5. **build_tree** — parse graphs → tree JSONL + name crops (`src/s5_build_tree.py`)
+6. **stitch** — connect the per-graph subtrees into one lineage (`src/s6_stitch.py`)
+7. **OCR** — name crops → Unicode (`src/s7_ocr.py`)
 
 ## Stage 1 — Spreads → pages
 
 **In:** `books/bookN/original/*.png` — two-page camera scans (each image is a
 left + right page spread).
-**Out:** `books/bookN/pages/{i}.png` — single deskewed pages.
+**Out:** `books/bookN/1_pages/{i}.png` — single deskewed pages.
 
 Detects the page-border corners on each half of the spread and applies a
 perspective normalization. Some per-book fudging exists for which half-page to
@@ -30,8 +30,8 @@ Old helpers: `remove_small_islands`, `get_corners`, `normalize_page`.
 
 ## Stage 2 — Classify pages (tree graph vs biography)
 
-**In:** `books/bookN/pages/*.png`
-**Out:** `books/bookN/pages/page_types.json` — per-page `graph`/`bio` label +
+**In:** `books/bookN/1_pages/*.png`
+**Out:** `books/bookN/1_pages/page_types.json` — per-page `graph`/`bio` label +
 flat `graph_pages` / `bio_pages` lists; each bio page records `follows_graph`
 (the nearest preceding tree page) for later graph↔biography association.
 
@@ -55,27 +55,27 @@ eyeballed ground truth; **0** conflicts with the Stage-3 subtree-start detector.
 Books 1 & 2 have no `page_types.json`, so Stage 3 treats every page as a graph
 page — their output is unchanged.
 
-Helper: `src/classify_pages.py` (`is_biography_page`, `classify_pages`,
+Helper: `src/s2_classify_pages.py` (`is_biography_page`, `classify_pages`,
 `load_bio_pages`).
 
 ## Stage 3 — Tree pages → per-page crops
 
-**In:** `books/bookN/pages/*.png` (tree pages only — biographies skipped via the
+**In:** `books/bookN/1_pages/*.png` (tree pages only — biographies skipped via the
 Stage-2 `page_types.json` sidecar)
-**Out:** `books/bookN/crops/{i}.png` (one tree-crop per page) +
-`books/bookN/crops/starts.json` (which pages start a subtree).
+**Out:** `books/bookN/3_crops/{i}.png` (one tree-crop per page) +
+`books/bookN/3_crops/starts.json` (which pages start a subtree).
 
 Detects subtree start pages (a `X房系世系图` label on the upper-right), trims the
 frame, crops off the label, and shrinks each page to its graph's bounding box.
 A page with no label is a continuation of the previous subtree. Biography pages
 (from Stage 2) get no crop and no `starts.json` entry.
 
-Helpers: `trim_borders`, `is_tree_start_page`, `shrink_page` (`src/segment.py`).
+Helpers: `trim_borders`, `is_tree_start_page`, `shrink_page` (`src/s3_segment.py`).
 
 ## Stage 4 — Per-page crops → merged graph images
 
-**In:** `books/bookN/crops/*.png` + `starts.json`
-**Out:** `books/bookN/graphs/{start}_{end}.png` — one image per subtree,
+**In:** `books/bookN/3_crops/*.png` + `starts.json`
+**Out:** `books/bookN/4_graphs/{start}_{end}.png` — one image per subtree,
 stitched across the pages it spans.
 
 A subtree's line-graph often runs across several pages. This stage merges each
@@ -83,16 +83,16 @@ run of continuation pages onto its start page into a single graph image, alignin
 the line endpoints at the page seam. Iterates only the pages Stage 3 cropped
 (so Book 3/4 biographies are naturally absent).
 
-Helpers: `merge_graphs`, `find_best_orphans`, `matched_shift` (`src/merge_pages.py`).
+Helpers: `merge_graphs`, `find_best_orphans`, `matched_shift` (`src/s4_merge_pages.py`).
 
 **Bugs fixed vs old:** `merge_graphs` vstack sign bug; the old Book 2 run wrote
-merged graphs to `book1/graphs/` (copy-paste).
+merged graphs to `book1/4_graphs/` (copy-paste).
 
 ## Stage 5 — Graph images → tree + name crops
 
-**In:** `books/bookN/graphs/*.png`
+**In:** `books/bookN/4_graphs/*.png`
 **Out:** `data/bookN.jsonl` (tree, names still as image pointers),
-`books/bookN/names/{id}.png`, `books/bookN/trees/*.json`.
+`books/bookN/5_names/{id}.png`, `books/bookN/trees/*.json`.
 
 Finds the graph's lines as connected components (BFS), identifies each line's
 parent/child endpoints, merges line segments into nodes across the graph,
@@ -107,7 +107,7 @@ left-to-right.
 Old helpers: `find_lines`, `find_line_ends`, `sort_nodes`, `infer_ends`,
 `get_name_image`.
 
-## Stage 6 — Cross-graph stitching (`src/stitch.py`)
+## Stage 6 — Cross-graph stitching (`src/s6_stitch.py`)
 
 **In:** `data/bookN.jsonl` (a forest — one subtree per Stage-4 graph)
 **Out:** `data/bookN_stitched.jsonl` (one connected tree, absolute generations).
@@ -124,7 +124,7 @@ lineage, then recomputes absolute generations (root=1) and reassigns BFS/RTL ids
 
 ## Stage 7 — OCR
 
-**In:** `books/bookN/names/*.png` + `data/bookN.jsonl` (node ids)
+**In:** `books/bookN/5_names/*.png` + `data/bookN.jsonl` (node ids)
 **Out:** `data/bookN_names.json` (sidecar) → merged into `name` on each node.
 
 Convert name-character images to Unicode. Engine: **PaddleOCR PP-OCRv5** —
@@ -137,7 +137,7 @@ Run (after Stage 5, since it reads `bookN.jsonl` for ids and writes names into
 it):
 
 ```
-python -m src.ocr --book bookN --populate
+python -m src.s7_ocr --book bookN --populate
 ```
 
 This writes a **sidecar** `data/bookN_names.json` (`{id: {name, confidence,
@@ -151,7 +151,7 @@ back to the image. For the stitched Book 1, `ocr.apply_names_by_crop` maps the
 book1 sidecar onto `book1_stitched.jsonl` by crop id.
 
 Cloud engines (Google Vision, Google Document AI, Mistral) are wired in
-`src/ocr_cloud.py` for comparison but lost the bake-off (document/layout engines,
+`src/s7_ocr_cloud.py` for comparison but lost the bake-off (document/layout engines,
 weak on isolated glyphs) — kept as optional second opinions, not the default.
 
 ## Golden data (separate, manual — verification)

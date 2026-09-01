@@ -28,8 +28,8 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 
-import src.build_tree as bt
-import src.extract_pages as ep
+import src.s5_build_tree as bt
+import src.s1_extract_pages as ep
 from src.imaging import get_image
 
 Image.MAX_IMAGE_PIXELS = None
@@ -94,8 +94,8 @@ def build(book, variant, pdf, first_page, last_page, books_dir="books", data_dir
     # Canonical bitonal output lives at books/{book}/{pages,graphs}; the grayscale
     # variant is namespaced under gray/.
     sub = "" if variant == "bw" else f"{variant}/"
-    pages_dir = os.path.join(books_dir, book, f"{sub}pages")
-    graphs_dir = os.path.join(books_dir, book, f"{sub}graphs")
+    pages_dir = os.path.join(books_dir, book, f"{sub}1_pages")
+    graphs_dir = os.path.join(books_dir, book, f"{sub}4_graphs")
     config = bt.BOOK_CONFIGS.get(book, bt.BookConfig())
 
     doc = None

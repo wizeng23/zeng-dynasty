@@ -428,7 +428,7 @@ def extract_pages(
         book: Book name, e.g. ``"book1"`` (used to locate the output dir).
         pdf_path: Path to the v1 source PDF.
         pages_dir: Output subdirectory name under ``{books_dir}/{book}/``
-            (``pages`` for the canonical bitonal output; ``gray/pages`` for the
+            (``1_pages`` for the canonical bitonal output; ``gray/1_pages`` for the
             grayscale variant).
         first_page: First content page index (inclusive, zero-based). Defaults to
             the book's entry in :data:`BOOK_PAGE_RANGES`.
@@ -520,8 +520,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Last content page (inclusive). Default: book's BOOK_PAGE_RANGES entry.",
     )
     parser.add_argument(
-        "--pages-dir", default="pages",
-        help="Output subdir under books/{book}/ (default: pages; gray/pages for grayscale)."
+        "--pages-dir", default="1_pages",
+        help="Output subdir under books/{book}/ (default: 1_pages; gray/1_pages for grayscale)."
     )
     parser.add_argument(
         "--threshold", type=int, default=GRAY_THRESHOLD, help="Grayscale ink cutoff (default 128)."

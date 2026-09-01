@@ -14,7 +14,7 @@ Escape reverts the focused cell to the OCR reading. Your position is remembered.
 
 Corrections are a SEPARATE ground-truth layer, keyed by ``{provenance}#{charIndex}``
 (0-based), written to ``data/{book}_overrides.json``. Re-running OCR never touches
-them; ``src.ocr.apply_names`` reassembles each node's name from its per-character
+them; ``src.s7_ocr.apply_names`` reassembles each node's name from its per-character
 overrides (falling back to the OCR character where there is no override), so an
 override always wins.
 
@@ -29,7 +29,7 @@ Run::
 
     python -m scripts.qa.ocr              # then open http://localhost:8761/
 
-Nothing here writes into ``{book}.jsonl`` -- run ``src.ocr.apply_names`` afterward
+Nothing here writes into ``{book}.jsonl`` -- run ``src.s7_ocr.apply_names`` afterward
 to fold overrides + OCR into the tree.
 """
 
@@ -93,7 +93,7 @@ def _compute_page_ranks(book: str) -> dict[str, tuple[int, int]]:
     """Parse each graph to map provenance -> (page, 1-based reading-order rank).
 
     Recovers node x-columns, maps x to a page via the graph's page seams (cumulative
-    shrunk-page widths, the same assembly src.segment uses), and ranks nodes within
+    shrunk-page widths, the same assembly src.s3_segment uses), and ranks nodes within
     each page right-to-left (descending x = eldest first). Returns {} for a book
     whose graphs can't be parsed (the caller falls back to the provenance index).
     """

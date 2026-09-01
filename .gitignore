@@ -228,22 +228,25 @@ data/*_page_ranks.json
 # out of the (public) repo. The tiny corner/starts JSONs below ARE tracked (the
 # human review layer is not reproducible). Covers the canonical bitonal dirs, the
 # gray/ variant, and the archived v0/ image assets.
-books/*/pages/*.png
-books/*/crops/*.png
-books/*/graphs/
-books/*/names/
-books/*/gray/pages/
-books/*/gray/crops/
-books/*/gray/graphs/
-books/*/gray/names/
+# Canonical bitonal dirs are prefixed by the pipeline stage that produces them:
+# 1_pages (extract), 3_crops (segment), 4_graphs (merge), 5_names (build_tree).
+books/*/1_pages/*.png
+books/*/3_crops/*.png
+books/*/4_graphs/
+books/*/5_names/
+books/*/gray/1_pages/
+books/*/gray/3_crops/
+books/*/gray/4_graphs/
+books/*/gray/5_names/
 books/*/v0/pages/
 books/*/v0/crops/
 books/*/v0/graphs/
 books/*/v0/names/
 books/*/v0/original/
-!books/*/pages/corners.json
-!books/*/pages/corners_review.json
-!books/*/crops/starts.json
+!books/*/1_pages/corners.json
+!books/*/1_pages/corners_review.json
+!books/*/1_pages/page_types.json
+!books/*/3_crops/starts.json
 
 # per-stage QA artifacts / scratch data (regenerable)
 data/artifacts/

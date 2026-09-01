@@ -58,7 +58,7 @@ def load_crops(book: str, ids: list[int], books_dir: str = "books") -> list[Crop
     """Load the name-crop PNGs for the given ids."""
     crops = []
     for i in ids:
-        path = os.path.join(books_dir, book, "names", f"{i}.png")
+        path = os.path.join(books_dir, book, "5_names", f"{i}.png")
         if not os.path.exists(path):
             logger.warning("missing crop %s", path)
             continue
@@ -297,7 +297,7 @@ def populate_names(
     sidecar: dict[str, dict] = {}
     n_low = 0
     for k, node_id in enumerate(ids):
-        path = os.path.join(books_dir, book, "names", f"{node_id}.png")
+        path = os.path.join(books_dir, book, "5_names", f"{node_id}.png")
         if not os.path.exists(path):
             logger.warning("missing crop %s", path)
             continue

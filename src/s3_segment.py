@@ -209,8 +209,8 @@ def segment(
     book: str,
     books_dir: str = "books",
     config: BookConfig | None = None,
-    pages_dir: str = "pages",
-    crops_dir_name: str = "crops",
+    pages_dir: str = "1_pages",
+    crops_dir_name: str = "3_crops",
 ) -> list[str]:
     """Crop each page to its tree line-graph; record which pages start a subtree.
 
@@ -237,7 +237,7 @@ def segment(
         config = BOOK_CONFIGS[book]
 
     # Lazy import avoids a circular dependency (classify_pages imports from here).
-    from src.classify_pages import load_bio_pages
+    from src.s2_classify_pages import load_bio_pages
     bio_pages = load_bio_pages(book, books_dir=books_dir, pages_dir=pages_dir)
 
     in_dir = os.path.join(books_dir, book, pages_dir)
@@ -279,8 +279,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True, choices=sorted(BOOK_CONFIGS))
     parser.add_argument("--books-dir", default="books")
-    parser.add_argument("--pages-dir", default="pages")
-    parser.add_argument("--crops-dir", default="crops")
+    parser.add_argument("--pages-dir", default="1_pages")
+    parser.add_argument("--crops-dir", default="3_crops")
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 

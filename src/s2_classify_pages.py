@@ -41,7 +41,7 @@ import cv2
 import numpy as np
 
 from src.imaging import get_image
-from src.segment import trim_borders
+from src.s3_segment import trim_borders
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ def classify_pages(
     book: str,
     num_pages: int,
     books_dir: str = "books",
-    pages_dir: str = "pages",
+    pages_dir: str = "1_pages",
 ) -> dict:
     """Classify every page of a book as ``graph`` or ``bio``; write the sidecar.
 
@@ -161,7 +161,7 @@ def classify_pages(
     return sidecar
 
 
-def load_bio_pages(book: str, books_dir: str = "books", pages_dir: str = "pages") -> set[int]:
+def load_bio_pages(book: str, books_dir: str = "books", pages_dir: str = "1_pages") -> set[int]:
     """Read the sidecar's ``bio_pages`` set, or an empty set if no sidecar exists.
 
     Books with no ``page_types.json`` (e.g. the all-tree Books 1 & 2, which were
@@ -176,18 +176,18 @@ def load_bio_pages(book: str, books_dir: str = "books", pages_dir: str = "pages"
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    from src.segment import BOOK_CONFIGS
+    from src.s3_segment import BOOK_CONFIGS
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True, choices=sorted(BOOK_CONFIGS))
     parser.add_argument("--books-dir", default="books")
-    parser.add_argument("--pages-dir", default="pages")
+    parser.add_argument("--pages-dir", default="1_pages")
     parser.add_argument("--log-level", default="INFO")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> None:
-    from src.segment import BOOK_CONFIGS
+    from src.s3_segment import BOOK_CONFIGS
 
     args = _parse_args(argv)
     logging.basicConfig(

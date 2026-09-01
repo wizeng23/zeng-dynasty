@@ -30,7 +30,7 @@ from PIL import Image
 
 Image.MAX_IMAGE_PIXELS = None
 
-from src import build_tree as bt
+from src import s5_build_tree as bt
 from src.imaging import get_image
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ def graph_health(a: np.ndarray, cfg: bt.BookConfig, stem: str | None = None) -> 
 
 def book_health(book: str, books_dir: str = "books") -> dict:
     cfg = bt.BOOK_CONFIGS[book]
-    graphs_dir = os.path.join(books_dir, book, "graphs")
+    graphs_dir = os.path.join(books_dir, book, "4_graphs")
     files = sorted(
         (f for f in os.listdir(graphs_dir) if f.endswith(".png")),
         key=lambda f: int(f.split("_")[0]),
@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO),
                         format="%(message)s")
     # Silence the per-node warnings from verify/grid; we count them ourselves.
-    logging.getLogger("src.build_tree").setLevel(logging.ERROR)
+    logging.getLogger("src.s5_build_tree").setLevel(logging.ERROR)
 
     result = book_health(args.book, books_dir=args.books_dir)
     t = result["total"]

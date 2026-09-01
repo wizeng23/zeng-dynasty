@@ -10,14 +10,16 @@ parsed → (2) dynamic website allowing updates. See `docs/milestones.md`.
 
 ```
 src/         canonical v1 parsing pipeline (Python); src/v0/ = archived v0 pipeline
-  model.py     Node dataclass — the canonical data schema
+  sN_*.py      one module per stage, prefixed by stage number (s1_extract_pages … s7_ocr)
+  model.py / imaging.py   shared (stage-agnostic): Node schema, image I/O
 data/        parsed output (book1_golden.jsonl) + sheet export (csv)
-books/       per-book assets, namespaced by scan generation:
+books/       per-book assets, namespaced by scan generation. v1 output dirs are
+             prefixed by the stage that produces them (no .5s):
   bookN/
     bookN.pdf                canonical scan = v1 bitonal 600dpi
-    pages/ crops/ graphs/ names/   v1 bitonal pipeline output
-      pages/corners.json, corners_review.json   detected + human-reviewed frame corners
-    gray/  bookN.pdf, bookN_200dpi.pdf, pages/ …   v1 grayscale variant
+    1_pages/ 3_crops/ 4_graphs/ 5_names/   v1 bitonal pipeline output
+      1_pages/corners.json, corners_review.json, page_types.json   corners + bio/tree labels
+    gray/  bookN.pdf, bookN_200dpi.pdf, 1_pages/ …   v1 grayscale variant
     v0/    bookN.pdf, original/ pages/ graphs/ names/   archived old glass-scan assets
 web/         d3.js tree viewer (index.html)
 docs/        milestones.md, progress.md, pipeline.md, history.md, specs/
@@ -31,10 +33,10 @@ Two scan generations exist per book, namespaced by folder (no filename suffixes)
 - **v1** (CANONICAL, current) — new scans: spines cut off, one page per scan
   through an ADF, 600dpi. `books/bookN/bookN.pdf` = bitonal (the parse target);
   `books/bookN/gray/bookN.pdf` = grayscale variant. All four books have v1 scans.
-  The pipeline is `src/` at full native resolution: `extract_pages` (frame-based
-  deskew+crop), `segment` (crop to tree), `merge_pages` (stitch multi-page
-  subtrees), `apply_corners` (final gen with reviewed corners). Output at
-  `books/bookN/{pages,crops,graphs,names}/`.
+  The pipeline is `src/` at full native resolution: `s1_extract_pages` (frame-based
+  deskew+crop), `s3_segment` (crop to tree), `s4_merge_pages` (stitch multi-page
+  subtrees), `s1_apply_corners` (final gen with reviewed corners). Output at
+  `books/bookN/{1_pages,3_crops,4_graphs,5_names}/`.
 - **v0** (archived) — original glass-top scans (two pages per image), Book 1 & 2
   only. Assets in `books/bookN/v0/` (`bookN.pdf`, `original/`, `pages/`, `graphs/`,
   `names/`); code in `src/v0/`. Superseded by the v1 rebuild.
@@ -48,13 +50,13 @@ for reference.
 Scans → structured tree. Whole-integer stage numbers (no `.5`s). See
 `docs/pipeline.md` for detail.
 
-1. **extract_pages** — split + deskew scans into single upright pages → `books/bookN/pages/`.
-2. **classify_pages** (`src/classify_pages.py`) — tag each page tree-graph vs **biography**. Books 3 & 4 interleave biography-text pages; only tree pages go on the graph path. Writes `books/bookN/pages/page_types.json` (`graph_pages`/`bio_pages`, each bio's `follows_graph`). Bio = exactly 4 full-width rules at fixed y-fracs ≈ 0.19/0.40/0.60/0.80. Books 1 & 2 (all-tree) → no sidecar, unchanged.
-3. **segment** (`src/segment.py`) — crop each tree page to its line-graph → `books/bookN/crops/` + `starts.json` (biographies skipped via the sidecar).
-4. **merge_pages** (`src/merge_pages.py`) — stitch a subtree's pages into one graph image → `books/bookN/graphs/{start}_{end}.png`.
-5. **build_tree** (`src/build_tree.py`) — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/names/`. Includes **orphan-bridging** (`src.segment.bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.
-6. **Stitching** (`src/stitch.py`) — fold each graph's duplicate root into its canonical leaf → one connected lineage. Book 1 done (hand `BOOK_MERGES`); Book 2 auto-matcher TODO.
-7. **OCR** (DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/qa/ocr.py`.
+1. **extract_pages** (`src/s1_extract_pages.py`) — split + deskew scans into single upright pages → `books/bookN/1_pages/`.
+2. **classify_pages** (`src/s2_classify_pages.py`) — tag each page tree-graph vs **biography**. Books 3 & 4 interleave biography-text pages; only tree pages go on the graph path. Writes `books/bookN/1_pages/page_types.json` (`graph_pages`/`bio_pages`, each bio's `follows_graph`). Bio = exactly 4 full-width rules at fixed y-fracs ≈ 0.19/0.40/0.60/0.80. Books 1 & 2 (all-tree) → no sidecar, unchanged.
+3. **segment** (`src/s3_segment.py`) — crop each tree page to its line-graph → `books/bookN/3_crops/` + `starts.json` (biographies skipped via the sidecar).
+4. **merge_pages** (`src/s4_merge_pages.py`) — stitch a subtree's pages into one graph image → `books/bookN/4_graphs/{start}_{end}.png`.
+5. **build_tree** (`src/s5_build_tree.py`) — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/5_names/`. Includes **orphan-bridging** (`bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/4_graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.
+6. **Stitching** (`src/s6_stitch.py`, TODO) — fold each graph's duplicate root into its canonical leaf → one connected lineage. Book 1 done (hand `BOOK_MERGES`); Book 2 auto-matcher TODO.
+7. **OCR** (DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/s7_ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/qa/ocr.py`.
 
 Spreadsheet path (verification): Book 1 was also hand-typed into a Google Sheet →
 `data/zeng_google_sheet.csv` → `data/book1_golden.jsonl`. This **golden** data
@@ -66,7 +68,7 @@ is the verified ground truth used to check the algorithmic output.
   (paddleocr/cv2/PIL/pypinyin). Use `/opt/miniconda3/envs/zeng/bin/python` with
   `PYTHONPATH=.`, or `conda activate zeng`. Symptom of the wrong env: `ModuleNotFoundError`.
 - **Big graphs are slow.** Book 2's `36_52` is 17 pages (~93M px); a full
-  `python -m src.segment --book book2` takes minutes. Run it in the background.
+  `python -m src.s3_segment --book book2` takes minutes. Run it in the background.
 - **Publication gate.** The repo (`github.com/wizeng23/zeng-dynasty`) is public;
   agents are BLOCKED from `git push`. Commit locally freely; William pushes.
 - **Thresholds are hand-tuned per book's scan geometry.** "Make it work on

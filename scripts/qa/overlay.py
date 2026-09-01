@@ -11,7 +11,7 @@ Produces two overlays per Book-N graph, plus an HTML index to click through them
    The book reads right-to-left, so page numbers should ASCEND from right to left;
    an out-of-order or misplaced label means the page merge went wrong.
 
-The graph images (``books/bookN/graphs/{start}_{end}.png``) are already the
+The graph images (``books/bookN/4_graphs/{start}_{end}.png``) are already the
 pipeline's deskewed pages roughly joined, so this verifies name-detection,
 edge-parsing, AND page assembly in one place.
 
@@ -35,8 +35,8 @@ from PIL import Image, ImageDraw, ImageFont
 # which these known-safe local scans exceed.
 Image.MAX_IMAGE_PIXELS = None
 
-from src import segment as seg
-from src import build_tree as bt
+from src import s3_segment as seg
+from src import s5_build_tree as bt
 from src.imaging import get_image
 
 logger = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ def stacked_compare(
 
     Pages run right-to-left (page numbers ascend right→left), matching the graph.
     """
-    pages_dir = os.path.join(books_dir, book, "pages")
+    pages_dir = os.path.join(books_dir, book, "1_pages")
     order = list(range(start, end + 1))[::-1]  # left-to-right = end..start
 
     raw_cols: list[Image.Image] = []
@@ -264,11 +264,11 @@ def _page_seams(
 ) -> list[tuple[int, int]]:
     """Page-seam left-x positions in graph coordinates: [(page, left_x), ...].
 
-    Mirrors :func:`src.segment.segment`'s assembly (pages stacked left-to-right in
+    Mirrors :func:`src.s3_segment.segment`'s assembly (pages stacked left-to-right in
     the order end..start; each page cropped + shrunk), so the cumulative widths give
     the same seam x-positions the graph image uses.
     """
-    pages_dir = os.path.join(books_dir, book, "pages")
+    pages_dir = os.path.join(books_dir, book, "1_pages")
     order = list(range(start, end + 1))[::-1]
     seams: list[tuple[int, int]] = []
     acc = 0
@@ -363,7 +363,7 @@ def qa_book(
     """
     seg_cfg = seg.BOOK_CONFIGS[book]
     bt_cfg = bt.BOOK_CONFIGS[book]
-    graphs_dir = os.path.join(books_dir, book, "graphs")
+    graphs_dir = os.path.join(books_dir, book, "4_graphs")
     qa_dir = os.path.join(books_dir, book, "qa")
     os.makedirs(qa_dir, exist_ok=True)
 
