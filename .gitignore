@@ -246,6 +246,7 @@ books/*/v0/original/
 !books/*/1_pages/corners.json
 !books/*/1_pages/corners_review.json
 !books/*/2_classify/page_types.json
+!books/*/2_classify/page_types_review.json
 !books/*/3_crops/starts.json
 
 # per-stage QA artifacts / scratch data (regenerable)

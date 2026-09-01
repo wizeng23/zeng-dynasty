@@ -170,19 +170,36 @@ def classify_pages(
     return sidecar
 
 
+REVIEW_FILE = "page_types_review.json"
+
+
 def load_bio_pages(book: str, books_dir: str = "books",
                    out_dir_name: str = CLASSIFY_DIR) -> set[int]:
-    """Read the sidecar's ``bio_pages`` set, or an empty set if no sidecar exists.
+    """Return the set of biography-page indices, detector output plus overrides.
 
-    Books with no ``page_types.json`` (e.g. the all-tree Books 1 & 2, which were
-    never classified) return an empty set, so downstream code treats every page as
-    a graph page -- preserving their existing behaviour untouched.
+    Reads the detector's ``bio_pages`` from ``page_types.json`` and applies the
+    human override layer ``page_types_review.json`` (from :mod:`scripts.qa.classify`,
+    ``{"145": "bio"|"graph"}``): a page overridden to ``bio`` is added, one
+    overridden to ``graph`` is removed. Books with no ``page_types.json`` (e.g. the
+    all-tree Books 1 & 2, never classified) return an empty set, so downstream code
+    treats every page as a graph page -- preserving their existing behaviour.
     """
-    path = os.path.join(books_dir, book, out_dir_name, PAGE_TYPES_FILE)
+    stage_dir = os.path.join(books_dir, book, out_dir_name)
+    path = os.path.join(stage_dir, PAGE_TYPES_FILE)
     if not os.path.exists(path):
         return set()
     with open(path) as fh:
-        return set(json.load(fh)["bio_pages"])
+        bio = set(json.load(fh)["bio_pages"])
+
+    review_path = os.path.join(stage_dir, REVIEW_FILE)
+    if os.path.exists(review_path):
+        with open(review_path) as fh:
+            for page, label in json.load(fh).items():
+                if label == "bio":
+                    bio.add(int(page))
+                elif label == "graph":
+                    bio.discard(int(page))
+    return bio
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

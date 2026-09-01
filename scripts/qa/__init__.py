@@ -8,6 +8,9 @@ Interactive review servers (open in a browser):
                    fix.  Port 8760.  →  python -m scripts.qa.borders
   * ``ocr``      — per-character name filmstrip for correcting OCR readings.
                    Port 8761.  →  python -m scripts.qa.ocr
+  * ``classify`` — Stage 2 (classify) page grid, colored tree/bio; click a cell
+                   to flip a wrong label (saved as an override that crop/merge
+                   honor).  Port 8762.  →  python -m scripts.qa.classify
 
 Static-artifact generators (write images + an HTML index to click through):
   * ``overlay``  — parse overlays per subtree graph (name boxes, line endpoints).
@@ -15,6 +18,6 @@ Static-artifact generators (write images + an HTML index to click through):
   * ``artifacts``— per-stage checkpoint screenshots (raw → page → graph → parse).
                    →  python -m scripts.qa.artifacts --book bookN ...
 
-The two servers use adjacent ports (8760 / 8761), both clear of 8000, so they
-can run at the same time and never collide with local dev work on 8000.
+The three servers use adjacent ports (8760 / 8761 / 8762), all clear of 8000, so
+they can run at the same time and never collide with local dev work on 8000.
 """
