@@ -3,7 +3,7 @@
 Two corner sources feed this, in priority order per page:
 
 1. ``books/{book}/pages/corners_review.json`` -- the human review layer from
-   the border-QA tool (:mod:`scripts.qa.borders`). An entry with
+   the border-QA tool (:mod:`scripts.qa.s1_borders`). An entry with
    ``status == "corners"`` holds hand-placed/confirmed corners and always wins.
 2. ``books/{book}/pages/corners.json`` -- the detector output. Pages the two
    detectors agreed on carry their ``corners``; flagged pages carry none and must

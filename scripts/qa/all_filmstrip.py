@@ -17,7 +17,7 @@ Stages 02/03 are read from the pipeline's own outputs (``pages_{variant}`` /
 ``graphs_{variant}``); stage 01 is re-rendered from the source PDF; stage 04 is
 computed here by running the parser and drawing its detections.
 
-    python -m scripts.qa.artifacts --book book1 --variant bw \
+    python -m scripts.qa.all_filmstrip --book book1 --variant bw \
         --pdf books/book1/book1.pdf --first-page 6 --last-page 23
 """
 from __future__ import annotations

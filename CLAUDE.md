@@ -56,7 +56,7 @@ Scans → structured tree. Whole-integer stage numbers (no `.5`s). See
 4. **merge_pages** (`src/s4_merge_pages.py`) — stitch a subtree's pages into one graph image → `books/bookN/4_graphs/{start}_{end}.png`.
 5. **build_tree** (`src/s5_build_tree.py`) — parse lines into nodes, crop name images → `data/bookN.jsonl`, `books/bookN/5_names/`. Includes **orphan-bridging** (`bridge_orphans`): reconnects generation bars broken across page seams; the synthetic connectors ("green" in QA) are recorded to `books/bookN/4_graphs/{stem}.imaginary.json`. See `docs/bridge-ground-truth.md`.
 6. **Stitching** (`src/s6_stitch.py`, TODO) — fold each graph's duplicate root into its canonical leaf → one connected lineage. Book 1 done (hand `BOOK_MERGES`); Book 2 auto-matcher TODO.
-7. **OCR** (DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/s7_ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/qa/ocr.py`.
+7. **OCR** (DONE) — PaddleOCR PP-OCRv5 reads each name crop → Unicode. `src/s7_ocr.py` writes sidecar `data/bookN_names.json` + folds into jsonl via `apply_names`. Per-char human overrides live in `data/bookN_overrides.json` (a ground-truth layer). Review tool: `scripts/qa/s7_ocr.py`.
 
 Spreadsheet path (verification): Book 1 was also hand-typed into a Google Sheet →
 `data/zeng_google_sheet.csv` → `data/book1_golden.jsonl`. This **golden** data
@@ -97,7 +97,7 @@ is the verified ground truth used to check the algorithmic output.
   it when rewriting `src/`, but it is not the source of truth.
 - Verify a rewritten Book 1 parse by diffing against `data/book1_golden.jsonl`.
 - Design specs go in `docs/specs/YYYY-MM-DD-<topic>-design.md`.
-- **QA is gitignored** (`books/*/qa/`): regenerate with `python -m scripts.qa.overlay
+- **QA is gitignored** (`books/*/qa/`): regenerate with `python -m scripts.qa.s5_parse
   --book bookN`, then serve `books/bookN/qa/index.html` on a localhost port to view.
 
 ## Docs map (where to look)
@@ -115,5 +115,5 @@ is the verified ground truth used to check the algorithmic output.
 Books 1 & 2 fully parsed; **all 45 Book-2 subgraphs LOCKED** (0 within-graph
 orphans, bridges match ground truth). OCR populated for both books. Uncommitted-to-
 remote work sits on branch `book2-bridge-trace-right` (William to push). **Next
-step:** William reviews OCR via `scripts/qa/ocr.py`, then Book 2 stitching, then
+step:** William reviews OCR via `scripts/qa/s7_ocr.py`, then Book 2 stitching, then
 website. Remaining orphans in a few graphs are cross-graph (resolved at stitching).

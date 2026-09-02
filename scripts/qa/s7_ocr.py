@@ -27,7 +27,7 @@ node is flagged (``count_mismatch``) so you can eyeball it.
 
 Run::
 
-    python -m scripts.qa.ocr              # then open http://localhost:8761/
+    python -m scripts.qa.s7_ocr              # then open http://localhost:8767/
 
 Nothing here writes into ``{book}.jsonl`` -- run ``src.s7_ocr.apply_names`` afterward
 to fold overrides + OCR into the tree.
@@ -609,7 +609,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--port", type=int, default=8761)
+    ap.add_argument("--port", type=int, default=8767)
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     n = len(build_cells())

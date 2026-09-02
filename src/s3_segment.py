@@ -224,7 +224,7 @@ def segment(
     Merging the crops of a multi-page subtree into one graph is done separately by
     :mod:`src.merge_pages`, which reads ``starts.json``.
 
-    Biography pages (Books 3 & 4 interleave them; see :mod:`src.classify_pages`,
+    Biography pages (Books 3 & 4 interleave them; see :mod:`src.s2_classify_pages`,
     the preceding Stage 2) are skipped -- they are not tree pages, so they get no
     crop and no ``starts.json`` entry. If no ``page_types.json`` sidecar exists
     (Books 1 & 2, which are entirely tree pages), every page is processed as before.

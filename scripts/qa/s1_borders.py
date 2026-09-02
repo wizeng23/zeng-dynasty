@@ -26,7 +26,7 @@ override detection on the reviewed pages.
 
 Run::
 
-    python -m scripts.qa.borders          # then open http://localhost:8760/
+    python -m scripts.qa.s1_borders          # then open http://localhost:8761/
 """
 from __future__ import annotations
 
@@ -547,7 +547,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--port", type=int, default=8760)
+    ap.add_argument("--port", type=int, default=8761)
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)

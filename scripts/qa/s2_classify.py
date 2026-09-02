@@ -13,11 +13,11 @@ Thumbnails are served lazily from the already-extracted ``1_pages/{i}.png`` (no
 PDF re-render), so a 300-page book loads fast. One server, a tab per book; a
 tab's grid loads only when opened.
 
-Port 8762 (clear of 8000 and the other QA servers on 8760/8761).
+Port 8762 (clear of 8000 and the other QA servers on 8761/8767).
 
 Run::
 
-    python -m scripts.qa.classify          # then open http://localhost:8762/
+    python -m scripts.qa.s2_classify          # then open http://localhost:8762/
 """
 
 from __future__ import annotations
