@@ -27,7 +27,7 @@ Stage 3 independently detects as a subtree-start comes out ``graph`` (0 conflict
 Output: ``books/{book}/2_classify/page_types.json`` -- see :func:`classify_pages`.
 
 CLI:
-    python -m src.classify_pages --book book3
+    python -m src.s2_classify_pages --book book3
 """
 
 from __future__ import annotations
@@ -118,6 +118,7 @@ def classify_pages(
     books_dir: str = "books",
     pages_dir: str = "1_pages",
     out_dir_name: str = CLASSIFY_DIR,
+    force: bool = False,
 ) -> dict:
     """Classify every page of a book as ``graph`` or ``bio``; write the sidecar.
 
@@ -129,8 +130,24 @@ def classify_pages(
     it can be re-associated with the lineage it details when biographies are parsed
     later.
 
-    Returns the written sidecar dict.
+    If an existing sidecar is stamped ``"human_verified": true`` (its labels were
+    hand-reviewed and are the ground truth), this refuses to overwrite it and
+    returns the existing sidecar unchanged, unless ``force=True``. Stage 2 is a
+    one-time step per book -- once verified, it need never run again.
+
+    Returns the written (or preserved) sidecar dict.
     """
+    out_path_dir = os.path.join(books_dir, book, out_dir_name)
+    out_path = os.path.join(out_path_dir, PAGE_TYPES_FILE)
+    if not force and os.path.exists(out_path):
+        with open(out_path) as fh:
+            existing = json.load(fh)
+        if existing.get("human_verified"):
+            logger.warning(
+                "%s classification is human-verified ground truth; refusing to "
+                "overwrite %s (pass force=True to override).", book, out_path)
+            return existing
+
     pages_path = os.path.join(books_dir, book, pages_dir)
     logger.info("Classifying %s: %d pages in %s", book, num_pages, pages_path)
 
@@ -159,9 +176,7 @@ def classify_pages(
         "bio_pages": bio_pages,
         "pages": pages,
     }
-    out_path_dir = os.path.join(books_dir, book, out_dir_name)
     os.makedirs(out_path_dir, exist_ok=True)
-    out_path = os.path.join(out_path_dir, PAGE_TYPES_FILE)
     with open(out_path, "w") as fh:
         json.dump(sidecar, fh, indent=2)
 
@@ -178,7 +193,7 @@ def load_bio_pages(book: str, books_dir: str = "books",
     """Return the set of biography-page indices, detector output plus overrides.
 
     Reads the detector's ``bio_pages`` from ``page_types.json`` and applies the
-    human override layer ``page_types_review.json`` (from :mod:`scripts.qa.classify`,
+    human override layer ``page_types_review.json`` (from :mod:`scripts.qa.s2_classify`,
     ``{"145": "bio"|"graph"}``): a page overridden to ``bio`` is added, one
     overridden to ``graph`` is removed. Books with no ``page_types.json`` (e.g. the
     all-tree Books 1 & 2, never classified) return an empty set, so downstream code

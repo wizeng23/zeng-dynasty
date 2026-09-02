@@ -72,6 +72,31 @@ character is damaged before it ever reaches OCR.
 - NOTE: changing extract_pages re-runs Stage 1 -> would change pages/graphs for BOTH
   books; check the freeze / re-verify everything downstream.
 
+## v1 scan quality: ADF ink smears / graininess (William, 2026-09-01) — CROSS-CUTTING
+
+The new v1 scans were run through an automatic document feeder (ADF), which
+**smeared wet/loose ink across the pages** — so regions of a page are grainy or
+have faint stray ink dragged from elsewhere on the sheet. This is a property of
+the *source scans* (`books/bookN/bookN.pdf`), not any one stage, so **every stage
+must be robust to it**:
+- **Stage 1 (extract):** smear can create faint stray marks near the page edge /
+  above the border that fool the frame detectors (this is the phantom-line-above-
+  the-top-border issue on some Book 4 pages — extra whitespace/junk above the true
+  outer border). Border detection must tolerate grain and not latch onto smear.
+- **Stage 2 (classify):** faint smeared lines could add spurious full-width rows;
+  the fixed 4-rule fingerprint (`s2_classify_pages`) held up, but watch for it.
+- **Stage 3 (segment/crop):** the fixed-inset `trim_borders` top cut assumes a
+  clean border at a fixed offset; smear-induced whitespace above the border breaks
+  that assumption and misaligns the graph top across pages -> Stage 4 merge seams
+  mismatch. (Active investigation: replace the fixed top trim with a border-band
+  detector so the graph top is standardized regardless of smear whitespace.)
+- **Stage 5 (build_tree) + OCR:** grain adds small speckle components (interacts
+  with the missing-dots `remove_small_islands` issue above) and can degrade name
+  crops. Speckle thresholds (e.g. `COL_INK_MIN`) already guard some of this.
+
+No single fix — each stage's thresholds/detectors should be hardened against grain
+rather than assuming clean ink. Flag any new anomaly that traces back to a smear.
+
 ## Automation opportunity (the big one)
 William's **parent-trace rule** ("trace right from the orphan to the x of its
 parent = nearest node in the generation above, to the right") resolved 126_128 and
