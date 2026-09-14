@@ -253,64 +253,7 @@ rebuild (new ADF scans, `src/`) is redoing every stage from clean scans.
 
 Book 1 is **fully done end-to-end** → `data/book1_stitched.jsonl`, published to the
 website. **Book 2 is blocked at Stage 5** on a single stepped-bar component in graph
-`67_68` — see the handoff note below.
+`67_68`.
 
 **v0 pipeline (prior, archived):** books 1–2 reached tree + OCR (book 1 stitched by
 hand); superseded by the v1 rebuild above.
-
-
-## HANDOFF (2026-09-14) — Book 2 Stage 5 blocker: graph 67_68 stepped bar
-
-**Task:** run Stage 5 (`src/s5_build_tree.py`) for Book 2. It crashes on exactly
-**one** component, in **graph `67_68` only** (all 34 earlier graphs parse fine, and
-`67_68` is the sole stepped-bar case in the whole book — confirmed by a full scan):
-
-```
-ValueError: 67_68.png: expected exactly one parent endpoint, got [(3894, 381), (3894, 2257)]
-```
-
-**What it is (verified — render `books/book2/4_graphs/67_68.png`, rows 3700–4650,
-cols 250–2450):** a **stepped sibling bar**. Parent **宏羨** (top right); its
-hang-line comes down (col ~2257), the bar branches off it and runs high-left over
-children **闻评** (col 381) and **闻瑛** (col ~1600), then **steps down** and 宏羨's
-line continues to its own child below. The component is rows 3894–4559, cols
-381–2264. `find_line_ends` (`s5_build_tree.py:266`) reads the **top band** (within
-`end_threshold=150` of `min_x=3894`) and `remove_adjacent` collapses it to TWO
-endpoints — col 381 (child 闻评's riser-top, at the bar's high-left corner) and col
-2257 (宏羨's real parent hang-line) — because the stepped bar leaves a 639px gap in
-the top band (cols 381–1618, then 2257). The existing "fan-out bar flush with the
-top" collapse (lines 301–304) assumes a *single-level* continuous bar and so
-returns 2, tripping the `len(parents) != 1` assertion.
-
-**Which endpoint is the real parent = col 2257.** Two independent discriminators
-both agree:
-- **Only col 2257 has ink continuing ABOVE the component** (rows 3600–3893, toward
-  宏羨). Cols 381 and 1600 have nothing above — they hang *down* from the bar.
-  (This is the truly reliable signal but needs the full image, not just the
-  component.)
-- **Component-only:** col 2257's vertical line **reaches the component's max row**
-  (4559 = max_x — it's the through-line: parent above → continues to a child
-  below); col 381 stops early (row 4227, a pure child riser).
-
-**Decision handed to next session (William deferred it):** how to fix
-`find_line_ends`. Options weighed:
-1. **Through-line pick (component-only):** when the top band yields multiple
-   endpoints, choose the parent as the endpoint whose vertical line reaches the
-   component bottom; treat the others as children. No image needed. **Recommended
-   — simplest, and it's 1 component in the whole book.** Verify the resulting parse
-   of 67_68 matches the eyeballed tree (宏羨 parent of 闻评/闻瑛 + its own lower child).
-2. **Ink-above (needs image):** thread the graph image into the parse and pick the
-   endpoint whose column has ink above the component. Most faithful, but a
-   signature change to `find_line_ends`/`parse_graph`.
-
-**After the fix,** finish Book 2: re-run Stage 5 (v1 — the existing `book2.jsonl`
-is the STALE v0 parse, name_images path `books/book2/names/`, NOT v1 `5_names/`),
-then Stage 6 OCR, then Stage 7 stitch. **Book 2 has no oracle and no hand merges —
-it will be the first real test of the automated name-matcher `find_merges` on a
-fresh book.** Watch for name collisions (two people sharing a name → the matcher
-picks the nearest earlier graph; verify that's right).
-
-**Repo state at handoff:** on `main`, pushed to origin (36 commits incl. all Book 1
-work + website). Working tree clean except this doc + any in-progress s5 edits. Env:
-`PYTHONPATH=. /opt/miniconda3/envs/zeng/bin/python`. The 17-page graph `36_52` makes
-full Book-2 s5 runs slow (~minutes) — run in background.

@@ -121,9 +121,9 @@ All on `main`, pushed.
 **Book 2 is BLOCKED at Stage 5** on a single stepped-bar component — graph
 `67_68` (`ValueError: expected exactly one parent endpoint`). This is the sole such
 case in the book; the real parent is col 2257 (宏羨's line — the through-line that
-reaches the component bottom and has ink above it). **See `docs/history.md`'s
-HANDOFF note for the full analysis + recommended fix**, then re-run Book 2 Stage 5
-(the existing `book2.jsonl` is the STALE v0 parse) → OCR → stitch. Book 2 has no
-oracle/hand-merges, so it's the first real test of the name-matcher.
+reaches the component bottom and has ink above it). Fix `find_line_ends` in
+`src/s5_build_tree.py`, then re-run Book 2 Stage 5 (the existing `book2.jsonl` is
+the STALE v0 parse) → OCR → stitch. Book 2 has no oracle/hand-merges, so it's the
+first real test of the name-matcher.
 
 Books 3 & 4 are at Stage 2 (classify, human-verified) + Stage 3 (crop).
