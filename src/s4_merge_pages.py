@@ -54,6 +54,39 @@ def remove_adjacent(numbers: list[int], threshold: int | None = None) -> list[in
 
 SHIFT_PENALTY_WEIGHT = 0.1
 
+# Seam-endpoint quality. A dangling line end meeting a page edge is several rows
+# tall (v1 lines are 6-9px at 600dpi) and inks most of the seam band -- measured
+# over all 90 Book 2 seams: 463 real ends are 6-9 rows x 14 cols; a few real ends
+# that stop just short of the edge are 7-8 rows x 4-5 cols. ADF smear specks at
+# the page edge are 1-4 rows tall and a few px wide, and must NOT count: at
+# 11_17's p16|p15 seam two specks were paired with real lines exiting p16, and the
+# median pair offset shifted the whole page 388 rows off its grid.
+SEAM_END_MIN_ROWS = 5
+SEAM_END_MIN_COLS = 4
+
+
+def seam_endpoints(edge: np.ndarray) -> list[int]:
+    """Rows where a genuine line end meets the page edge.
+
+    ``edge`` is the seam band (``h x band`` columns, 0 == ink). Consecutive inked
+    rows form a run; a run counts as a line end when it is at least
+    :data:`SEAM_END_MIN_ROWS` tall and some row inks at least
+    :data:`SEAM_END_MIN_COLS` columns. Returns each run's first row (the same
+    representative :func:`remove_adjacent` kept), ascending.
+    """
+    inked = (1 - edge).sum(axis=1)
+    rows = np.where(inked > 0)[0]
+    if len(rows) == 0:
+        return []
+    breaks = np.where(np.diff(rows) > 1)[0]
+    starts = np.concatenate([[rows[0]], rows[breaks + 1]])
+    stops = np.concatenate([rows[breaks], [rows[-1]]])
+    ends = [
+        int(s) for s, e in zip(starts, stops)
+        if e - s + 1 >= SEAM_END_MIN_ROWS and inked[s:e + 1].max() >= SEAM_END_MIN_COLS
+    ]
+    return remove_adjacent(ends)
+
 
 def find_best_orphans(left: list[int], right: list[int]) -> tuple[list[int], str]:
     """Choose which endpoints on the longer side have no partner at the seam.
@@ -115,10 +148,8 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     concatenates. Seam-band width scaled from v0's 5px.
     """
     band = _s(5)
-    g1_edge = np.sum(1 - g1[:, -band:], axis=1)
-    left_y = remove_adjacent([x for x in range(len(g1_edge)) if g1_edge[x] > 0])
-    g2_edge = np.sum(1 - g2[:, :band], axis=1)
-    right_y = remove_adjacent([x for x in range(len(g2_edge)) if g2_edge[x] > 0])
+    left_y = seam_endpoints(g1[:, -band:])
+    right_y = seam_endpoints(g2[:, :band])
     logger.debug("seam endpoints: left=%s right=%s", left_y, right_y)
 
     if not left_y or not right_y:
