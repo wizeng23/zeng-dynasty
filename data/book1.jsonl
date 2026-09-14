@@ -12,8 +12,8 @@
 {"id": 12, "name": "伟", "name_images": ["books/book1/5_names/12.png"], "generation": 4, "father": 11, "children": [14], "biography": "", "notes": "1_1_3 | ocr_conf=0.9997"}
 {"id": 13, "name": "盈", "name_images": ["books/book1/5_names/13.png"], "generation": 4, "father": 11, "children": [], "biography": "", "notes": "1_1_4 | ocr_conf=1.0"}
 {"id": 14, "name": "乐", "name_images": ["books/book1/5_names/14.png"], "generation": 5, "father": 12, "children": [15], "biography": "", "notes": "1_1_5 | ocr_conf=0.9999"}
-{"id": 15, "name": "免", "name_images": ["books/book1/5_names/15.png"], "generation": 6, "father": 14, "children": [], "biography": "", "notes": "1_1_6 | ocr_conf=0.9999"}
-{"id": 16, "name": "免", "name_images": ["books/book1/5_names/16.png"], "generation": 1, "father": -1, "children": [18, 17], "biography": "", "notes": "2_2_0 | ocr_conf=0.9996"}
+{"id": 15, "name": "凂", "name_images": ["books/book1/5_names/15.png"], "generation": 6, "father": 14, "children": [], "biography": "", "notes": "1_1_6 | ocr_conf=0.9999 | ocr_override"}
+{"id": 16, "name": "凂", "name_images": ["books/book1/5_names/16.png"], "generation": 1, "father": -1, "children": [18, 17], "biography": "", "notes": "2_2_0 | ocr_conf=0.9996 | ocr_override"}
 {"id": 17, "name": "旃", "name_images": ["books/book1/5_names/17.png"], "generation": 2, "father": 16, "children": [19], "biography": "", "notes": "2_2_1 | ocr_conf=0.9986"}
 {"id": 18, "name": "光", "name_images": ["books/book1/5_names/18.png"], "generation": 2, "father": 16, "children": [], "biography": "", "notes": "2_2_2 | ocr_conf=1.0"}
 {"id": 19, "name": "嘉", "name_images": ["books/book1/5_names/19.png"], "generation": 3, "father": 17, "children": [21, 20], "biography": "", "notes": "2_2_3 | ocr_conf=1.0"}
@@ -67,7 +67,7 @@
 {"id": 67, "name": "德富", "name_images": ["books/book1/5_names/67.png"], "generation": 2, "father": 66, "children": [70, 69, 68], "biography": "", "notes": "7_7_1 | ocr_conf=0.9988"}
 {"id": 68, "name": "文遄", "name_images": ["books/book1/5_names/68.png"], "generation": 3, "father": 67, "children": [], "biography": "", "notes": "7_7_2 | ocr_conf=0.7483 | ocr_low_conf"}
 {"id": 69, "name": "文辿", "name_images": ["books/book1/5_names/69.png"], "generation": 3, "father": 67, "children": [71], "biography": "", "notes": "7_7_3 | ocr_conf=0.8502 | ocr_low_conf | ocr_override"}
-{"id": 70, "name": "又油", "name_images": ["books/book1/5_names/70.png"], "generation": 3, "father": 67, "children": [], "biography": "", "notes": "7_7_4 | ocr_conf=0.9231"}
+{"id": 70, "name": "文迪", "name_images": ["books/book1/5_names/70.png"], "generation": 3, "father": 67, "children": [], "biography": "", "notes": "7_7_4 | ocr_conf=0.9231 | ocr_override"}
 {"id": 71, "name": "宣", "name_images": ["books/book1/5_names/71.png"], "generation": 4, "father": 69, "children": [73, 72], "biography": "", "notes": "7_7_5 | ocr_conf=0.5814 | ocr_low_conf | ocr_override"}
 {"id": 72, "name": "舆", "name_images": ["books/book1/5_names/72.png"], "generation": 5, "father": 71, "children": [], "biography": "", "notes": "7_7_6 | ocr_conf=0.9558"}
 {"id": 73, "name": "兴", "name_images": ["books/book1/5_names/73.png"], "generation": 5, "father": 71, "children": [74], "biography": "", "notes": "7_7_7 | ocr_conf=1.0"}
@@ -111,12 +111,12 @@
 {"id": 111, "name": "旺", "name_images": ["books/book1/5_names/111.png"], "generation": 3, "father": 110, "children": [114, 113], "biography": "", "notes": "13_16_2 | ocr_conf=1.0"}
 {"id": 112, "name": "然", "name_images": ["books/book1/5_names/112.png"], "generation": 3, "father": 110, "children": [118, 117, 116, 115], "biography": "", "notes": "13_16_3 | ocr_conf=0.9999"}
 {"id": 113, "name": "彭六郎", "name_images": ["books/book1/5_names/113.png"], "generation": 4, "father": 111, "children": [119], "biography": "", "notes": "13_16_4 | ocr_conf=0.9999"}
-{"id": 114, "name": "十郎", "name_images": ["books/book1/5_names/114.png"], "generation": 4, "father": 111, "children": [123, 122, 121, 120], "biography": "", "notes": "13_16_5 | ocr_conf=0.9969"}
+{"id": 114, "name": "彭十郎", "name_images": ["books/book1/5_names/114.png"], "generation": 4, "father": 111, "children": [123, 122, 121, 120], "biography": "", "notes": "13_16_5 | ocr_conf=0.9969 | ocr_override"}
 {"id": 115, "name": "贵善", "name_images": ["books/book1/5_names/115.png"], "generation": 4, "father": 112, "children": [125, 124], "biography": "", "notes": "13_16_6 | ocr_conf=0.9639"}
 {"id": 116, "name": "茂泗郎", "name_images": ["books/book1/5_names/116.png"], "generation": 4, "father": 112, "children": [133, 132, 131, 130, 129, 128, 127, 126], "biography": "", "notes": "13_16_7 | ocr_conf=0.9989"}
 {"id": 117, "name": "勤", "name_images": ["books/book1/5_names/117.png"], "generation": 4, "father": 112, "children": [135, 134], "biography": "", "notes": "13_16_8 | ocr_conf=0.9999"}
 {"id": 118, "name": "葉", "name_images": ["books/book1/5_names/118.png"], "generation": 4, "father": 112, "children": [137, 136], "biography": "", "notes": "13_16_9 | ocr_conf=0.9997"}
-{"id": 119, "name": "十郎", "name_images": ["books/book1/5_names/119.png"], "generation": 5, "father": 113, "children": [140, 139, 138], "biography": "", "notes": "13_16_10 | ocr_conf=0.9984"}
+{"id": 119, "name": "平十郎", "name_images": ["books/book1/5_names/119.png"], "generation": 5, "father": 113, "children": [140, 139, 138], "biography": "", "notes": "13_16_10 | ocr_conf=0.9984 | ocr_override"}
 {"id": 120, "name": "益道", "name_images": ["books/book1/5_names/120.png"], "generation": 5, "father": 114, "children": [143, 142, 141], "biography": "", "notes": "13_16_11 | ocr_conf=0.9998"}
 {"id": 121, "name": "思道", "name_images": ["books/book1/5_names/121.png"], "generation": 5, "father": 114, "children": [144], "biography": "", "notes": "13_16_12 | ocr_conf=0.9995"}
 {"id": 122, "name": "意道", "name_images": ["books/book1/5_names/122.png"], "generation": 5, "father": 114, "children": [145], "biography": "", "notes": "13_16_13 | ocr_conf=0.7038 | ocr_low_conf | ocr_override"}
@@ -147,7 +147,7 @@
 {"id": 147, "name": "存泰", "name_images": ["books/book1/5_names/147.png"], "generation": 6, "father": 126, "children": [], "biography": "", "notes": "13_16_38 | ocr_conf=0.9999"}
 {"id": 148, "name": "存仁", "name_images": ["books/book1/5_names/148.png"], "generation": 6, "father": 126, "children": [], "biography": "", "notes": "13_16_39 | ocr_conf=0.9999"}
 {"id": 149, "name": "存钦", "name_images": ["books/book1/5_names/149.png"], "generation": 6, "father": 127, "children": [], "biography": "", "notes": "13_16_40 | ocr_conf=0.989"}
-{"id": 150, "name": "存", "name_images": ["books/book1/5_names/150.png"], "generation": 6, "father": 127, "children": [], "biography": "", "notes": "13_16_41 | ocr_conf=0.9995"}
+{"id": 150, "name": "存义", "name_images": ["books/book1/5_names/150.png"], "generation": 6, "father": 127, "children": [], "biography": "", "notes": "13_16_41 | ocr_conf=0.9995 | ocr_override"}
 {"id": 151, "name": "存寿", "name_images": ["books/book1/5_names/151.png"], "generation": 6, "father": 127, "children": [], "biography": "", "notes": "13_16_42 | ocr_conf=0.9992"}
 {"id": 152, "name": "存纯", "name_images": ["books/book1/5_names/152.png"], "generation": 6, "father": 128, "children": [], "biography": "", "notes": "13_16_43 | ocr_conf=0.8239 | ocr_low_conf"}
 {"id": 153, "name": "存学", "name_images": ["books/book1/5_names/153.png"], "generation": 6, "father": 128, "children": [], "biography": "", "notes": "13_16_44 | ocr_conf=0.9834"}
@@ -157,7 +157,7 @@
 {"id": 157, "name": "存奈", "name_images": ["books/book1/5_names/157.png"], "generation": 6, "father": 130, "children": [], "biography": "", "notes": "13_16_48 | ocr_conf=0.9985"}
 {"id": 158, "name": "存志", "name_images": ["books/book1/5_names/158.png"], "generation": 6, "father": 131, "children": [], "biography": "", "notes": "13_16_49 | ocr_conf=0.9974"}
 {"id": 159, "name": "存惠", "name_images": ["books/book1/5_names/159.png"], "generation": 6, "father": 131, "children": [], "biography": "", "notes": "13_16_50 | ocr_conf=0.9975"}
-{"id": 160, "name": "存原", "name_images": ["books/book1/5_names/160.png"], "generation": 6, "father": 131, "children": [], "biography": "", "notes": "13_16_51 | ocr_conf=0.9865"}
+{"id": 160, "name": "存愿", "name_images": ["books/book1/5_names/160.png"], "generation": 6, "father": 131, "children": [], "biography": "", "notes": "13_16_51 | ocr_conf=0.9865 | ocr_override"}
 {"id": 161, "name": "存性", "name_images": ["books/book1/5_names/161.png"], "generation": 6, "father": 132, "children": [], "biography": "", "notes": "13_16_52 | ocr_conf=0.9989"}
 {"id": 162, "name": "存远", "name_images": ["books/book1/5_names/162.png"], "generation": 6, "father": 132, "children": [], "biography": "", "notes": "13_16_53 | ocr_conf=0.9537"}
 {"id": 163, "name": "存德", "name_images": ["books/book1/5_names/163.png"], "generation": 6, "father": 132, "children": [], "biography": "", "notes": "13_16_54 | ocr_conf=0.9989"}

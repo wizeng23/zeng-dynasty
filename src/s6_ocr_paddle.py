@@ -59,20 +59,40 @@ class PaddleEngine:
         (the weakest character governs how much to trust the whole name). Returns
         ``("", 0.0)`` when nothing is recognized.
         """
+        name, conf, _boxes = self.recognize_name_boxed(image)
+        return name, conf
+
+    def recognize_name_boxed(self, image) -> tuple[str, float, list[list[int]]]:
+        """Like :meth:`recognize_name`, plus PP-OCRv5's per-character boxes.
+
+        With ``return_word_box=True`` the pipeline returns one box per character
+        (``text_word`` + ``text_word_boxes``, each ``[x0, y0, x1, y1]`` in crop
+        pixels) in reading order -- the ground-truth character split boundaries,
+        far more reliable than guessing from the crop aspect ratio. Returns
+        ``(name, min_confidence, boxes)`` where ``boxes`` is one ``[x0,y0,x1,y1]``
+        per recognized character (empty if none / not available).
+        """
         arr = np.asarray(image.convert("RGB"))
-        result = self._full_ocr().predict(arr)
+        result = self._full_ocr().predict(arr, return_word_box=True)
         if not result:
-            return "", 0.0
+            return "", 0.0, []
         res = result[0]
         data = getattr(res, "json", None)
         d = data.get("res", data) if isinstance(data, dict) else res
         if not isinstance(d, dict):
-            return "", 0.0
+            return "", 0.0, []
         texts = d.get("rec_texts") or []
         scores = d.get("rec_scores") or []
         name = "".join(texts)
         conf = min((float(s) for s in scores), default=0.0)
-        return name, conf
+
+        # Per-character boxes: text_word_boxes is grouped per text region; flatten
+        # to one box per character, in reading order, aligned to `name`.
+        boxes: list[list[int]] = []
+        for grp in (d.get("text_word_boxes") or []):
+            for bx in grp:
+                boxes.append([int(bx[0]), int(bx[1]), int(bx[2]), int(bx[3])])
+        return name, conf, boxes
 
     def recognize(self, crops: list[Crop]) -> dict[int, str]:
         out: dict[int, str] = {}

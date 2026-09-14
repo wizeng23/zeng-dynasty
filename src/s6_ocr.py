@@ -301,14 +301,25 @@ def populate_names(
         if not os.path.exists(path):
             logger.warning("missing crop %s", path)
             continue
-        name, conf = engine.recognize_name(Image.open(path).convert("L"))
+        # Capture PP-OCRv5's per-character boxes when the engine exposes them
+        # (the ground-truth character split boundaries). Fall back gracefully for
+        # engines that only return text.
+        img = Image.open(path).convert("L")
+        boxes: list = []
+        if hasattr(engine, "recognize_name_boxed"):
+            name, conf, boxes = engine.recognize_name_boxed(img)
+        else:
+            name, conf = engine.recognize_name(img)
         is_low = (not name) or conf < low_conf
         n_low += int(is_low)
-        sidecar[str(node_id)] = {
+        rec = {
             "name": name,
             "confidence": round(conf, 4),
             "low_conf": is_low,
         }
+        if boxes:
+            rec["char_boxes"] = boxes  # [[x0,y0,x1,y1], ...] in crop pixels
+        sidecar[str(node_id)] = rec
         if (k + 1) % 100 == 0:
             logger.info("  ...%d/%d", k + 1, len(ids))
 

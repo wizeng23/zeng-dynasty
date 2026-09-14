@@ -46,6 +46,8 @@ from urllib.parse import urlparse
 import numpy as np
 from PIL import Image
 
+from src.s6_ocr import _resolve_name
+
 Image.MAX_IMAGE_PIXELS = None
 
 logger = logging.getLogger(__name__)
@@ -235,6 +237,69 @@ def split_bands(image: Image.Image, n: int) -> list[tuple[int, int]]:
     return [(bounds[k], bounds[k + 1]) for k in range(len(bounds) - 1)]
 
 
+def _box_q(box: list[int]) -> str:
+    """Encode an [x0,y0,x1,y1] box for a crop URL query."""
+    return ",".join(str(int(v)) for v in box)
+
+
+def _fix_boxes(
+    boxes: list[list[int]], crop_w: int | None, crop_h: int | None
+) -> list[list[int]]:
+    """Normalize PP-OCRv5 boxes, which come back mis-oriented on tall vertical names.
+
+    Names are glyphs stacked TOP-TO-BOTTOM, but PP-OCRv5 often reads them as a
+    rotated horizontal line and returns boxes in one of two broken frames:
+
+    * **transposed** -- x and y swapped; the tell is ``x1 > crop_width`` (a box
+      wider than the crop, e.g. 思道's 道 as [170,0,342,204] on a 204-wide crop).
+      Swapping (x0,y0,x1,y1)->(y0,x0,y1,x1) lands it back on the real stack.
+    * **horizontally tiled** -- boxes span the full height but tile across X (e.g.
+      得道 as [[0,0,157,314],[104,0,210,314]] on a 210x314 crop): the glyphs were
+      laid left-to-right instead of top-to-bottom. These x-ranges are meaningless
+      for a vertical name, so the boxes are DISCARDED (return []), and the caller
+      falls back to the ink-valley split (:func:`split_bands`) with the correct
+      OCR character count.
+
+    A box set that is already a clean vertical stack is returned untouched.
+    """
+    if not boxes or not crop_w or not crop_h:
+        return boxes
+    fixed = [
+        ([b[1], b[0], b[3], b[2]] if b[2] > crop_w + 2 else list(b)) for b in boxes
+    ]
+    # After transpose-repair, a multi-box set on a TALL crop should tile vertically
+    # (distinct y-starts). If instead the y-starts are ~equal while x-starts differ,
+    # the boxes are horizontally tiled -- unusable for a vertical name; drop them.
+    if len(fixed) > 1 and crop_h > crop_w:
+        y_starts = {round(b[1] / 20) for b in fixed}
+        x_starts = {round(b[0] / 20) for b in fixed}
+        if len(y_starts) <= 1 and len(x_starts) > 1:
+            return []
+    return fixed
+
+
+def _coverage_gap(crop_path: str, char_boxes: list[list[int]]) -> float:
+    """Fraction of the crop's INKED rows that lie outside every OCR char box.
+
+    A high value means OCR's boxes leave real ink uncovered -- i.e. a character was
+    probably MISSED (or two glyphs collapsed into one box, common when PP-OCRv5
+    returns duplicate/degenerate boxes for a stacked pair). This is the signal for
+    the QA 'possible missed character' flag.
+    """
+    try:
+        a = np.asarray(Image.open(crop_path).convert("L"))
+    except Exception:
+        return 0.0
+    ink_rows = np.where((a < 128).any(axis=1))[0]
+    if len(ink_rows) == 0:
+        return 0.0
+    covered = np.zeros(a.shape[0], dtype=bool)
+    for _x0, y0, _x1, y1 in char_boxes:
+        covered[max(0, int(y0)):min(a.shape[0], int(y1))] = True
+    uncovered = sum(1 for r in ink_rows if not covered[r])
+    return uncovered / len(ink_rows)
+
+
 def _overrides_path(book: str) -> str:
     return os.path.join(DATA_DIR, f"{book}_overrides.json")
 
@@ -254,6 +319,32 @@ def save_override(book: str, key: str, name: str) -> None:
         overrides[key] = name
     else:
         overrides.pop(key, None)
+    with open(_overrides_path(book), "w") as f:
+        json.dump(overrides, f, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def save_name(book: str, prov: str, ocr_name: str, edited: str) -> None:
+    """Persist a whole-name edit as per-character overrides over the OCR reading.
+
+    The reviewer edits the entire name in one box; we diff it against the OCR text
+    character-by-character and store an override (``{prov}#{i}``) only where they
+    differ, clearing any slot that now matches OCR. This keeps the on-disk override
+    format (per-character) that :func:`src.s6_ocr._resolve_name` / ``apply_names``
+    already consume -- and length changes work too: if the edit is longer than OCR
+    (OCR under-read a stacked glyph) the extra characters become overrides at the
+    new indices; if shorter, the trailing OCR slots are overridden to empty.
+    """
+    overrides = _load_overrides(book)
+    # Drop every existing override for this node, then re-add per current diff.
+    for k in [k for k in overrides if k.rsplit("#", 1)[0] == prov]:
+        overrides.pop(k, None)
+    n = max(len(edited), len(ocr_name))
+    for i in range(n):
+        e = edited[i] if i < len(edited) else ""
+        o = ocr_name[i] if i < len(ocr_name) else ""
+        if e != o:
+            # store the override; an empty string overrides a spurious OCR char away
+            overrides[f"{prov}#{i}"] = e
     with open(_overrides_path(book), "w") as f:
         json.dump(overrides, f, ensure_ascii=False, indent=2, sort_keys=True)
 
@@ -320,15 +411,34 @@ def build_cells() -> list[dict]:
             ocr_name = entry.get("name", n.get("name", ""))
             crop = n["name_images"][0] if n.get("name_images") else ""
             crop_name = os.path.basename(crop) if crop else ""
-            # Determine character count from the crop aspect ratio; fall back to
-            # the OCR length when there's no crop. Read the v1 crop at the path the
-            # jsonl records (books/{book}/5_names/{id}.png) -- NOT the archived v0
-            # crops.
+            # Character count: OCR's own detection is the baseline (PP-OCRv5 detects
+            # then recognizes each stacked glyph, so len(name) is how many it found --
+            # far more reliable than geometry, which mis-rounds at the aspect-ratio .5
+            # boundary: 彭六郎's ink h/w=3.50 rounded to 4 and split mid-glyph). The
+            # aspect ratio (char_count, on the INK bbox) is only the fallback when OCR
+            # returned nothing (a blank/failed crop). A disagreement between the two
+            # is surfaced as a 'count mismatch' for review. Crop read at the path the
+            # jsonl records (books/{book}/5_names/{id}.png), not the archived v0 crops.
             n_by_ratio = None
+            crop_h = crop_w = None
             if crop and os.path.exists(crop):
-                n_by_ratio = char_count(Image.open(crop))
-            n_chars = n_by_ratio or max(1, len(ocr_name))
-            mismatch = bool(ocr_name) and n_by_ratio is not None and n_by_ratio != len(ocr_name)
+                _im = Image.open(crop)
+                n_by_ratio = char_count(_im)
+                crop_w, crop_h = _im.size
+            n_by_ocr = len(ocr_name)
+            n_chars = n_by_ocr or n_by_ratio or 1
+            mismatch = bool(ocr_name) and n_by_ratio is not None and n_by_ratio != n_by_ocr
+
+            # PP-OCRv5 per-character boxes (ground-truth split boundaries), normalized:
+            # PP-OCRv5 sometimes returns a tall/vertical name's boxes in a transposed
+            # (x<->y swapped) frame -- a box then has x1 > crop width (e.g. 思道's 道
+            # came back [170,0,342,204] on a 204-wide crop). _fix_boxes swaps those
+            # back so they land on the real vertical stack.
+            char_boxes = _fix_boxes(entry.get("char_boxes") or [], crop_w, crop_h)
+            # Coverage gap: how much of the crop's INKED height sits OUTSIDE every
+            # OCR char box. A large gap means OCR likely MISSED a character -- the
+            # thing we most want to catch. Measured as a fraction of ink rows.
+            coverage_gap = _coverage_gap(crop, char_boxes) if (crop and char_boxes) else 0.0
             # Page from the parse (_page_ranks gives the correct page per node); the
             # NAME NUMBER is just a running 1..n counter per page in tool order.
             pr = page_ranks.get(prov)
@@ -344,31 +454,35 @@ def build_cells() -> list[dict]:
                 page_seen[pages] = page_rank
             else:
                 page_rank = None
-            for ci in range(n_chars):
-                key = f"{prov}#{ci}"
-                ocr_char = ocr_name[ci] if ci < len(ocr_name) else ""
-                cells.append(
-                    {
-                        "book": book,
-                        "id": n["id"],
-                        "provenance": prov,
-                        "pages": pages,
-                        "page_rank": page_rank,
-                        "char_index": ci,
-                        "n_chars": n_chars,
-                        "crop_url": (
-                            f"/crop/{book}/{crop_name}?i={ci}&n={n_chars}"
-                            if crop_name
-                            else ""
-                        ),
-                        "ocr_char": ocr_char,
-                        "confidence": entry.get("confidence"),
-                        "low_conf": entry.get("low_conf", False),
-                        "override": overrides.get(key, ""),
-                        "count_mismatch": mismatch,
-                        "flagged": prov in flags,
-                    }
-                )
+            # ONE cell per NAME (read the stacked glyphs top-to-bottom in the crop,
+            # edit the whole name in one vertical box). The resolved name = OCR text
+            # with any per-character overrides applied, so a prior correction shows.
+            resolved, _had = _resolve_name(prov, ocr_name, overrides)
+            cells.append(
+                {
+                    "book": book,
+                    "id": n["id"],
+                    "provenance": prov,
+                    "pages": pages,
+                    "page_rank": page_rank,
+                    "n_chars": n_chars,
+                    "ocr_name": ocr_name,        # raw OCR reading
+                    "name": resolved,            # OCR + overrides (edit-box value)
+                    "confidence": entry.get("confidence"),
+                    "low_conf": entry.get("low_conf", False),
+                    "overridden": resolved != ocr_name,
+                    "count_mismatch": mismatch,
+                    "flagged": prov in flags,
+                    # Whole-name crop + ALL OCR char boxes (each a different color) so
+                    # you can confirm every glyph was detected and nothing was missed.
+                    "name_url": f"/name/{book}/{crop_name}" if crop_name else "",
+                    "crop_w": crop_w,
+                    "crop_h": crop_h,
+                    "char_boxes": char_boxes,
+                    "has_boxes": bool(char_boxes),
+                    "coverage_gap": round(coverage_gap, 3),
+                }
+            )
     return cells
 
 
@@ -383,6 +497,7 @@ PAGE = r"""<!doctype html>
     --bg:#f7f5f0; --fg:#1a1a1a; --muted:#6b6b6b; --card:#fff; --line:#e3ddd2;
     --focus:#8a1f1f; --low:#c25a00; --low-bg:#fbe9d6; --ovr:#2f7d32; --ovr-bg:#dcefdc;
     --flag:#8a2be2; --flag-bg:#efe4fb;
+    --cw: 150px; --nh: 340px;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#1a1815; --fg:#ececec; --muted:#9a9a9a; --card:#252220; --line:#3a352f;
@@ -400,40 +515,44 @@ PAGE = r"""<!doctype html>
     vertical-align:middle; }
   label.filter { font-size:13px; color:var(--muted); cursor:pointer; user-select:none; }
   .stage { flex:1 1 auto; display:flex; flex-direction:column; align-items:center;
-    justify-content:center; overflow:hidden; }
-  .strip { display:flex; align-items:center; transition:transform .12s ease-out;
+    justify-content:flex-start; padding-top:16px; overflow:hidden; }
+  .strip { display:flex; align-items:flex-start; transition:transform .12s ease-out;
     will-change:transform; }
-  .cell { flex:0 0 auto; width:var(--cw); margin:0 6px; display:flex; flex-direction:column;
-    align-items:center; gap:8px; opacity:.5; transition:opacity .12s, transform .12s; }
-  .cell.focus { opacity:1; transform:scale(1.12); }
-  .cropbox { width:var(--cw); height:var(--cw); background:#fff; border:2px solid var(--line);
-    border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  .cropbox img { max-width:100%; max-height:100%; image-rendering:-webkit-optimize-contrast; }
-  .txt { width:var(--cw); height:var(--cw); text-align:center; border:2px solid var(--line);
-    border-radius:8px; background:var(--card); color:var(--fg);
-    font-family:"Noto Serif SC",ui-serif,serif; }
-  .txt { font-size:calc(var(--cw) * 0.5); line-height:var(--cw); }
-  input.txt { padding:0; }
-  input.txt:focus { outline:none; border-color:var(--focus); }
-  .cell.low .cropbox, .cell.low .txt { border-color:var(--low); background:var(--low-bg); }
-  .cell.low .cropbox { background:#fff; }
+  .cell { flex:0 0 auto; margin:0 10px; display:flex; flex-direction:column;
+    align-items:center; gap:8px; opacity:.5; transition:opacity .12s, transform .12s;
+    align-self:flex-start; }
+  .cell.focus { opacity:1; transform:scale(1.06); }
+  /* Per-NAME cell: whole-name crop on top, vertical edit box BELOW it (same width),
+     so a row of crops scans across the top and their names read right underneath. */
+  .body { display:flex; flex-direction:column; gap:6px; align-items:center; }
+  /* Width/height are set PER CELL in JS so every crop renders at the SAME scale
+     (crop_px / NAME_SCALE) -- a glyph is then the same on-screen size in every
+     cell, 1-char and 3-char alike. */
+  .cropbox { background:#fff; border:2px solid var(--line);
+    border-radius:8px; position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; }
+  .cropbox img { width:100%; height:100%; display:block;
+    image-rendering:-webkit-optimize-contrast; }
+  .ocrbox { position:absolute; border:3px solid; box-sizing:border-box; pointer-events:none; }
+  /* Edit box under the crop: one vertical column, text top-to-bottom, sized to
+     MIRROR the crop -- the box height is set per-cell to the crop's displayed
+     height and the glyph font ~matches the crop glyph size, so the typed name lines
+     up with the characters in the image directly above it. */
+  .txt { writing-mode:vertical-lr; text-orientation:upright; width:120px;
+    text-align:center; border:2px solid var(--line); border-radius:8px;
+    background:var(--card); color:var(--fg); font-family:"Noto Serif SC",ui-serif,serif;
+    font-size:96px; line-height:1.05; padding:6px; letter-spacing:0;
+    overflow:hidden; }
+  textarea.txt { resize:none; }
+  textarea.txt:focus { outline:none; border-color:var(--focus); }
+  .cell.low .cropbox, .cell.low .txt { border-color:var(--low); }
   .cell.ovr .txt { border-color:var(--ovr); background:var(--ovr-bg); }
-  .cell.mismatch .cropbox { box-shadow:0 0 0 2px var(--low) inset; }
-  /* reviewed = you pressed Enter (confirmed) on this cell */
-  .cell.reviewed .cropbox::after { content:"✓"; position:absolute; margin:-6px 0 0 -6px;
-    color:var(--ovr); font-size:20px; font-weight:700; }
-  .cell.reviewed .cropbox { position:relative; }
-  .cell.reviewed { opacity:.7; }
-  /* flagged = 'impossible' (can't determine the digital character); revisit later.
-     Independent of reviewed. Purple frame + ⚑ badge. */
+  .cell.reviewed { opacity:.75; }
   .cell.flagged .cropbox, .cell.flagged .txt { border-color:var(--flag); }
   .cell.flagged .txt { background:var(--flag-bg); }
-  .cell.flagged .cropbox { position:relative; }
-  .cell.flagged .cropbox::before { content:"⚑"; position:absolute; top:2px; right:6px;
-    color:var(--flag); font-size:22px; font-weight:700; }
   /* Status band = the obvious per-cell state stripe at the very top of the cell.
      Green = reviewed, purple = flagged, both = split. Neutral otherwise. */
-  .status { width:var(--cw); height:26px; border-radius:6px; display:flex;
+  .status { width:214px; height:26px; border-radius:6px; display:flex;
     align-items:center; justify-content:center; font-size:12px; font-weight:700;
     letter-spacing:.03em; color:var(--muted); background:var(--card);
     border:1px solid var(--line); overflow:hidden; }
@@ -447,16 +566,21 @@ PAGE = r"""<!doctype html>
   .cell.reviewed.flagged .status .flg { background:var(--flag); color:#fff; }
   .status .half:first-child { border-radius:6px 0 0 6px; }
   .status .half:last-child { border-radius:0 6px 6px 0; }
+  .nobox { position:absolute; bottom:3px; left:3px; font-size:10px; color:#fff;
+    background:var(--flag); padding:1px 5px; border-radius:3px; z-index:2; }
+  .gapwarn { z-index:2; font-size:11px; font-weight:700; color:#fff;
+    background:#c0392b; padding:3px 6px; border-radius:4px; text-align:center;
+    line-height:1.2; width:214px; }
   .tag { font-size:11px; line-height:1.35; color:var(--muted);
-    font-variant-numeric:tabular-nums; min-height:74px; text-align:center; }
-  .py { font-size:13px; color:var(--muted); height:18px; letter-spacing:.02em;
-    font-family:ui-sans-serif,system-ui,sans-serif; }
+    font-variant-numeric:tabular-nums; min-height:58px; text-align:center; }
+  .py { font-size:12px; color:var(--muted); min-height:16px; letter-spacing:.02em;
+    font-family:ui-sans-serif,system-ui,sans-serif; text-align:center;
+    max-width:calc(var(--cw) + 72px); }
   .cell.focus .py { color:var(--fg); font-weight:600; }
   .footer { flex:0 0 auto; padding:10px 20px; border-top:1px solid var(--line);
     display:flex; justify-content:space-between; align-items:center; }
   .hint { color:var(--muted); font-size:13px; }
   .saved { color:var(--ovr); font-size:13px; min-width:120px; text-align:right; }
-  :root { --cw: 120px; }
 </style>
 </head>
 <body>
@@ -486,14 +610,35 @@ let onlyFlag = false;
 const KEY = "ocr_review_char_pos";
 const REVIEWED_KEY = "ocr_review_reviewed";  // per-book set of confirmed cell keys
 const WINDOW = 8; // cells rendered each side of focus
+const GAP_WARN = 0.15; // >=15% of ink outside all OCR boxes -> possible missed char
+const NAME_SCALE = 1.4; // crop_px / NAME_SCALE = displayed px (same scale for ALL crops)
 const $ = (id) => document.getElementById(id);
 
 // A cell is 'reviewed' only once you press Enter (confirm) on it -- cells you
-// filter/scroll past without confirming never count. Keyed by book+provenance+char
-// so it survives reloads and re-parses.
+// filter/scroll past without confirming never count. Keyed by book:provenance
+// (one cell per NAME) so it survives reloads and re-parses.
 let reviewed = new Set();
 try { reviewed = new Set(JSON.parse(localStorage.getItem(REVIEWED_KEY) || "[]")); } catch {}
-const cellKey = (c) => `${c.book}:${c.provenance}#${c.char_index}`;
+// One-time migration: earlier the tool was per-CHARACTER and stored reviewed keys
+// as "book:prov#charIndex". The rewrite is per-name ("book:prov"). Fold any old
+// keys down to their node (a node counts reviewed if any of its char cells was),
+// and persist, so previously-reviewed names stay marked.
+(function migrateReviewed() {
+  let changed = false;
+  for (const k of [...reviewed]) {
+    if (k.includes("#")) {
+      reviewed.delete(k);
+      reviewed.add(k.split("#")[0]);
+      changed = true;
+    }
+  }
+  if (changed) {
+    try { localStorage.setItem(REVIEWED_KEY, JSON.stringify([...reviewed])); } catch {}
+  }
+})();
+const cellKey = (c) => `${c.book}:${c.provenance}`;   // one cell per NAME
+// Distinct colors per character box (char 1 red, 2 orange, 3 green, ...).
+const BOX_COLORS = ["#e02424","#e08e00","#2f9e44","#1c7ed6","#9c36b5","#0c8599"];
 function markReviewed(c) {
   reviewed.add(cellKey(c));
   try { localStorage.setItem(REVIEWED_KEY, JSON.stringify([...reviewed])); } catch {}
@@ -507,8 +652,7 @@ function visible() {
 function cellClasses(c, focused) {
   let k = "cell";
   if (c.low_conf) k += " low";
-  if (c.override) k += " ovr";
-  if (c.count_mismatch) k += " mismatch";
+  if (c.overridden) k += " ovr";
   if (reviewed.has(cellKey(c))) k += " reviewed";
   if (c.flagged) k += " flagged";
   if (focused) k += " focus";
@@ -527,7 +671,7 @@ function render() {
     const focused = (i === idx);
     const el = document.createElement("div");
     el.className = cellClasses(c, focused);
-    const cur = c.override || c.ocr_char || "";
+    const cur = focused ? c.name : c.name;   // vertical box shows the (resolved) name
     let tag = "&nbsp;";
     if (focused) {
       const bookLbl = c.book === "book1" ? "Book 1" : (c.book === "book2" ? "Book 2" : c.book);
@@ -535,9 +679,7 @@ function render() {
       if (c.page_rank != null) pageLbl += ", name " + c.page_rank;
       const scoreLbl = (c.confidence == null) ? "score —"
                        : ("score " + Number(c.confidence).toFixed(2));
-      const lines = [bookLbl, pageLbl];
-      if (c.n_chars > 1) lines.push("char " + (c.char_index+1) + "/" + c.n_chars);
-      lines.push(scoreLbl);
+      const lines = [bookLbl, pageLbl, (c.n_chars + "-char"), scoreLbl];
       tag = lines.join("<br>");
     }
     const rev = reviewed.has(cellKey(c)), flg = c.flagged;
@@ -546,24 +688,62 @@ function render() {
     else if (rev) status = "✓ REVIEWED";
     else if (flg) status = "⚑ FLAGGED";
     else status = "unreviewed";
+    // Whole-name crop with ALL OCR char boxes drawn (each a different color) so you
+    // can confirm every glyph was detected. Big coverage gap -> red 'missed char'.
+    const gapWarn = (c.coverage_gap >= GAP_WARN)
+      ? `<div class="gapwarn">⚠ ${Math.round(c.coverage_gap*100)}% uncovered — possible missed char</div>` : "";
+    const boxSpans = (c.char_boxes || []).map((b,bi) =>
+      `<span class="ocrbox" data-box="${b.join(',')}" data-w="${c.crop_w||0}" data-h="${c.crop_h||0}" style="border-color:${BOX_COLORS[bi%BOX_COLORS.length]}"></span>`
+    ).join("");
+    const noBox = c.has_boxes ? "" : `<span class="nobox">no OCR box</span>`;
+    // Same scale for every crop: displayed size = crop pixels / NAME_SCALE, so a
+    // glyph is identical on-screen in a 1-char and a 3-char name.
+    const dispW = c.crop_w ? Math.round(c.crop_w / NAME_SCALE) : 150;
+    const dispH = c.crop_h ? Math.round(c.crop_h / NAME_SCALE) : 150;
+    const cropStyle = `width:${dispW}px;height:${dispH}px`;
+    // Text box mirrors the crop's displayed height so the typed name lines up with
+    // the glyphs above it at the same scale.
+    const txtStyle = `height:${dispH}px`;
     el.innerHTML =
       `<div class="status">${status}</div>` +
       `<div class="tag">${tag}</div>` +
-      `<div class="cropbox">${c.crop_url ? `<img src="${c.crop_url}">` : ""}</div>` +
-      (focused
-        ? `<input class="txt" id="focusInput" value="${cur.replace(/"/g,'&quot;')}"
-             autocomplete="off" autocapitalize="off" spellcheck="false" lang="zh">`
-        : `<div class="txt">${cur}</div>`) +
+      gapWarn +
+      `<div class="body">` +
+        `<div class="cropbox" style="${cropStyle}">${c.name_url ? `<img src="${c.name_url}">` : ""}${boxSpans}${noBox}</div>` +
+        (focused
+          ? `<textarea class="txt" id="focusInput" rows="1" style="${txtStyle}"
+               autocomplete="off" autocapitalize="off" spellcheck="false" lang="zh">${cur.replace(/</g,'&lt;')}</textarea>`
+          : `<div class="txt" style="${txtStyle}">${cur.replace(/</g,'&lt;')}</div>`) +
+      `</div>` +
       `<div class="py" data-char="${cur.replace(/"/g,'&quot;')}">&nbsp;</div>`;
     strip.appendChild(el);
   }
   updatePinyin();
-  // center the focused cell
-  const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cw"));
-  const cellPx = cw + 12;
-  const rendered = to - from + 1;
-  const focusOffset = (pos - from);
-  strip.style.transform = `translateX(${(rendered/2 - focusOffset - 0.5) * cellPx}px)`;
+  positionBoxes();
+  // Center the focused cell. Crop/box widths are set inline (not image-load
+  // dependent), so measure synchronously -- but FIRST clear any transform from the
+  // previous render, else getBoundingClientRect() reports the already-shifted
+  // position and the centering drifts. Use offsetLeft (layout-relative, transform-
+  // independent) to be safe.
+  const kids = [...strip.children];
+  const fidx = pos - from;
+  if (kids[fidx]) {
+    const f = kids[fidx];
+    // Measure with the transform CLEARED so rects are in natural layout position,
+    // then shift so the focused cell's center sits at the viewport center.
+    strip.style.transition = "none";
+    strip.style.transform = "none";
+    // force layout, then read positions in viewport coords
+    const fRect = f.getBoundingClientRect();
+    const fCenter = fRect.left + fRect.width / 2;   // viewport x of cell center
+    const viewCenter = window.innerWidth / 2;
+    const shift = viewCenter - fCenter;             // untransformed -> transform is 0 here
+    requestAnimationFrame(() => {
+      strip.style.transition = "";
+      strip.style.transform = `translateX(${shift}px)`;
+      positionBoxes();
+    });
+  }
   const revCount = cells.filter(c => reviewed.has(cellKey(c))).length;
   const flagCount = cells.filter(c => c.flagged).length;
   const scope = onlyFlag ? "flagged" : (onlyLow ? "low-conf" : "all");
@@ -572,6 +752,32 @@ function render() {
   const input = $("focusInput");
   if (input) { input.focus(); input.select(); input.oninput = markDirty; }
   localStorage.setItem(KEY, idx);
+}
+
+// Overlay each char's OCR box onto its whole-name image, scaling crop-pixel
+// coords to the rendered image size (so you see WHERE in the name OCR found this
+// glyph, and by omission, what it missed).
+function positionBoxes() {
+  for (const box of document.querySelectorAll(".ocrbox")) {
+    const img = box.parentElement.querySelector("img");
+    if (!img) continue;
+    const draw = () => {
+      const [x0,y0,x1,y1] = box.getAttribute("data-box").split(",").map(Number);
+      const cropW = Number(box.getAttribute("data-w")) || img.naturalWidth || 1;
+      const cropH = Number(box.getAttribute("data-h")) || img.naturalHeight || 1;
+      const rw = img.clientWidth, rh = img.clientHeight;
+      if (!rw || !rh) return;
+      const sx = rw / cropW, sy = rh / cropH;
+      // image is centered inside the .cropbox
+      const offX = (box.parentElement.clientWidth - rw) / 2;
+      const offY = (box.parentElement.clientHeight - rh) / 2;
+      box.style.left   = (offX + x0*sx) + "px";
+      box.style.top    = (offY + y0*sy) + "px";
+      box.style.width  = ((x1-x0)*sx) + "px";
+      box.style.height = ((y1-y0)*sy) + "px";
+    };
+    if (img.complete) draw(); else img.onload = draw;
+  }
 }
 
 const pyCache = {};
@@ -604,19 +810,18 @@ async function refreshFocusPinyin() {
 function markDirty() {
   const el = $("focusInput"); if (!el) return;
   const c = cells[idx];
-  el.parentElement.classList.toggle("ovr", el.value.trim() !== (c.ocr_char||""));
+  el.closest(".cell").classList.toggle("ovr", el.value.trim() !== (c.ocr_name||""));
   refreshFocusPinyin();
 }
 
 async function saveFocus() {
   const el = $("focusInput"); if (!el) return;
   const c = cells[idx];
-  const v = el.value.trim();
-  const isOverride = v !== (c.ocr_char || "");
+  const v = el.value.trim().replace(/\s+/g,"");  // a name is one column, no whitespace
+  const isOverride = v !== (c.ocr_name || "");
   const res = await fetch("/save", { method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({book:c.book, key:`${c.provenance}#${c.char_index}`,
-      name: isOverride ? v : ""}) });
-  c.override = (res.ok && isOverride) ? v : "";
+    body: JSON.stringify({book:c.book, prov:c.provenance, ocr_name:c.ocr_name||"", name:v}) });
+  if (res.ok) { c.name = v; c.overridden = isOverride; }
   $("saved").textContent = res.ok ? (isOverride ? "saved ✓" : "reverted ✓") : "save failed";
 }
 
@@ -658,10 +863,10 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "Escape") {
     e.preventDefault();
     const el = $("focusInput"), c = cells[idx];
-    if (el) { el.value = c.ocr_char || ""; markDirty();
+    if (el) { el.value = c.ocr_name || ""; markDirty();
       fetch("/save",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({book:c.book,key:`${c.provenance}#${c.char_index}`,name:""})});
-      c.override=""; $("saved").textContent="reverted ✓"; }
+        body:JSON.stringify({book:c.book,prov:c.provenance,ocr_name:c.ocr_name||"",name:c.ocr_name||""})});
+      c.name = c.ocr_name || ""; c.overridden=false; $("saved").textContent="reverted ✓"; }
   }
 });
 $("onlyLow").onchange = (e) => {
@@ -689,16 +894,38 @@ fetch("/data").then(r=>r.json()).then(d=>{
 """
 
 
-def _crop_band_png(book: str, fname: str, i: int, n: int) -> bytes:
-    """Return PNG bytes of the i-th (of n) character band of a v1 name crop."""
+def _crop_band_png(
+    book: str, fname: str, i: int, n: int, box: list[int] | None = None
+) -> bytes:
+    """PNG of the i-th character band of a v1 name crop.
+
+    Uses PP-OCRv5's per-character ``box`` ([x0,y0,x1,y1]) when supplied -- the
+    ground-truth boundary -- cropping to that character's row range (full crop
+    width, so a slightly-off x doesn't clip strokes). Falls back to the
+    aspect-ratio :func:`split_bands` when no box is available.
+    """
     fpath = os.path.join(BOOKS_DIR, book, "5_names", os.path.basename(fname))
     im = Image.open(fpath).convert("L")
-    bands = split_bands(im, n)
-    if 0 <= i < len(bands):
-        top, bot = bands[i]
-        im = im.crop((0, top, im.width, bot))
+    if box is not None:
+        _x0, y0, _x1, y1 = box
+        top, bot = max(0, int(y0)), min(im.height, int(y1))
+        if bot > top:
+            im = im.crop((0, top, im.width, bot))
+    else:
+        bands = split_bands(im, n)
+        if 0 <= i < len(bands):
+            top, bot = bands[i]
+            im = im.crop((0, top, im.width, bot))
     buf = io.BytesIO()
     im.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def _name_png(book: str, fname: str) -> bytes:
+    """PNG of the whole name crop (unmodified), for the context image above cells."""
+    fpath = os.path.join(BOOKS_DIR, book, "5_names", os.path.basename(fname))
+    buf = io.BytesIO()
+    Image.open(fpath).convert("L").save(buf, format="PNG")
     return buf.getvalue()
 
 
@@ -727,8 +954,20 @@ class Handler(BaseHTTPRequestHandler):
                 kv.split("=", 1) for kv in parsed.query.split("&") if "=" in kv
             )
             i, n = int(qs.get("i", 0)), int(qs.get("n", 1))
+            box = None
+            if qs.get("box"):
+                try:
+                    box = [int(v) for v in qs["box"].split(",")]
+                except ValueError:
+                    box = None
             try:
-                self._send(200, _crop_band_png(book, fname, i, n), "image/png")
+                self._send(200, _crop_band_png(book, fname, i, n, box), "image/png")
+            except FileNotFoundError:
+                self._send(404, b"not found", "text/plain")
+        elif path.startswith("/name/"):
+            _, _, book, fname = path.split("/", 3)
+            try:
+                self._send(200, _name_png(book, fname), "image/png")
             except FileNotFoundError:
                 self._send(404, b"not found", "text/plain")
         elif path == "/pinyin":
@@ -758,12 +997,14 @@ class Handler(BaseHTTPRequestHandler):
             save_flag(book, prov, bool(payload.get("flagged")))
             self._send(200, json.dumps({"ok": True}))
             return
-        key = payload.get("key")
-        name = payload.get("name", "").strip()
-        if not key:
+        # /save: a whole-name edit for one node, decomposed to per-char overrides.
+        prov = payload.get("prov")
+        if not prov:
             self._send(400, json.dumps({"error": "bad request"}))
             return
-        save_override(book, key, name)
+        ocr_name = payload.get("ocr_name", "")
+        edited = payload.get("name", "").strip()
+        save_name(book, prov, ocr_name, edited)
         self._send(200, json.dumps({"ok": True}))
 
 

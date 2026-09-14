@@ -2,816 +2,2516 @@
   "1": {
     "name": "点",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        10,
+        6,
+        186,
+        183
+      ]
+    ]
   },
   "2": {
     "name": "参",
     "confidence": 0.9992,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        13,
+        0,
+        205,
+        198
+      ]
+    ]
   },
   "3": {
     "name": "元",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        15,
+        1,
+        198,
+        198
+      ]
+    ]
   },
   "4": {
     "name": "电",
     "confidence": 0.9222,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        29,
+        0,
+        189,
+        166
+      ]
+    ]
   },
   "5": {
     "name": "华",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        13,
+        0,
+        194,
+        190
+      ]
+    ]
   },
   "6": {
     "name": "西",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        23,
+        0,
+        182,
+        197
+      ]
+    ]
   },
   "7": {
     "name": "钦",
     "confidence": 0.9943,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        12,
+        0,
+        208,
+        200
+      ]
+    ]
   },
   "8": {
     "name": "旱",
     "confidence": 0.3919,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        226,
+        186
+      ]
+    ]
   },
   "9": {
     "name": "得",
     "confidence": 0.2916,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        3,
+        0,
+        181,
+        162
+      ]
+    ]
   },
   "10": {
     "name": "羡",
     "confidence": 0.9615,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        176,
+        200
+      ]
+    ]
   },
   "11": {
     "name": "遐",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        10,
+        0,
+        208,
+        193
+      ]
+    ]
   },
   "12": {
     "name": "伟",
     "confidence": 0.9997,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        15,
+        0,
+        209,
+        205
+      ]
+    ]
   },
   "13": {
     "name": "盈",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        7,
+        0,
+        198,
+        182
+      ]
+    ]
   },
   "14": {
     "name": "乐",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        166,
+        196
+      ]
+    ]
   },
   "15": {
     "name": "免",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        11,
+        0,
+        202,
+        192
+      ]
+    ]
   },
   "16": {
     "name": "免",
     "confidence": 0.9996,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        12,
+        0,
+        197,
+        190
+      ]
+    ]
   },
   "17": {
     "name": "旃",
     "confidence": 0.9986,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        4,
+        0,
+        211,
+        189
+      ]
+    ]
   },
   "18": {
     "name": "光",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        24,
+        0,
+        199,
+        165
+      ]
+    ]
   },
   "19": {
     "name": "嘉",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        18,
+        0,
+        198,
+        202
+      ]
+    ]
   },
   "20": {
     "name": "寳",
     "confidence": 0.5785,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        23,
+        0,
+        182,
+        203
+      ]
+    ]
   },
   "21": {
     "name": "顼",
     "confidence": 0.8302,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        13,
+        0,
+        190,
+        186
+      ]
+    ]
   },
   "22": {
     "name": "琰",
     "confidence": 0.9969,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        11,
+        0,
+        211,
+        200
+      ]
+    ]
   },
   "23": {
     "name": "据",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        5,
+        0,
+        204,
+        184
+      ]
+    ]
   },
   "24": {
     "name": "据",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        7,
+        0,
+        200,
+        181
+      ]
+    ]
   },
   "25": {
     "name": "闽",
     "confidence": 0.2039,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        29,
+        0,
+        197,
+        170
+      ]
+    ]
   },
   "26": {
     "name": "场",
     "confidence": 0.9041,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        12,
+        0,
+        204,
+        197
+      ]
+    ]
   },
   "27": {
     "name": "植",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        12,
+        5,
+        209,
+        205
+      ]
+    ]
   },
   "28": {
     "name": "永",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        15,
+        0,
+        208,
+        205
+      ]
+    ]
   },
   "29": {
     "name": "耀",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        17,
+        0,
+        204,
+        204
+      ]
+    ]
   },
   "30": {
     "name": "四J",
     "confidence": 0.2735,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        23,
+        2,
+        123,
+        178
+      ],
+      [
+        117,
+        2,
+        147,
+        178
+      ]
+    ]
   },
   "31": {
     "name": "万",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        17,
+        0,
+        190,
+        193
+      ]
+    ]
   },
   "32": {
     "name": "培",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        14,
+        0,
+        204,
+        199
+      ]
+    ]
   },
   "33": {
     "name": "坤",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        22,
+        2,
+        197,
+        207
+      ]
+    ]
   },
   "34": {
     "name": "游",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        16,
+        0,
+        196,
+        197
+      ]
+    ]
   },
   "35": {
     "name": "沭",
     "confidence": 0.5915,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        8,
+        0,
+        198,
+        185
+      ]
+    ]
   },
   "36": {
     "name": "德",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        9,
+        0,
+        202,
+        190
+      ]
+    ]
   },
   "37": {
     "name": "佐",
     "confidence": 0.9981,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        13,
+        201,
+        185
+      ]
+    ]
   },
   "38": {
     "name": "萱",
     "confidence": 0.3151,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        41,
+        0,
+        193,
+        184
+      ]
+    ]
   },
   "39": {
     "name": "衍",
     "confidence": 0.9898,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        177
+      ]
+    ]
   },
   "40": {
     "name": "葵",
     "confidence": 0.9995,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        10,
+        0,
+        204,
+        192
+      ]
+    ]
   },
   "41": {
     "name": "衍",
     "confidence": 0.9715,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        209,
+        179
+      ]
+    ]
   },
   "42": {
     "name": "祚",
     "confidence": 0.9984,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        35,
+        0,
+        200,
+        180
+      ]
+    ]
   },
   "43": {
     "name": "道",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        21,
+        0,
+        202,
+        164
+      ]
+    ]
   },
   "44": {
     "name": "良",
     "confidence": 0.999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        26,
+        17,
+        206,
+        180
+      ]
+    ]
   },
   "45": {
     "name": "奉",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        16,
+        0,
+        208,
+        206
+      ]
+    ]
   },
   "46": {
     "name": "春",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        8,
+        0,
+        211,
+        195
+      ]
+    ]
   },
   "47": {
     "name": "拱",
     "confidence": 0.9997,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        13,
+        0,
+        207,
+        200
+      ]
+    ]
   },
   "48": {
     "name": "庆",
     "confidence": 0.9994,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        176,
+        185
+      ]
+    ]
   },
   "49": {
     "name": "庆",
     "confidence": 0.9988,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        177,
+        187
+      ]
+    ]
   },
   "50": {
     "name": "务",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        186,
+        202
+      ]
+    ]
   },
   "51": {
     "name": "允",
     "confidence": 0.9893,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        22,
+        0,
+        194,
+        204
+      ]
+    ]
   },
   "52": {
     "name": "耀",
     "confidence": 0.9996,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        15,
+        0,
+        202,
+        200
+      ]
+    ]
   },
   "53": {
     "name": "俊",
     "confidence": 0.99,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        3,
+        209,
+        182
+      ]
+    ]
   },
   "54": {
     "name": "琦",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        6,
+        0,
+        221,
+        200
+      ]
+    ]
   },
   "55": {
     "name": "赐福",
     "confidence": 0.9413,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        16,
+        200,
+        216
+      ],
+      [
+        0,
+        183,
+        200,
+        339
+      ]
+    ]
   },
   "56": {
     "name": "赐重",
     "confidence": 0.8886,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        17,
+        200,
+        221
+      ],
+      [
+        0,
+        187,
+        200,
+        344
+      ]
+    ]
   },
   "57": {
     "name": "赐重",
     "confidence": 0.9293,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        201,
+        187
+      ],
+      [
+        0,
+        153,
+        201,
+        324
+      ]
+    ]
   },
   "58": {
     "name": "球",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        6,
+        0,
+        207,
+        188
+      ]
+    ]
   },
   "59": {
     "name": "坚",
     "confidence": 0.9994,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        181,
+        204
+      ]
+    ]
   },
   "60": {
     "name": "贵",
     "confidence": 0.9951,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        14,
+        0,
+        200,
+        196
+      ]
+    ]
   },
   "61": {
     "name": "颜",
     "confidence": 0.8741,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        15,
+        0,
+        210,
+        206
+      ]
+    ]
   },
   "62": {
     "name": "荣",
     "confidence": 0.9996,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        177,
+        206
+      ]
+    ]
   },
   "63": {
     "name": "经",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        4,
+        0,
+        189,
+        169
+      ]
+    ]
   },
   "64": {
     "name": "二",
     "confidence": 0.4264,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        246,
+        189
+      ]
+    ]
   },
   "65": {
     "name": "守霜",
     "confidence": 0.9976,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        22,
+        0,
+        212,
+        229
+      ],
+      [
+        22,
+        197,
+        212,
+        353
+      ]
+    ]
   },
   "66": {
     "name": "守霜",
     "confidence": 0.9976,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        11,
+        0,
+        201,
+        196
+      ],
+      [
+        11,
+        163,
+        201,
+        339
+      ]
+    ]
   },
   "67": {
     "name": "德富",
     "confidence": 0.9988,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        197,
+        197
+      ],
+      [
+        0,
+        164,
+        197,
+        342
+      ]
+    ]
   },
   "68": {
     "name": "文遄",
     "confidence": 0.7483,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        204,
+        204
+      ],
+      [
+        0,
+        170,
+        204,
+        333
+      ]
+    ]
   },
   "69": {
     "name": "文汕",
     "confidence": 0.8502,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        28,
+        205,
+        218
+      ],
+      [
+        170,
+        28,
+        340,
+        218
+      ]
+    ]
   },
   "70": {
     "name": "又油",
     "confidence": 0.9231,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        9,
+        194,
+        200
+      ],
+      [
+        162,
+        9,
+        330,
+        200
+      ]
+    ]
   },
   "71": {
     "name": "四",
     "confidence": 0.5814,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        2,
+        172,
+        179
+      ]
+    ]
   },
   "72": {
     "name": "舆",
     "confidence": 0.9558,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        30,
+        1,
+        206,
+        179
+      ]
+    ]
   },
   "73": {
     "name": "兴",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        26,
+        18,
+        198,
+        186
+      ]
+    ]
   },
   "74": {
     "name": "作铢",
     "confidence": 0.747,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        17,
+        195,
+        222
+      ],
+      [
+        0,
+        187,
+        195,
+        353
+      ]
+    ]
   },
   "75": {
     "name": "作铢",
     "confidence": 0.9379,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        186
+      ],
+      [
+        0,
+        152,
+        203,
+        334
+      ]
+    ]
   },
   "76": {
     "name": "珂",
     "confidence": 0.9987,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        8,
+        0,
+        202,
+        180
+      ]
+    ]
   },
   "77": {
     "name": "珊",
     "confidence": 0.9986,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        47,
+        0,
+        199,
+        160
+      ]
+    ]
   },
   "78": {
     "name": "玺",
     "confidence": 0.9981,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        26,
+        0,
+        191,
+        162
+      ]
+    ]
   },
   "79": {
     "name": "珀",
     "confidence": 0.9972,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        20,
+        0,
+        190,
+        154
+      ]
+    ]
   },
   "80": {
     "name": "琥",
     "confidence": 0.9997,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        23,
+        0,
+        202,
+        166
+      ]
+    ]
   },
   "81": {
     "name": "起滔",
     "confidence": 0.9994,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        17,
+        202,
+        222
+      ],
+      [
+        0,
+        187,
+        202,
+        350
+      ]
+    ]
   },
   "82": {
     "name": "魁",
     "confidence": 0.9997,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        10,
+        0,
+        208,
+        196
+      ]
+    ]
   },
   "83": {
     "name": "壁",
     "confidence": 0.9993,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        12,
+        0,
+        207,
+        199
+      ]
+    ]
   },
   "84": {
     "name": "星",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        23,
+        0,
+        187,
+        200
+      ]
+    ]
   },
   "85": {
     "name": "产",
     "confidence": 0.9816,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        22,
+        2,
+        189,
+        185
+      ]
+    ]
   },
   "86": {
     "name": "察",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        14,
+        0,
+        206,
+        202
+      ]
+    ]
   },
   "87": {
     "name": "臣",
     "confidence": 0.7661,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        43,
+        2,
+        202,
+        194
+      ]
+    ]
   },
   "88": {
     "name": "吉祥",
     "confidence": 0.9986,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        16,
+        201,
+        217
+      ],
+      [
+        0,
+        183,
+        201,
+        355
+      ]
+    ]
   },
   "89": {
     "name": "振",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        2,
+        0,
+        214,
+        187
+      ]
+    ]
   },
   "90": {
     "name": "托",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        2,
+        0,
+        208,
+        183
+      ]
+    ]
   },
   "91": {
     "name": "春",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        12,
+        0,
+        207,
+        199
+      ]
+    ]
   },
   "92": {
     "name": "添",
     "confidence": 0.614,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        26,
+        0,
+        204,
+        172
+      ]
+    ]
   },
   "93": {
     "name": "泰",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        15,
+        0,
+        198,
+        203
+      ]
+    ]
   },
   "94": {
     "name": "吉祥",
     "confidence": 0.6687,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        203
+      ],
+      [
+        169,
+        0,
+        337,
+        203
+      ]
+    ]
   },
   "95": {
     "name": "安",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        25,
+        0,
+        201,
+        168
+      ]
+    ]
   },
   "96": {
     "name": "振",
     "confidence": 0.9975,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        5,
+        0,
+        208,
+        188
+      ]
+    ]
   },
   "97": {
     "name": "森",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        4,
+        0,
+        200,
+        179
+      ]
+    ]
   },
   "98": {
     "name": "侨",
     "confidence": 0.4689,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        200,
+        166
+      ]
+    ]
   },
   "99": {
     "name": "棹",
     "confidence": 0.997,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        11,
+        1,
+        208,
+        199
+      ]
+    ]
   },
   "100": {
     "name": "嘉",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        18,
+        0,
+        196,
+        199
+      ]
+    ]
   },
   "101": {
     "name": "泰",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        14,
+        0,
+        203,
+        198
+      ]
+    ]
   },
   "102": {
     "name": "革",
     "confidence": 0.4174,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        12,
+        0,
+        202,
+        195
+      ]
+    ]
   },
   "103": {
     "name": "沂",
     "confidence": 0.9942,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        178,
+        201
+      ]
+    ]
   },
   "104": {
     "name": "炜",
     "confidence": 0.9913,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        25,
+        0,
+        189,
+        206
+      ]
+    ]
   },
   "105": {
     "name": "铭",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        21,
+        0,
+        196,
+        205
+      ]
+    ]
   },
   "106": {
     "name": "衡",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        9,
+        0,
+        206,
+        192
+      ]
+    ]
   },
   "107": {
     "name": "德",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        8,
+        0,
+        204,
+        189
+      ]
+    ]
   },
   "108": {
     "name": "排",
     "confidence": 0.982,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        24,
+        0,
+        189,
+        204
+      ]
+    ]
   },
   "109": {
     "name": "衡",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        5,
+        0,
+        210,
+        190
+      ]
+    ]
   },
   "110": {
     "name": "惠",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        25,
+        0,
+        183,
+        200
+      ]
+    ]
   },
   "111": {
     "name": "旺",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        15,
+        1,
+        181,
+        182
+      ]
+    ]
   },
   "112": {
     "name": "然",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        173,
+        194
+      ]
+    ]
   },
   "113": {
     "name": "彭六郎",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        23,
+        188,
+        195
+      ],
+      [
+        0,
+        179,
+        188,
+        351
+      ],
+      [
+        0,
+        335,
+        188,
+        507
+      ]
+    ]
   },
   "114": {
     "name": "十郎",
     "confidence": 0.9969,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        124,
+        0,
+        343,
+        188
+      ],
+      [
+        312,
+        0,
+        510,
+        188
+      ]
+    ]
   },
   "115": {
     "name": "贵善",
     "confidence": 0.9639,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        189
+      ],
+      [
+        0,
+        154,
+        207,
+        332
+      ]
+    ]
   },
   "116": {
     "name": "茂泗郎",
     "confidence": 0.9989,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        27,
+        0,
+        231,
+        181
+      ],
+      [
+        27,
+        163,
+        231,
+        353
+      ],
+      [
+        27,
+        336,
+        231,
+        494
+      ]
+    ]
   },
   "117": {
     "name": "勤",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        29,
+        0,
+        182,
+        207
+      ]
+    ]
   },
   "118": {
     "name": "葉",
     "confidence": 0.9997,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        26,
+        0,
+        200,
+        216
+      ]
+    ]
   },
   "119": {
     "name": "十郎",
     "confidence": 0.9984,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        94,
+        0,
+        316,
+        190
+      ],
+      [
+        285,
+        0,
+        500,
+        190
+      ]
+    ]
   },
   "120": {
     "name": "益道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        205,
+        187
+      ],
+      [
+        0,
+        153,
+        205,
+        316
+      ]
+    ]
   },
   "121": {
     "name": "思道",
     "confidence": 0.9995,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        204,
+        204
+      ],
+      [
+        170,
+        0,
+        342,
+        204
+      ]
+    ]
   },
   "122": {
     "name": "息道",
     "confidence": 0.7038,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        187,
+        204
+      ],
+      [
+        153,
+        0,
+        341,
+        204
+      ]
+    ]
   },
   "123": {
     "name": "德道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        208,
+        190
+      ],
+      [
+        0,
+        155,
+        208,
+        318
+      ]
+    ]
   },
   "124": {
     "name": "财道",
     "confidence": 0.9936,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        16,
+        202,
+        218
+      ],
+      [
+        0,
+        185,
+        202,
+        333
+      ]
+    ]
   },
   "125": {
     "name": "赐道",
     "confidence": 0.9478,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        17,
+        204,
+        221
+      ],
+      [
+        0,
+        187,
+        204,
+        354
+      ]
+    ]
   },
   "126": {
     "name": "贯道",
     "confidence": 0.9565,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        186
+      ],
+      [
+        0,
+        152,
+        203,
+        351
+      ]
+    ]
   },
   "127": {
     "name": "正道",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        189
+      ],
+      [
+        0,
+        155,
+        207,
+        352
+      ]
+    ]
   },
   "128": {
     "name": "弘道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        35,
+        204,
+        211
+      ],
+      [
+        0,
+        175,
+        204,
+        350
+      ]
+    ]
   },
   "129": {
     "name": "明道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        12,
+        204,
+        207
+      ],
+      [
+        170,
+        12,
+        350,
+        207
+      ]
+    ]
   },
   "130": {
     "name": "思道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        205,
+        187
+      ],
+      [
+        0,
+        153,
+        205,
+        339
+      ]
+    ]
   },
   "131": {
     "name": "允道",
     "confidence": 0.999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        205,
+        205
+      ],
+      [
+        170,
+        0,
+        340,
+        205
+      ]
+    ]
   },
   "132": {
     "name": "吾道",
     "confidence": 0.9849,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        189
+      ],
+      [
+        0,
+        155,
+        207,
+        339
+      ]
+    ]
   },
   "133": {
     "name": "盡道",
     "confidence": 0.9965,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        205,
+        187
+      ],
+      [
+        0,
+        153,
+        205,
+        347
+      ]
+    ]
   },
   "134": {
     "name": "行道",
     "confidence": 1.0,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        186
+      ],
+      [
+        0,
+        152,
+        203,
+        315
+      ]
+    ]
   },
   "135": {
     "name": "得道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        157,
+        314
+      ],
+      [
+        104,
+        0,
+        210,
+        314
+      ]
+    ]
   },
   "136": {
     "name": "达道",
     "confidence": 0.9995,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        193,
+        181
+      ],
+      [
+        0,
+        148,
+        193,
+        314
+      ]
+    ]
   },
   "137": {
     "name": "进道",
     "confidence": 0.9998,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        200,
+        185
+      ],
+      [
+        0,
+        151,
+        200,
+        314
+      ]
+    ]
   },
   "138": {
     "name": "晋郎",
     "confidence": 0.9196,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        201,
+        184
+      ],
+      [
+        0,
+        150,
+        201,
+        334
+      ]
+    ]
   },
   "139": {
     "name": "宪七郎",
     "confidence": 0.8221,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        196,
+        170
+      ],
+      [
+        0,
+        154,
+        196,
+        333
+      ],
+      [
+        0,
+        317,
+        196,
+        486
+      ]
+    ]
   },
   "140": {
     "name": "信九郎",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        177
+      ],
+      [
+        0,
+        160,
+        203,
+        345
+      ],
+      [
+        0,
+        328,
+        203,
+        486
+      ]
+    ]
   },
   "141": {
     "name": "鵬展",
     "confidence": 0.7656,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        17,
+        211,
+        230
+      ],
+      [
+        0,
+        195,
+        211,
+        344
+      ]
+    ]
   },
   "142": {
     "name": "鸾展",
     "confidence": 0.98,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        17,
+        206,
+        223
+      ],
+      [
+        0,
+        188,
+        206,
+        353
+      ]
+    ]
   },
   "143": {
     "name": "鶚屈",
     "confidence": 0.4838,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        6,
+        210,
+        211
+      ],
+      [
+        175,
+        6,
+        350,
+        211
+      ]
+    ]
   },
   "144": {
     "name": "凤展",
     "confidence": 0.8448,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        209,
+        191
+      ],
+      [
+        0,
+        156,
+        209,
+        334
+      ]
+    ]
   },
   "145": {
     "name": "皇展",
     "confidence": 0.8234,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        212,
+        194
+      ],
+      [
+        0,
+        159,
+        212,
+        334
+      ]
+    ]
   },
   "146": {
     "name": "存",
     "confidence": 0.5294,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        180,
+        307
+      ]
+    ]
   },
   "147": {
     "name": "存泰",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        207
+      ],
+      [
+        0,
+        172,
+        207,
+        336
+      ]
+    ]
   },
   "148": {
     "name": "存仁",
     "confidence": 0.9999,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        189
+      ],
+      [
+        0,
+        154,
+        207,
+        328
+      ]
+    ]
   },
   "149": {
     "name": "存钦",
     "confidence": 0.989,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        199,
+        199
+      ],
+      [
+        0,
+        165,
+        199,
+        324
+      ]
+    ]
   },
   "150": {
     "name": "存",
     "confidence": 0.9995,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        200,
+        243
+      ]
+    ]
   },
   "151": {
     "name": "存寿",
     "confidence": 0.9992,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        205,
+        187
+      ],
+      [
+        0,
+        153,
+        205,
+        334
+      ]
+    ]
   },
   "152": {
     "name": "存纯",
     "confidence": 0.8239,
-    "low_conf": true
+    "low_conf": true,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        206
+      ],
+      [
+        0,
+        172,
+        207,
+        318
+      ]
+    ]
   },
   "153": {
     "name": "存学",
     "confidence": 0.9834,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        206,
+        194
+      ],
+      [
+        0,
+        159,
+        206,
+        335
+      ]
+    ]
   },
   "154": {
     "name": "存思",
     "confidence": 0.9975,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        204,
+        187
+      ],
+      [
+        0,
+        153,
+        204,
+        325
+      ]
+    ]
   },
   "155": {
     "name": "存养",
     "confidence": 0.9964,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        206,
+        188
+      ],
+      [
+        0,
+        154,
+        206,
+        323
+      ]
+    ]
   },
   "156": {
     "name": "存善",
     "confidence": 0.9996,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        209,
+        191
+      ],
+      [
+        0,
+        156,
+        209,
+        332
+      ]
+    ]
   },
   "157": {
     "name": "存奈",
     "confidence": 0.9985,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        205,
+        205
+      ],
+      [
+        0,
+        170,
+        205,
+        331
+      ]
+    ]
   },
   "158": {
     "name": "存志",
     "confidence": 0.9974,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        203
+      ],
+      [
+        0,
+        169,
+        203,
+        326
+      ]
+    ]
   },
   "159": {
     "name": "存惠",
     "confidence": 0.9975,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        202
+      ],
+      [
+        0,
+        168,
+        203,
+        328
+      ]
+    ]
   },
   "160": {
     "name": "存原",
     "confidence": 0.9865,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        186
+      ],
+      [
+        0,
+        152,
+        203,
+        326
+      ]
+    ]
   },
   "161": {
     "name": "存性",
     "confidence": 0.9989,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        206,
+        190
+      ],
+      [
+        0,
+        156,
+        206,
+        321
+      ]
+    ]
   },
   "162": {
     "name": "存远",
     "confidence": 0.9537,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        203,
+        187
+      ],
+      [
+        0,
+        153,
+        203,
+        318
+      ]
+    ]
   },
   "163": {
     "name": "存德",
     "confidence": 0.9989,
-    "low_conf": false
+    "low_conf": false,
+    "char_boxes": [
+      [
+        0,
+        0,
+        207,
+        189
+      ],
+      [
+        0,
+        155,
+        207,
+        324
+      ]
+    ]
   }
 }
