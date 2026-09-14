@@ -202,6 +202,17 @@ GEN_BAND_TOL = int(round(60 * V1_SCALE))      # 180px
 # with V1_SCALE**2 (a v1 crop has ~9x the pixels of the same v0 crop) -- v0's 30.
 BLANK_NAME_MAX_INK = int(round(30 * V1_SCALE * V1_SCALE))  # 270
 
+# Stroke-end read (see find_line_ends). A free stroke end is the top (or bottom)
+# edge of a narrow vertical stroke with no ink beyond it. STROKE_MAX_WIDTH bounds
+# an ink run that still counts as a stroke rather than a bar (v1 lines are ~7px,
+# generation bars hundreds); STROKE_MIN_LEN is how far the run must stay that
+# narrow -- a bar corner widens within a few rows and a speck on a bar's ragged
+# edge runs out of ink, so neither passes, while a real riser/hang-line does.
+STROKE_MAX_WIDTH = int(round(13 * V1_SCALE))  # 40px
+STROKE_MIN_LEN = int(round(33 * V1_SCALE))    # 100px
+# A stroke may drift this many px sideways over STROKE_MIN_LEN rows (deskew slop).
+STROKE_DRIFT = 4
+
 
 @dataclasses.dataclass
 class LineNode:
@@ -284,6 +295,23 @@ def find_line_ends(
     collapsed to a single representative: the parent connection of a bare
     fan-out bar. Single-top segments (Book 1) are untouched.
 
+    That band read assumes a single-level fan-out: parent at the top row, every
+    child within ``threshold`` of the bottom row. A **stepped** bar breaks both
+    assumptions (Book 2 graph 67_68: 宏羨's hang-line steps left and UP into a
+    raised sibling bar, so the parent connection sits ~100 rows below the
+    component top and two of the three children hang ~330 rows above the
+    bottom). The band read then finds two "parents" -- the raised bar's corner
+    and the real hang-line -- or, had the bar's top edge been clean, silently
+    picks the bar corner. So the band read is cross-checked against a
+    **stroke read** (:func:`_stroke_ends`): the free ends of narrow vertical
+    strokes. An upward free end is where the segment hangs from its parent; a
+    downward free end is where a child hangs off it. The stroke read decides the
+    parent when the band read is ambiguous or disagrees with a single clear
+    hang-line, and contributes any child riser the bottom band missed. A bar
+    flush with the top has no upward stroke, so it keeps the band read's parent.
+    Where the two reads agree (every component of Books 1 and 2 bar 67_68 and
+    one 11_17 riser), the band read's exact coordinates are kept.
+
     Args:
         points: The ``(row, col)`` pixels of one connected component.
         threshold: Rows within this distance of the top/bottom count as ends.
@@ -309,7 +337,123 @@ def find_line_ends(
 
     top_points = [(min_x, y) for y in sorted(top_ys_filtered)]
     bottom_points = [(max_x, y) for y in sorted(bottom_ys_filtered)]
+
+    ups, downs = _stroke_ends(points)
+
+    def same_end(p: tuple[int, int], q: tuple[int, int]) -> bool:
+        # Same stroke: within the band tolerance vertically, one stroke width across.
+        return abs(p[0] - q[0]) <= threshold and abs(p[1] - q[1]) <= STROKE_MAX_WIDTH
+
+    if len(ups) == 1:
+        if not (len(top_points) == 1 and same_end(top_points[0], ups[0])):
+            logger.info(
+                "stroke read picks parent %s over band read %s", ups[0], top_points
+            )
+            top_points = [ups[0]]
+
+    for d in downs:
+        if not any(same_end(d, b) for b in bottom_points):
+            logger.info("stroke read adds child end %s above the bottom band", d)
+            bottom_points.append(d)
+    bottom_points.sort(key=lambda p: p[1])
     return (top_points, bottom_points)
+
+
+def _stroke_ends(
+    points: set[tuple[int, int]],
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """Free ends of the narrow vertical strokes in one component.
+
+    Returns ``(upward_ends, downward_ends)``: the topmost pixel of every stroke
+    whose top is free (no ink above), and the bottommost of every stroke whose
+    bottom is free. Ends on the same stroke (ragged edges) are collapsed to one.
+
+    Args:
+        points: The ``(row, col)`` pixels of one connected component.
+    """
+    rows = np.fromiter((p[0] for p in points), dtype=np.int64, count=len(points))
+    cols = np.fromiter((p[1] for p in points), dtype=np.int64, count=len(points))
+    r0, c0 = int(rows.min()), int(cols.min())
+    # 1px background pad so the component's own edges read as free.
+    mask = np.zeros((int(rows.max()) - r0 + 3, int(cols.max()) - c0 + 3), dtype=bool)
+    mask[rows - r0 + 1, cols - c0 + 1] = True
+
+    ups = _upward_stroke_ends(mask)
+    h = mask.shape[0]
+    downs = [(h - 1 - r, c) for r, c in _upward_stroke_ends(mask[::-1])]
+    return (
+        [(r + r0 - 1, c + c0 - 1) for r, c in ups],
+        [(r + r0 - 1, c + c0 - 1) for r, c in downs],
+    )
+
+
+def _upward_stroke_ends(mask: np.ndarray) -> list[tuple[int, int]]:
+    """``(row, col)`` of each upward free stroke end in a padded ink mask.
+
+    A candidate is a whole ink run on a row with no ink in the row above across
+    the run's extent (+-1px) -- a genuine top edge, not a 1px protrusion on a
+    stroke's side. The run must be at most :data:`STROKE_MAX_WIDTH` wide and the
+    stroke must stay that narrow for :data:`STROKE_MIN_LEN` rows below it.
+    """
+    ends: list[tuple[int, int]] = []
+    h = mask.shape[0]
+    for r in range(1, h - 1):
+        row = mask[r]
+        ink = np.where(row)[0]
+        if len(ink) == 0:
+            continue
+        breaks = np.where(np.diff(ink) > 1)[0]
+        starts = np.concatenate([[ink[0]], ink[breaks + 1]])
+        stops = np.concatenate([ink[breaks], [ink[-1]]])
+        above = mask[r - 1]
+        for a, b in zip(starts, stops):
+            if b - a + 1 > STROKE_MAX_WIDTH or r + STROKE_MIN_LEN > h:
+                continue
+            if above[max(0, a - 1):b + 2].any():
+                continue
+            if _is_narrow_stroke(mask, r, (a + b) // 2):
+                ends.append((int(r), int((a + b) // 2)))
+    return _collapse_stroke_ends(ends)
+
+
+def _is_narrow_stroke(mask: np.ndarray, r: int, c: int) -> bool:
+    """Does the ink at ``(r, c)`` continue down STROKE_MIN_LEN rows as a stroke?"""
+    for rr in range(r, r + STROKE_MIN_LEN):
+        row = mask[rr]
+        if not row[c]:
+            lo = max(0, c - STROKE_DRIFT)
+            near = np.where(row[lo:c + STROKE_DRIFT + 1])[0]
+            if len(near) == 0:
+                return False
+            c = lo + int(near[len(near) // 2])
+        if _run_width_at(row, c) > STROKE_MAX_WIDTH:
+            return False
+    return True
+
+
+def _run_width_at(row: np.ndarray, c: int) -> int:
+    """Width of the ink run through column ``c`` (capped just past the max)."""
+    lo = max(0, c - STROKE_MAX_WIDTH - 1)
+    hi = min(len(row), c + STROKE_MAX_WIDTH + 2)
+    win = row[lo:hi]
+    ci = c - lo
+    left = win[:ci + 1][::-1]
+    right = win[ci:]
+    n_left = int(np.argmin(left)) if not left.all() else STROKE_MAX_WIDTH + 1
+    n_right = int(np.argmin(right)) if not right.all() else STROKE_MAX_WIDTH + 1
+    return n_left + n_right - 1
+
+
+def _collapse_stroke_ends(ends: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Collapse ends within one stroke width of each other; keep the topmost."""
+    out: list[tuple[int, int]] = []
+    for r, c in sorted(ends, key=lambda p: p[1]):
+        if out and c - out[-1][1] <= STROKE_MAX_WIDTH:
+            if r < out[-1][0]:
+                out[-1] = (r, out[-1][1])
+            continue
+        out.append((r, c))
+    return out
 
 
 def remove_adjacent(numbers: set[int] | list[int], threshold: int = 30) -> list[int]:
