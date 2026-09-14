@@ -3,12 +3,11 @@
  * static site can fetch them at runtime.
  *
  * What it does:
- *   1. Copies the 3 JSONL files into public/data/.
- *   2. For the two parsed (non-golden) books, rewrites each node's
- *      `name_images` paths from the repo path ("books/book1/names/1.png")
- *      to the public URL the browser can load ("/names/book1/1.png").
- *      Golden data is copied verbatim — it has real Unicode names, no images.
- *   3. Copies books/book{1,2}/names/ -> public/names/book{1,2}/.
+ *   1. Copies data/book1_stitched.jsonl into public/data/.
+ *   2. Rewrites each node's `name_images` path from the repo path
+ *      ("books/book1/5_names/1.png") to the public URL the browser can load
+ *      ("/names/book1/1.png").
+ *   3. Copies books/book1/5_names/ -> public/names/book1/.
  *
  * Run from web-app/:  bun run export-data   (or: npx tsx scripts/export-web-data.ts)
  */
@@ -24,14 +23,12 @@ const REPO_ROOT = join(WEB_APP, "..");
 const PUBLIC_DATA = join(WEB_APP, "public", "data");
 const PUBLIC_NAMES = join(WEB_APP, "public", "names");
 
-// Each source book: its JSONL and (for parsed books) its name-image folder.
+// The single showcase dataset: Book 1, fully parsed -> OCR'd -> cross-graph
+// stitched into one connected lineage (src/s7_stitch.py). It carries real Unicode
+// names (Stage 6 OCR) AND the v1 name-crop images as a fallback. Its name_images
+// point at "books/book1/5_names/*.png", rewritten to "/names/book1/*.png".
 const BOOKS = [
-  { jsonl: "data/book1_golden.jsonl", book: null }, // golden: real names, no image rewrite
-  { jsonl: "data/book1.jsonl", book: "book1" },
-  // Stitched Book 1: the 14 parsed subtrees cross-graph-merged into one connected
-  // lineage (see src/stitch.py). Reuses book1's name crops, so rewrite as book1.
   { jsonl: "data/book1_stitched.jsonl", book: "book1" },
-  { jsonl: "data/book2.jsonl", book: "book2" },
 ] as const;
 
 function copyJsonl(srcRel: string, book: string | null): number {
@@ -58,10 +55,11 @@ function copyJsonl(srcRel: string, book: string | null): number {
 }
 
 function copyNames(book: string): number {
-  const srcDir = join(REPO_ROOT, "books", book, "names");
+  // v1 pipeline writes name crops to 5_names/ (Stage 5).
+  const srcDir = join(REPO_ROOT, "books", book, "5_names");
   const destDir = join(PUBLIC_NAMES, book);
   if (!existsSync(srcDir)) {
-    console.warn(`  (no names dir for ${book}, skipping)`);
+    console.warn(`  (no 5_names dir for ${book}, skipping)`);
     return 0;
   }
   cpSync(srcDir, destDir, { recursive: true });
@@ -79,7 +77,7 @@ function main() {
   }
 
   console.log("Copying name-crop images -> public/names/");
-  for (const book of ["book1", "book2"]) {
+  for (const book of ["book1"]) {
     const n = copyNames(book);
     console.log(`  ${book}: ${n} images`);
   }

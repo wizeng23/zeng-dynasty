@@ -13,8 +13,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { DATASETS, type DatasetName, type LoadedTree, loadTree } from "@/lib/tree";
 
 export default function Home() {
-  // Default to the golden dataset — the clean, fully-named showcase lineage.
-  const [dataset, setDataset] = useState<DatasetName>("book1_golden");
+  // The single showcase dataset: Book 1, fully parsed + OCR'd + stitched.
+  const [dataset, setDataset] = useState<DatasetName>("book1_stitched");
   const [tree, setTree] = useState<LoadedTree | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,23 +71,25 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Dataset switcher. */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {DATASETS.map((d) => (
-            <button
-              key={d.name}
-              type="button"
-              onClick={() => setDataset(d.name)}
-              className={`rounded-md border px-3 py-1.5 font-medium text-sm transition-colors ${
-                d.name === dataset
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
+        {/* Dataset switcher — shown only when there is more than one dataset. */}
+        {DATASETS.length > 1 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {DATASETS.map((d) => (
+              <button
+                key={d.name}
+                type="button"
+                onClick={() => setDataset(d.name)}
+                className={`rounded-md border px-3 py-1.5 font-medium text-sm transition-colors ${
+                  d.name === dataset
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-foreground hover:bg-muted"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* Body: the tree viewport on the left, the detail panel on the right.

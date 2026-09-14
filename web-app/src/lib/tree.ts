@@ -55,29 +55,14 @@ export interface LoadedTree {
   byId: Map<number, FamilyNode>;
 }
 
-export type DatasetName = "book1_golden" | "book1_stitched" | "book1" | "book2";
+export type DatasetName = "book1_stitched";
 
 export const DATASETS: { name: DatasetName; label: string; blurb: string }[] = [
   {
-    name: "book1_golden",
-    label: "Golden (Book 1)",
-    blurb: "One verified lineage with real Unicode names — the showcase dataset.",
-  },
-  {
     name: "book1_stitched",
-    label: "Book 1 (stitched)",
+    label: "Book 1",
     blurb:
-      "The parsed subtrees cross-graph-merged into one connected lineage — scanned names, pending OCR.",
-  },
-  {
-    name: "book1",
-    label: "Book 1 (parsed)",
-    blurb: "Algorithmic parse — a fragmented forest with scanned name images.",
-  },
-  {
-    name: "book2",
-    label: "Book 2 (parsed)",
-    blurb: "The largest parse: 1,763 people across many disconnected lineages.",
+      "Book 1 parsed end-to-end: scans → segmented graphs → one connected lineage, with OCR'd Unicode names.",
   },
 ];
 

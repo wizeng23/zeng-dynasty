@@ -701,9 +701,14 @@ function render() {
     const dispW = c.crop_w ? Math.round(c.crop_w / NAME_SCALE) : 150;
     const dispH = c.crop_h ? Math.round(c.crop_h / NAME_SCALE) : 150;
     const cropStyle = `width:${dispW}px;height:${dispH}px`;
-    // Text box mirrors the crop's displayed height so the typed name lines up with
-    // the glyphs above it at the same scale.
-    const txtStyle = `height:${dispH}px`;
+    // Text box height must ALWAYS fit every character in the name, else a
+    // hallucinated extra glyph (OCR reading 1-char 宣 as "宣J") gets clipped out of
+    // view and is easy to miss. Glyph height ~= crop width (glyphs are ~square);
+    // size the box to hold as many glyphs as the text has, at that per-glyph height.
+    const perGlyph = dispW;   // one ~square glyph
+    const txtGlyphs = Math.max(1, [...(cur||"")].length);
+    const txtH = Math.round(perGlyph * txtGlyphs) + 12;  // + padding/border
+    const txtStyle = `height:${txtH}px`;
     el.innerHTML =
       `<div class="status">${status}</div>` +
       `<div class="tag">${tag}</div>` +
