@@ -118,12 +118,14 @@ now matched **by name** (`find_merges` in `src/s7_stitch.py`), not the old hardc
 provenances (which were v0-keyed and mis-connected 7/13 under the v1 renumber).
 All on `main`, pushed.
 
-**Book 2 is BLOCKED at Stage 5** on a single stepped-bar component — graph
-`67_68` (`ValueError: expected exactly one parent endpoint`). This is the sole such
-case in the book; the real parent is col 2257 (宏羨's line — the through-line that
-reaches the component bottom and has ink above it). Fix `find_line_ends` in
-`src/s5_build_tree.py`, then re-run Book 2 Stage 5 (the existing `book2.jsonl` is
-the STALE v0 parse) → OCR → stitch. Book 2 has no oracle/hand-merges, so it's the
-first real test of the name-matcher.
+**Book 2 runs through all 7 stages** (2026-09-14) → `data/book2_stitched.jsonl`
+(1591 nodes) but is still a **51-root forest**: 42 roots are page-seam orphans
+(the v0 orphan-bridging pass in `src/v0/segment.py` was NEVER ported to v1; 37
+empty phantom bars in 12 multi-page graphs) and 8 section roots are unmatched
+because their OCR reading differs from the canonical leaf's (贞烈/贞列, 贞熊/贞能 …).
+Stage 5 gained a stroke-end read for stepped bars (67_68); Stage 7 now merges only
+`{graph}_0` section roots, falls back to non-leaf canonicals, and folds re-printed
+ancestor chains (克宣 → 龙润 …). Next: William reviews Book 2 OCR via
+`scripts/qa/s6_ocr.py`, then re-run `s6_ocr.apply_names` + `s7_stitch`; port bridging.
 
 Books 3 & 4 are at Stage 2 (classify, human-verified) + Stage 3 (crop).

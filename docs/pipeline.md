@@ -12,7 +12,7 @@ Stages are numbered as whole integers (no `.5`s). The v1 order:
 4. **merge_pages** — stitch a subtree's pages into one graph (`src/s4_merge_pages.py`)
 5. **build_tree** — parse graphs → tree JSONL + name crops (`src/s5_build_tree.py`)
 6. **OCR** — name crops → Unicode (`src/s6_ocr.py`)
-7. **stitch** — connect the per-graph subtrees into one lineage (`src/s7_stitch.py`, TODO)
+7. **stitch** — connect the per-graph subtrees into one lineage (`src/s7_stitch.py`)
 
 ## Stage 1 — Spreads → pages
 
@@ -107,6 +107,16 @@ left-to-right.
 Old helpers: `find_lines`, `find_line_ends`, `sort_nodes`, `infer_ends`,
 `get_name_image`.
 
+**Endpoint reading (`find_line_ends`):** the fast *band read* (parent = min row,
+children = within `end_threshold` of the max row) assumes a single-level fan-out.
+A **stepped** bar (Book 2 graph 67_68: a hang-line that steps up into a raised
+sibling bar) breaks both assumptions, so a *stroke read* cross-checks it: free
+ends of narrow vertical strokes (upward = parent, downward = child). The stroke
+read decides the parent when the band read is ambiguous or disagrees with one
+clear hang-line, and adds child risers that end above the bottom band; a bar
+flush with the top (no hang-line) keeps the band read. Tests:
+`tests/test_s5_line_ends.py`.
+
 ## Stage 6 — OCR (`src/s6_ocr.py`)
 
 **In:** `books/bookN/5_names/*.png` + `data/bookN.jsonl` (node ids)
@@ -157,7 +167,17 @@ Each graph's root (`{graph}_0`) is a **duplicate** of a person who appears as a
 Merging each duplicate into its canonical leaf connects the forest into one
 lineage, then recomputes absolute generations (root=1) and reassigns BFS/RTL ids.
 
-**Matching is unsolved automatically** (name-crop pixel-matching ≈ 4/13 on Book
+**Matching is by NAME** (`find_merges`, since Stage 6 runs first). Only a graph's own
+root `{graph}_0` is a duplicate; other roots in a graph are page-seam orphans and
+stay roots until bridging repairs the seam. The canonical node is the nearest
+earlier same-name **leaf**, else the nearest earlier same-name inner node (Book 2's
+4_5 repeats 0_3's own root 存学). Sections that re-print a shared ancestor chain
+(克宣 → 龙润 …) are **folded**: a duplicate's child whose name uniquely matches a
+child already under the canonical node merges recursively instead of being
+duplicated (≥2-char names only; a lone char is an OCR truncation). Tests:
+`tests/test_s7_stitch.py`. Historical note — the original v0 approach follows.
+
+**Matching was unsolved automatically in v0** (name-crop pixel-matching ≈ 4/13 on Book
 1). Merges are an explicit per-book list (`BOOK_MERGES`, Book 1's done by hand);
 `find_merges()` is where an automated matcher will plug in. Verified against
 `data/oracles/book1_merged.jsonl` via `scripts/verify_stitch.py`. Not yet ported

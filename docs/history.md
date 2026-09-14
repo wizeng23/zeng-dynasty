@@ -235,6 +235,64 @@ OCR names. Deploys to GitHub Pages on push to `main`.
 
 Merged the whole branch into `main` (fast-forward) and pushed. Book 1 **shipped**.
 
+## Era 10 — Book 2 through Stage 7: stepped-bar parse fix, chain-folding stitch (2026-09-14)
+
+**Stage 5 crash (graph 67_68) — root cause verified against the ink, not the handoff.**
+The handoff named the mechanism correctly (a *stepped* sibling bar: 宏羨's hang-line
+steps left and UP into a raised bar over 闻评/闻瑛, then continues down to 闻诏) but its
+proposed fix — "pick the through-line as parent, treat the other top-band endpoints as
+children" — would have anchored 闻评 at the bar corner and lost 闻瑛 entirely (col 1300
+never appears in the top band). The real break is that `find_line_ends` assumed a
+single-level fan-out on BOTH ends: parent at the min row (here it is 103 rows lower)
+AND all children within `end_threshold` of the max row (here two hang 330 rows
+higher). A synthetic clean-edged stepped bar showed the old code would not even crash
+— it silently returns the bar corner as parent; 67_68 crashed only because the bar's
+ragged top edge produced multiple min-row specks.
+
+Fix (`src/s5_build_tree.py`): a **stroke read** cross-checks the band read — free ends
+of narrow (≤40px) vertical strokes that stay narrow for 100 rows: upward = parent
+connection, downward = child connection (bar corners widen at once, ragged specks run
+out of ink, so neither passes). The band read stays the fast path and keeps its exact
+coordinates where the two agree; the stroke read decides the parent when the band read
+is ambiguous or disagrees with one clear hang-line, and adds child risers ending above
+the bottom band. Verified on all 685 components of Books 1+2 (old-vs-new harness):
+Book 1 byte-identical (sidecars, crops, topology); Book 2 changed exactly two
+components — 67_68, and one 11_17 riser whose child 尚嵩 the old read had left as a
+disconnected root. `tests/test_s5_line_ends.py` pins plain / flush / stepped bars.
+
+**Stage 5 Book 2:** 44 graphs → **1628 nodes**, 28 sus / 85 grid warnings, 37 empty
+phantom nodes in 12 multi-page graphs, 86 roots (44 sections + 42 seam orphans).
+The v0 orphan-bridging (trace-right rule) was **never ported to v1** (`s4_merge_pages`
+says so explicitly) — that is the seam-orphan count, not a parse regression.
+
+**Stage 6 Book 2:** PP-OCR → `data/book2_names.json`, 1584/1628 names applied (44
+blank = phantoms), 314 low-confidence, 0 overrides yet. 65 names came back as a
+single char (truncations, e.g. 传 ×24); 宏羨 read as 宏美. Review pending.
+
+**Stage 7 Book 2 — three things the Book 1 matcher never met**, each fixed in
+`src/s7_stitch.py` with tests (`tests/test_s7_stitch.py`), Book 1 output byte-identical:
+1. Only a graph's own root (`{graph}_0`) is a duplicate section root. Seam-orphan
+   roots (index ≠ 0) were being name-matched — 114_120_44 毓棋 would have been welded
+   onto a 101_105 leaf by name collision. They now stay roots.
+2. A section root may duplicate a NON-leaf: 4_5's 存学 repeats 0_3's own root.
+   Leaves still win; inner nodes are the fallback.
+3. Sections re-print a shared ancestor chain: 8_10 / 67_68 / 92_93 / 123_124 all open
+   克宣 → 龙X → 万X, and 8_10/67_68 share 龙润. Merging only the root duplicated 龙润.
+   `stitch_nodes` now **folds** repeated children recursively when the name match is
+   unambiguous (one child per side, ≥2 chars). Result: 克宣 → [龙润, 龙滟, 龙淀, 珊龙],
+   龙润 → [万邦, 万都], 存学 → 九舟 → 5 sons. 0 seam name mismatches.
+
+Result: `data/book2_stitched.jsonl` — **1591 nodes, 51 roots** = 1 main lineage
+(克宣's, reaching gen 16) + 42 seam orphans + 8 unresolved section roots. The 8 are OCR
+variant pairs between root and canonical leaf (贞烈/贞列, 贞熊/贞能, 贞杰/贞木, 贞斗/贞升,
+贞亮/贞光, 克太, 贞富, 贞年) — the OCR review will resolve them; then re-run
+`apply_names` + `s7_stitch`. Regenerated `book1_stitched.jsonl` from the current
+`book1.jsonl` (picks up the 宣J→宣 override; topology unchanged).
+
+**Next:** William reviews Book 2 OCR (`scripts/qa/s6_ocr.py` — restart it, it skipped
+Book 2 at startup for lacking v1 crops); port orphan-bridging to v1 (`src/v0/segment.py`
+→ merge stage; ground truth in `docs/bridge-ground-truth.md` is v0-scaled); then Books 3/4.
+
 ---
 
 ## Pipeline status (snapshot)
@@ -247,13 +305,13 @@ rebuild (new ADF scans, `src/`) is redoing every stage from clean scans.
 | Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 tree | 6 OCR | 7 stitch |
 |------|-----------|------------|--------|---------|--------|-------|----------|
 | 1 | done (17) | — all-tree | done (17) | done (14 graphs) | **done (163 nodes)** | **done (23 overrides, 2 flags)** | **done (150 nodes, 1 root, 56 gens)** |
-| 2 | done (134) | — all-tree | done (134) | done (44 graphs) | **BLOCKED at graph 67_68** | — | — |
+| 2 | done (134) | — all-tree | done (134) | done (44 graphs) | **done (1628 nodes)** | **done (314 low-conf, review pending)** | **done (1591 nodes, 51 roots — seam orphans + OCR-mismatched roots remain)** |
 | 3 | done (292) | done (51 graph / 241 bio) | done (51) | not started | — | — | — |
 | 4 | done (317) | done (147 graph / 170 bio) | done (147) | not started | — | — | — |
 
 Book 1 is **fully done end-to-end** → `data/book1_stitched.jsonl`, published to the
-website. **Book 2 is blocked at Stage 5** on a single stepped-bar component in graph
-`67_68`.
+website. **Book 2 runs end-to-end** but stays a 51-root forest until the OCR review
+resolves 8 section roots and orphan-bridging is ported to v1 (42 seam-orphan roots).
 
 **v0 pipeline (prior, archived):** books 1–2 reached tree + OCR (book 1 stitched by
 hand); superseded by the v1 rebuild above.
