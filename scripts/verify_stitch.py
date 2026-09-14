@@ -49,7 +49,12 @@ def load(path: str) -> dict[int, dict]:
 
 def apply_merges(nodes: dict[int, dict], parent_key: str) -> list[dict]:
     """Fold each duplicate root into its canonical leaf (mutates copies)."""
-    prov2id = {n["notes"].split("/")[0]: n["id"] for n in nodes.values()}
+    # Provenance = notes head: strip Stage-6 " | ocr_*" tags, then the "/" merge
+    # trace ("canonical/duplicate") that stitching may have written.
+    prov2id = {
+        n["notes"].split(" | ", 1)[0].split("/")[0]: n["id"]
+        for n in nodes.values()
+    }
     dropped: set[int] = set()
     for dup_prov, canon_prov in MERGES:
         dup = nodes[prov2id[dup_prov]]
