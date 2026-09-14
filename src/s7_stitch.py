@@ -108,26 +108,45 @@ def find_merges(nodes: list[Node], book: str) -> list[tuple[str, str]]:
         return BOOK_MERGES[book]
 
     prov_of = {n.id: _provenance(n.notes) for n in nodes}
-    # Earlier-graph leaves (childless nodes) indexed by name.
+    # Earlier-graph candidates indexed by name: leaves (the normal seam -- a
+    # subtree-start page repeats a person whose OWN subtree was cut off there) and
+    # non-leaves (a section that re-prints an ancestor who already has children in
+    # an earlier graph, e.g. Book 2's 4_5 repeating 0_3's root 存学). Leaves win
+    # when both exist; non-leaves are the fallback.
     leaves_by_name: dict[str, list[str]] = {}
+    inner_by_name: dict[str, list[str]] = {}
     for n in nodes:
-        if not n.children and n.name:
-            leaves_by_name.setdefault(n.name, []).append(prov_of[n.id])
+        if n.name:
+            index = leaves_by_name if not n.children else inner_by_name
+            index.setdefault(n.name, []).append(prov_of[n.id])
 
-    # Duplicate roots = every root except the forest's first graph, in graph order.
+    # Duplicate roots = each graph's own root, ``{graph}_0`` -- the person the
+    # subtree-start page reprints -- except the forest's first graph. A graph can
+    # hold OTHER roots too: subtrees severed at a page seam (Stage 5's empty
+    # phantom bars and the branches under them, provenance index != 0). Those are
+    # not duplicates of anyone; name-matching them would weld a severed branch
+    # onto whoever shares its OCR'd name (Book 2's 114_120_44 毓棋 -> 101_105).
+    # They stay roots until the seam itself is repaired (bridging).
     roots = sorted(
         (n for n in nodes if n.father == -1),
         key=lambda n: _graph_num(prov_of[n.id]),
     )
+    section_roots = [r for r in roots if prov_of[r.id].endswith("_0")]
+    orphan_roots = [r for r in roots if not prov_of[r.id].endswith("_0")]
+    if orphan_roots:
+        logger.warning(
+            "%s: %d root(s) are not section roots (seam orphans), left as roots: %s",
+            book, len(orphan_roots),
+            ", ".join(f"{prov_of[r.id]} ({r.name!r})" for r in orphan_roots))
 
     merges: list[tuple[str, str]] = []
     unresolved: list[str] = []
-    for r in roots[1:]:
+    for r in section_roots[1:]:
         rp = prov_of[r.id]
         rg = _graph_num(rp)
-        cands = [
-            lp for lp in leaves_by_name.get(r.name, []) if _graph_num(lp) < rg
-        ]
+        cands = [p for p in leaves_by_name.get(r.name, []) if _graph_num(p) < rg]
+        if not cands:
+            cands = [p for p in inner_by_name.get(r.name, []) if _graph_num(p) < rg]
         if not cands:
             unresolved.append(f"{rp} ({r.name!r})")
             continue
@@ -137,10 +156,10 @@ def find_merges(nodes: list[Node], book: str) -> list[tuple[str, str]]:
 
     if unresolved:
         logger.warning(
-            "%s: %d duplicate root(s) had no earlier same-name leaf, left "
+            "%s: %d duplicate root(s) had no earlier same-name node, left "
             "unmerged: %s", book, len(unresolved), ", ".join(unresolved))
     logger.info("name-matched %d/%d merges for %s",
-                len(merges), len(roots) - 1, book)
+                len(merges), len(section_roots) - 1, book)
     return merges
 
 
@@ -163,9 +182,46 @@ def stitch_nodes(nodes: list[Node], merges: list[tuple[str, str]]) -> list[Node]
     """
     by_prov = {_provenance(n.notes): n for n in nodes}
     by_id = {n.id: n for n in nodes}
+    prov_of = {n.id: _provenance(n.notes) for n in nodes}
 
-    # 1. Merge: fold each duplicate root into its canonical leaf.
     dropped_ids: set[int] = set()
+
+    def fold(canon: Node, dup: Node) -> None:
+        """``canon`` absorbs ``dup`` (the same person printed twice).
+
+        The canonical node adopts the duplicate's children -- except a child who
+        is ALSO already a child of the canonical node by name: a section that
+        re-prints a shared ancestor chain (Book 2's 8_10 and 67_68 both open
+        克宣 -> 龙润 before diverging) repeats those people too, so such a pair is
+        folded recursively instead of duplicated. A fold needs an unambiguous
+        name: exactly one child on each side carries it, and the name is at least
+        two characters (in a 2-char-name book a lone char is an OCR truncation,
+        not an identity; Book 1's 1-char names merge into leaves, so this never
+        applies there). Anything ambiguous is adopted as-is -- a visible duplicate
+        beats a silent wrong weld.
+        """
+        canon_names = collections.Counter(by_id[c].name for c in canon.children)
+        dup_names = collections.Counter(by_id[c].name for c in dup.children)
+        for child_id in list(dup.children):
+            child = by_id[child_id]
+            twin = None
+            if len(child.name) >= 2 and canon_names[child.name] == 1 and dup_names[child.name] == 1:
+                twin = next(by_id[c] for c in canon.children if by_id[c].name == child.name)
+            if twin is not None:
+                logger.info("folding repeated chain: %s %r into %s",
+                            prov_of[child.id], child.name, prov_of[twin.id])
+                fold(twin, child)
+            else:
+                canon.children = list(canon.children) + [child_id]
+                child.father = canon.id
+        # Record the merge in notes while KEEPING the canonical node's OCR tags:
+        # prepend the "canonical/duplicate" provenance trace, keep the rest.
+        _, _, canon_tags = (canon.notes or "").partition(" | ")
+        trace = f"{prov_of[canon.id]}/{prov_of[dup.id]}"
+        canon.notes = f"{trace} | {canon_tags}" if canon_tags else trace
+        dropped_ids.add(dup.id)
+
+    # 1. Merge: fold each duplicate root into its canonical node.
     for dup_prov, canon_prov in merges:
         dup = by_prov.get(dup_prov)
         canon = by_prov.get(canon_prov)
@@ -188,16 +244,7 @@ def stitch_nodes(nodes: list[Node], merges: list[tuple[str, str]]) -> list[Node]
             logger.warning(
                 "seam name MISMATCH: dup %s %r != canon %s %r -- likely wrong merge",
                 dup_prov, dup.name, canon_prov, canon.name)
-        # The canonical leaf adopts the duplicate's children.
-        canon.children = list(canon.children) + list(dup.children)
-        for child_id in dup.children:
-            by_id[child_id].father = canon.id
-        # Record the merge in notes while KEEPING the canonical node's OCR tags:
-        # prepend the "canonical/duplicate" provenance trace, keep the rest.
-        _, _, canon_tags = (canon.notes or "").partition(" | ")
-        trace = f"{canon_prov}/{dup_prov}"
-        canon.notes = f"{trace} | {canon_tags}" if canon_tags else trace
-        dropped_ids.add(dup.id)
+        fold(canon, dup)
 
     survivors = [n for n in nodes if n.id not in dropped_ids]
 

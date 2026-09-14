@@ -24,7 +24,7 @@
 {"id": 24, "name": "永", "name_images": ["books/book1/5_names/28.png"], "generation": 18, "father": 22, "children": [26, 27], "biography": "", "notes": "3_3_4 | ocr_conf=1.0"}
 {"id": 25, "name": "植", "name_images": ["books/book1/5_names/27.png"], "generation": 18, "father": 23, "children": [28], "biography": "", "notes": "3_3_3 | ocr_conf=0.9999"}
 {"id": 26, "name": "万", "name_images": ["books/book1/5_names/31.png"], "generation": 19, "father": 24, "children": [29, 30], "biography": "", "notes": "3_3_7 | ocr_conf=0.9999"}
-{"id": 27, "name": "宣J", "name_images": ["books/book1/5_names/30.png"], "generation": 19, "father": 24, "children": [31], "biography": "", "notes": "3_3_6 | ocr_conf=0.2735 | ocr_low_conf | ocr_override"}
+{"id": 27, "name": "宣", "name_images": ["books/book1/5_names/30.png"], "generation": 19, "father": 24, "children": [31], "biography": "", "notes": "3_3_6 | ocr_conf=0.2735 | ocr_low_conf | ocr_override"}
 {"id": 28, "name": "耀", "name_images": ["books/book1/5_names/29.png"], "generation": 19, "father": 25, "children": [32], "biography": "", "notes": "3_3_5 | ocr_conf=0.9998"}
 {"id": 29, "name": "沭", "name_images": ["books/book1/5_names/35.png"], "generation": 20, "father": 26, "children": [], "biography": "", "notes": "3_3_11 | ocr_conf=0.5915 | ocr_low_conf"}
 {"id": 30, "name": "游", "name_images": ["books/book1/5_names/34.png"], "generation": 20, "father": 26, "children": [33, 34, 35], "biography": "", "notes": "3_3_10 | ocr_conf=0.9998"}
