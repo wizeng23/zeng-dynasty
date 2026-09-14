@@ -110,10 +110,20 @@ is the verified ground truth used to check the algorithmic output.
 - `docs/future-features.md` — deferred FEATURE ideas (e.g. polyphonic-name support).
 - `docs/ocr-bakeoff.md` — why PP-OCRv5; `docs/overnight-worklog.md` — bridging blow-by-blow.
 
-## Current state (2026-08-25)
+## Current state (2026-09-14)
 
-Books 1 & 2 fully parsed; **all 45 Book-2 subgraphs LOCKED** (0 within-graph
-orphans, bridges match ground truth). OCR populated for both books. Uncommitted-to-
-remote work sits on branch `book2-bridge-trace-right` (William to push). **Next
-step:** William reviews OCR via `scripts/qa/s6_ocr.py`, then Book 2 stitching, then
-website. Remaining orphans in a few graphs are cross-graph (resolved at stitching).
+**Book 1 is DONE through all 7 v1 stages** → `data/book1_stitched.jsonl` (150
+nodes, 1 root 点, 56 gens, OCR'd names), published to the website. Stitch seams are
+now matched **by name** (`find_merges` in `src/s7_stitch.py`), not the old hardcoded
+provenances (which were v0-keyed and mis-connected 7/13 under the v1 renumber).
+All on `main`, pushed.
+
+**Book 2 is BLOCKED at Stage 5** on a single stepped-bar component — graph
+`67_68` (`ValueError: expected exactly one parent endpoint`). This is the sole such
+case in the book; the real parent is col 2257 (宏羨's line — the through-line that
+reaches the component bottom and has ink above it). **See `docs/history.md`'s
+HANDOFF note for the full analysis + recommended fix**, then re-run Book 2 Stage 5
+(the existing `book2.jsonl` is the STALE v0 parse) → OCR → stitch. Book 2 has no
+oracle/hand-merges, so it's the first real test of the name-matcher.
+
+Books 3 & 4 are at Stage 2 (classify, human-verified) + Stage 3 (crop).

@@ -1,14 +1,18 @@
 # Progress
 
-Status of each book through the pipeline stages. See `pipeline.md` for what
-each stage does.
+Status of each book through the v1 pipeline (7 whole-integer stages; **6 = OCR,
+7 = stitch**). See `pipeline.md` for what each stage does, and `history.md` Era 9
++ the HANDOFF note for the latest detail.
 
-| Book | 1: extract | 3: segment+4: merge→graphs | 5: build_tree | 7: OCR | Notes |
-|------|------------------|-----------------|----------------|----------|-------|
-| 1    | **done (src/)**  | **done (src/)** | **done (src/)** | not started | Reproduced: 100% topology match to old, RTL-fixed. `data/book1.jsonl` |
-| 2    | done (cropping)  | **done (src/)** | **done w/ caveats (src/)** | not started | 45 graphs, 1763 nodes. No oracle — verified structurally. Stitching gap amplified (181 subtrees). See Book 2 result. |
-| 3    | not started      | —               | —              | —        | Interleaves biography + tree pages |
-| 4    | not started      | —               | —              | —        | Same as Book 3 |
+| Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 build_tree | 6 OCR | 7 stitch |
+|------|-----------|------------|--------|---------|--------------|-------|----------|
+| 1 | done | — all-tree | done | done (14 graphs) | **done (163)** | **done (23 ovr, 2 flag)** | **done → book1_stitched.jsonl (150 nodes, 1 root 点, 56 gens)** |
+| 2 | done | — all-tree | done | done (44 graphs) | **BLOCKED: graph 67_68 stepped bar** | — | — |
+| 3 | done | done (bio/tree split, human-verified) | done | not started | — | — | — |
+| 4 | done | done (bio/tree split, human-verified) | done | not started | — | — | — |
+
+**Book 1 is DONE end-to-end** and published to the website. **Book 2 is blocked at
+Stage 5** on one stepped-bar component (graph `67_68`) — see `history.md` HANDOFF.
 
 ## Comparison oracles for the rewrite
 
