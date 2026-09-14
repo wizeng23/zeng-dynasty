@@ -299,3 +299,16 @@ def test_seam_step_counts_as_a_bridge_not_a_nick() -> None:
     _name(a, 830, 403)
     out, imaginary, nicks = bt.bridge_orphans(a, bt.BookConfig())
     assert nicks == [] and len(imaginary) == 1
+
+
+def test_candidates_found_when_parent_point_is_above_the_bar() -> None:
+    """36_52: a bar that steps up 22 rows at a seam is one component whose band
+    read puts the parent point at the top-LEFT corner -- 22 rows above the left
+    piece's ink. The bar lookup must still find the bar from that point."""
+    a = _blank(w=3000)
+    _hline(a, 522, 300, 1000)                 # left piece (lower)
+    a[500:530, 1000:1002] = 0                 # seam fill joining the pieces
+    _hline(a, 500, 1001, 1400)                # right piece, 22 rows higher, ends at 1400
+    _hline(a, 500, 2000, 2800)                # the bar resumes far right (parent side)
+    cands = bt.bridge_candidates(a, 500, 300) # parent point reported at (500, 300)
+    assert any(c0 <= 1400 + LINE and c1 == 2000 for _r, c0, c1 in cands), cands

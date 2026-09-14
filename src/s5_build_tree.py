@@ -981,18 +981,6 @@ def _ink_band(a: np.ndarray, row: int, half: int) -> np.ndarray:
     return (1 - a[lo:hi, :]).sum(axis=0) >= SPECK_MIN_ROWS
 
 
-def _bar_row_runs(a: np.ndarray, row: int) -> list[tuple[int, int]]:
-    """Horizontal ink runs ``(c0, c1)`` in the bar band around ``row``."""
-    present = _ink_band(a, row, BAR_BAND_HALF)
-    cols = np.where(present)[0]
-    if len(cols) == 0:
-        return []
-    breaks = np.where(np.diff(cols) > 1)[0]
-    starts = np.concatenate([[cols[0]], cols[breaks + 1]])
-    stops = np.concatenate([cols[breaks], [cols[-1]]])
-    return [(int(s), int(e)) for s, e in zip(starts, stops)]
-
-
 def find_orphans(nodes: list[LineNode], a: np.ndarray) -> list[LineNode]:
     """Bar-orphans: nodes with children whose own name crop is blank."""
     return [
@@ -1014,12 +1002,21 @@ def _solid_runs_near(a: np.ndarray, x: int, y: int) -> list[tuple[int, int]]:
     return [(int(r0), int(r1)) for r0, r1 in zip(starts, stops) if r1 - r0 + 1 >= SPECK_MIN_ROWS]
 
 
-def _nearest_run_y(runs: list[tuple[int, int]], y: int) -> int | None:
-    """Centre row of the run nearest ``y``; ``None`` if no run."""
+def _nearest_run_row(runs: list[tuple[int, int]], y: int) -> int | None:
+    """The bar row to track given the solid runs in a column and the current row.
+
+    A run containing ``y`` (the bar itself, or a riser/hang-line crossing it) keeps
+    ``y``. Otherwise the pixel of the nearest run closest to ``y`` -- its EDGE, not
+    its centre, so landing on a tall vertical line never drags the tracked row to
+    the line's middle (36_52: a hang-line beside a bar end pulled the row 50px off).
+    ``None`` if there is no run.
+    """
     if not runs:
         return None
-    r0, r1 = min(runs, key=lambda r: abs((r[0] + r[1]) // 2 - y))
-    return (r0 + r1) // 2
+    if any(r0 <= y <= r1 for r0, r1 in runs):
+        return y
+    r0, r1 = min(runs, key=lambda r: min(abs(r[0] - y), abs(r[1] - y)))
+    return r0 if abs(r0 - y) <= abs(r1 - y) else r1
 
 
 def trace_bar(
@@ -1050,30 +1047,26 @@ def trace_bar(
     # The caller's ``row`` is where the parser read the bar (its top edge for a
     # flush bar); snap to the centre of the bar's own run so the walk tracks the
     # bar, not its edge -- otherwise the first column reads as a phantom step.
-    y = _nearest_run_y(_solid_runs_near(a, x, row), row)
+    y = _nearest_run_row(_solid_runs_near(a, x, row), row)
     if y is None:
         y = row
     last_ink_x = x
     steps: list[tuple[int, int, int, int]] = []
     while x < w:
-        runs = _solid_runs_near(a, x, y)
-        if any(r0 <= y <= r1 for r0, r1 in runs):
-            last_ink_x = x
-            x += 1
-            continue
-        ny = _nearest_run_y(runs, y)
+        ny = _nearest_run_row(_solid_runs_near(a, x, y), y)
         if ny is not None:
             if abs(ny - y) >= STEP_MIN_ROWS:
-                steps.append((last_ink_x, x, y, ny))
+                steps.append((last_ink_x, x, y, ny))  # abutting vertical step
             y = ny
             last_ink_x = x
             x += 1
             continue
         # Gap: hop at most BAR_TRACE_HOP empty columns to the bar's continuation.
+        # Every hop is a pixel break (nick or seam gap), so it is always a candidate.
         j = x
         ny = None
         while j < w and j - x <= BAR_TRACE_HOP:
-            ny = _nearest_run_y(_solid_runs_near(a, j, y), y)
+            ny = _nearest_run_row(_solid_runs_near(a, j, y), y)
             if ny is not None:
                 break
             j += 1
@@ -1143,10 +1136,25 @@ def _bar_ink_y(a: np.ndarray, row: int, x: int, look: str) -> int | None:
 
 
 def _bar_run_at(a: np.ndarray, row: int, col: int) -> tuple[int, int] | None:
-    runs = _bar_row_runs(a, row)
-    return next(
-        (r for r in runs if r[0] - BAR_RUN_SLACK <= col <= r[1] + BAR_RUN_SLACK), None
-    )
+    """The bar run under the orphan's reported parent point ``(row, col)``.
+
+    The band read puts a flush bar's parent point at its top-left corner. When
+    the bar steps at a seam (Stage 4's seam fill joins two pieces at different
+    rows), that corner is the higher piece's row over the lower piece's column,
+    so the tight bar band misses the ink; widen to the drift tolerance then.
+    """
+    for half in (BAR_BAND_HALF, BRIDGE_CONNECT_YTOL):
+        present = _ink_band(a, row, half)
+        cols = np.where(present)[0]
+        if len(cols) == 0:
+            continue
+        breaks = np.where(np.diff(cols) > 1)[0]
+        starts = np.concatenate([[cols[0]], cols[breaks + 1]])
+        stops = np.concatenate([cols[breaks], [cols[-1]]])
+        for s, e in zip(starts, stops):
+            if s - BAR_RUN_SLACK <= col <= e + BAR_RUN_SLACK:
+                return (int(s), int(e))
+    return None
 
 
 def bridge_candidates(a: np.ndarray, row: int, col: int) -> list[tuple[int, int, int]]:
