@@ -157,3 +157,38 @@ def test_bridge_orphans_extends_across_two_page_breaks() -> None:
     assert _orphans(out) == []
     assert len(imaginary) == 1
     assert imaginary[0][3] == 2600                          # extended to the far bar
+
+
+# --- ADF smear specks (v1 scans) must not count as bar ink -------------------
+
+
+def _speck(a: np.ndarray, r: int, c: int, rows: int = 2, cols: int = 3) -> None:
+    a[r:r + rows, c:c + cols] = 0
+
+
+def test_bar_true_end_does_not_hop_onto_a_speck() -> None:
+    a = _blank()
+    _hline(a, 500, 300, 1000)
+    _speck(a, 470, 1050)                      # 2-row speck 50px past the bar end
+    _hline(a, 500, 1400, 2000)
+    end = bt.bar_true_end(a, 503, 300)
+    assert 1000 <= end <= 1000 + LINE
+
+
+def test_first_ink_right_skips_specks() -> None:
+    a = _blank()
+    _hline(a, 500, 300, 1000)
+    _speck(a, 460, 1100)
+    _speck(a, 540, 1250, rows=3)
+    _hline(a, 500, 1400, 2000)
+    assert bt.first_ink_right(a, 503, 1000 + LINE - 1) == 1400
+
+
+def test_draw_bridge_ignores_a_speck_when_finding_bar_ink() -> None:
+    a = _blank()
+    _hline(a, 505, 300, 1000)
+    _speck(a, 460, 1040)                      # speck just left of the anchor, 48 rows up
+    _hline(a, 500, 1400, 2000)
+    out = bt.draw_bridge(a, 508, 1050, 1400)  # anchored past the bar end, beside the speck
+    filled = np.where((out[:, 1200] == 0))[0]
+    assert filled.min() >= 495 and filled.max() <= 515   # thin fill, not up to the speck

@@ -953,12 +953,19 @@ BAR_RUN_SLACK = int(round(5 * V1_SCALE))          # 15px
 # A bar broken across several page breaks is closed by extending one bridge to
 # successive reconnections; bound the extension (real bars span <= 17 pages).
 MAX_BRIDGE_EXTENSIONS = 8
+# Solid-ink floor: a column counts as bar/line ink only if it carries at least
+# this many inked rows in the band. v1 lines are 6-9 rows thick; the ADF smear
+# specks that dot every v1 page are 1-3 rows. Without this floor the bar trace
+# hops onto a speck past the real bar end (anchoring the bridge in mid-air, so the
+# gap stays open) and the reconnection scan stops at a speck instead of the bar
+# (11_17's TOP gen-2 and LEFT-MID gen-4 bridges both failed that way).
+SPECK_MIN_ROWS = 4
 
 
 def _ink_band(a: np.ndarray, row: int, half: int) -> np.ndarray:
-    """Per-column: is there any ink within ``half`` rows of ``row``?"""
+    """Per-column: is there SOLID ink (>= SPECK_MIN_ROWS rows) within ``half`` rows of ``row``?"""
     lo, hi = max(0, row - half), min(a.shape[0], row + half + 1)
-    return (1 - a[lo:hi, :]).sum(axis=0) > 0
+    return (1 - a[lo:hi, :]).sum(axis=0) >= SPECK_MIN_ROWS
 
 
 def _bar_row_runs(a: np.ndarray, row: int) -> list[tuple[int, int]]:
@@ -1033,13 +1040,26 @@ def _bar_ink_y(a: np.ndarray, row: int, x: int, look: str) -> int | None:
     else:
         xs = range(x - 1, x - 1 - BAR_INK_REACH, -1)
     h, w = a.shape
+    lo, hi = max(0, row - BRIDGE_CONNECT_YTOL), min(h, row + BRIDGE_CONNECT_YTOL + 1)
     for xx in xs:
         if not 0 <= xx < w:
             continue
-        for dy in range(0, BRIDGE_CONNECT_YTOL + 1):
-            for y in (row + dy, row - dy):
-                if 0 <= y < h and a[y, xx] == 0:
-                    return y
+        ink_rows = np.where(a[lo:hi, xx] == 0)[0] + lo
+        if len(ink_rows) == 0:
+            continue
+        # Solid runs only (a smear speck must not pull the fill up to itself).
+        breaks = np.where(np.diff(ink_rows) > 1)[0]
+        starts = np.concatenate([[ink_rows[0]], ink_rows[breaks + 1]])
+        stops = np.concatenate([ink_rows[breaks], [ink_rows[-1]]])
+        best = None
+        for s, e in zip(starts, stops):
+            if e - s + 1 < SPECK_MIN_ROWS:
+                continue
+            y = int(min(max(row, s), e))  # pixel of this run nearest ``row``
+            if best is None or abs(y - row) < abs(best - row):
+                best = y
+        if best is not None:
+            return best
     return None
 
 
