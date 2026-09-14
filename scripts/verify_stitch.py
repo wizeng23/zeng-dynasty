@@ -84,28 +84,29 @@ def main() -> None:
     oracle_ahu = ahu(oracle, "parent")
 
     old_merged = apply_merges(load("old/data/book1.jsonl"), "parent")
-    new_merged = apply_merges(load("data/book1.jsonl"), "father")
     stitched = list(load("data/book1_stitched.jsonl").values())
 
     checks = [
+        # 1. The stitch LOGIC reproduces the oracle from the old parse + hand merges.
         ("old parse + 13 merges == oracle  (stitch logic is correct)",
          ahu(old_merged, "parent") == oracle_ahu),
-        ("src/stitch.py output == new parse + 13 merges  (stitch.py is faithful)",
-         ahu(stitched, "father") == ahu(new_merged, "father")),
-        ("new parse + 13 merges == oracle  (EXPECTED FALSE: parse nuance, not a bug)",
-         ahu(new_merged, "father") == oracle_ahu),
+        # 2. The actual pipeline output (s7_stitch.py, using the NAME-matcher) has
+        #    the same TREE SHAPE as the oracle. This is the real end-to-end check --
+        #    it passes now that name-matching pairs the seams correctly (the old
+        #    provenance-keyed list mis-connected 7 of 13 under the v1 renumber).
+        ("s7_stitch.py output == oracle tree shape  (pipeline reproduces oracle)",
+         ahu(stitched, "father") == oracle_ahu),
     ]
 
     print(f"oracle: {len(oracle)} nodes | stitched: {len(stitched)} nodes")
     print(f"stitched roots: {sum(1 for n in stitched if n['father'] == -1)} | "
           f"max generation: {max(n['generation'] for n in stitched)}\n")
     for label, result in checks:
-        print(f"  [{'PASS' if result else 'diff'}] {label}")
+        print(f"  [{'PASS' if result else 'FAIL'}] {label}")
 
-    logic_ok = checks[0][1] and checks[1][1]
-    print("\n" + ("STITCH VERIFIED: logic reproduces the oracle from the old parse; "
-                  "the new-parse difference is a within-graph parse nuance."
-                  if logic_ok else "STITCH VERIFICATION FAILED -- investigate."))
+    ok = all(c[1] for c in checks)
+    print("\n" + ("STITCH VERIFIED: the name-matched pipeline reproduces the oracle "
+                  "tree shape." if ok else "STITCH VERIFICATION FAILED -- investigate."))
 
 
 if __name__ == "__main__":

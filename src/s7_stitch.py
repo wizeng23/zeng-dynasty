@@ -47,33 +47,20 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Per-book merge lists.
+# Manual per-book merge OVERRIDES (rarely needed).
 #
-# Each entry is (duplicate_root_provenance, canonical_leaf_provenance): the
-# graph-root that is a duplicate, and the earlier-graph leaf it is the same
-# person as. Book 1's 13 merges were determined by hand (matching the archived
-# `data/oracles/book1_merged.jsonl`); all 13 provenances validate against the v1
-# parse unchanged. A future `find_merges` implementation will derive these
-# automatically; until then, unknown books produce no merges (the forest passes
-# through unchanged) and log a warning.
+# Each entry is (duplicate_root_provenance, canonical_leaf_provenance). Normally
+# :func:`find_merges` derives these automatically by name-matching each duplicate
+# root to its earlier same-name leaf (works cleanly for Book 1: 13/13 unique).
+# An entry here overrides the matcher for a whole book -- use it only when names
+# genuinely can't resolve a book's seams. Empty by default.
+#
+# (Historical note: Book 1 previously carried a hand-authored list here, but it was
+# keyed to the v0 parse's provenances; v1 renumbered graph-8's leaves, so 7 of 13
+# pairs pointed at the wrong person. The name-matcher fixes this and self-adapts to
+# the parse, so the hardcoded list was removed. See docs/history.md.)
 # ---------------------------------------------------------------------------
-BOOK_MERGES: dict[str, list[tuple[str, str]]] = {
-    "book1": [
-        ("1_1_0", "0_0_7"),
-        ("2_2_0", "1_1_6"),
-        ("3_3_0", "2_2_7"),
-        ("4_4_0", "3_3_13"),
-        ("5_5_0", "4_4_7"),
-        ("6_6_0", "5_5_6"),
-        ("7_7_0", "6_6_7"),
-        ("8_8_0", "7_7_8"),
-        ("9_9_0", "8_8_18"),
-        ("10_10_0", "8_8_17"),
-        ("11_11_0", "8_8_14"),
-        ("12_12_0", "8_8_13"),
-        ("13_16_0", "12_12_7"),
-    ],
-}
+BOOK_MERGES: dict[str, list[tuple[str, str]]] = {}
 
 
 def _provenance(notes: str) -> str:
@@ -85,31 +72,75 @@ def _provenance(notes: str) -> str:
     return (notes or "").split(" | ", 1)[0]
 
 
-def find_merges(nodes: list[Node], book: str) -> list[tuple[str, str]]:
-    """Return the (duplicate_root, canonical_leaf) provenance pairs to merge.
+def _graph_num(prov: str) -> tuple[int, ...]:
+    """The numeric graph key of a provenance ``{start}_{end}_{i}`` -> (start, end).
 
-    Currently a lookup into :data:`BOOK_MERGES`. This is the extension point for
-    an automated matcher (now that Stage 6 supplies names: name equality +
-    reading-order + grid position); swapping the body here is all that's needed to
-    make stitching general.
+    Graphs are ordered by their starting page; this sorts/compares provenances by
+    which graph they belong to (ignoring the within-graph index).
+    """
+    parts = prov.split("_")
+    return tuple(int(p) for p in parts[:-1]) if len(parts) >= 3 else (0,)
+
+
+def find_merges(nodes: list[Node], book: str) -> list[tuple[str, str]]:
+    """Match each duplicate graph-root to its canonical leaf, BY NAME.
+
+    A subtree-start page reprints its parent's name, so every graph's root (except
+    the first) duplicates a *leaf* of an earlier graph -- the SAME person, hence the
+    same name. Now that Stage 6 (OCR) fills in names, this pairs each duplicate root
+    with the earlier-graph leaf that has the same name. When several earlier leaves
+    share the name, the nearest (latest) earlier graph wins.
+
+    This supersedes the old hardcoded per-book provenance list, which was authored
+    against the v0 parse and mis-paired 7 of Book 1's 13 seams once v1 renumbered
+    graph-8's leaves (same provenance string, different person). A manual override
+    in :data:`BOOK_MERGES` still wins when present, for any case names can't resolve.
 
     Args:
-        nodes: The Stage-5 domain nodes (used by a future automated matcher;
-            unused by the hardcoded lookup).
+        nodes: The Stage-5 domain nodes (a forest), names filled in by Stage 6.
         book: Book name, e.g. ``"book1"``.
 
     Returns:
-        List of ``(duplicate_root_provenance, canonical_leaf_provenance)`` pairs.
+        ``(duplicate_root_provenance, canonical_leaf_provenance)`` pairs.
     """
-    merges = BOOK_MERGES.get(book)
-    if merges is None:
+    if book in BOOK_MERGES:
+        logger.info("using manual BOOK_MERGES override for %s", book)
+        return BOOK_MERGES[book]
+
+    prov_of = {n.id: _provenance(n.notes) for n in nodes}
+    # Earlier-graph leaves (childless nodes) indexed by name.
+    leaves_by_name: dict[str, list[str]] = {}
+    for n in nodes:
+        if not n.children and n.name:
+            leaves_by_name.setdefault(n.name, []).append(prov_of[n.id])
+
+    # Duplicate roots = every root except the forest's first graph, in graph order.
+    roots = sorted(
+        (n for n in nodes if n.father == -1),
+        key=lambda n: _graph_num(prov_of[n.id]),
+    )
+
+    merges: list[tuple[str, str]] = []
+    unresolved: list[str] = []
+    for r in roots[1:]:
+        rp = prov_of[r.id]
+        rg = _graph_num(rp)
+        cands = [
+            lp for lp in leaves_by_name.get(r.name, []) if _graph_num(lp) < rg
+        ]
+        if not cands:
+            unresolved.append(f"{rp} ({r.name!r})")
+            continue
+        # Nearest earlier graph wins if a name recurs.
+        canon = max(cands, key=_graph_num)
+        merges.append((rp, canon))
+
+    if unresolved:
         logger.warning(
-            "no merge list for %s; stitching will pass the forest through "
-            "unchanged. Add an entry to BOOK_MERGES or implement automated "
-            "matching.",
-            book,
-        )
-        return []
+            "%s: %d duplicate root(s) had no earlier same-name leaf, left "
+            "unmerged: %s", book, len(unresolved), ", ".join(unresolved))
+    logger.info("name-matched %d/%d merges for %s",
+                len(merges), len(roots) - 1, book)
     return merges
 
 
@@ -148,6 +179,15 @@ def stitch_nodes(nodes: list[Node], merges: list[tuple[str, str]]) -> list[Node]
                 f"duplicate {dup_prov!r} (id {dup.id}) is not a root "
                 f"(father={dup.father}); merge list is inconsistent"
             )
+        # A valid seam joins the SAME person, so the two nodes' names must agree
+        # (a subtree-start page reprints the parent's name). A mismatch means the
+        # merge is wrong -- the failure mode that silently mis-connected 7 of Book
+        # 1's seams under the old provenance-keyed list. Warn loudly (don't hard-
+        # fail: OCR noise could differ a glyph, and blank names can't be checked).
+        if dup.name and canon.name and dup.name != canon.name:
+            logger.warning(
+                "seam name MISMATCH: dup %s %r != canon %s %r -- likely wrong merge",
+                dup_prov, dup.name, canon_prov, canon.name)
         # The canonical leaf adopts the duplicate's children.
         canon.children = list(canon.children) + list(dup.children)
         for child_id in dup.children:
