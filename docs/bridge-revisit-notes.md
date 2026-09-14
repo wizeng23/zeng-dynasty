@@ -1,22 +1,14 @@
 # Bridge / crop fixes to revisit later (Book 2)
 
-> **v1 STATUS (2026-09-14): orphan-bridging is NOT ported to the v1 pipeline.**
-> Everything below describes the v0 `src/v0/segment.py` pass (v0 pixel geometry).
-> `src/s4_merge_pages.py` explicitly defers bridging; the v1 Book 2 Stage-5 parse
-> therefore has 37 empty phantom bars across 12 multi-page graphs (36_52: 10,
-> 69_82: 10, 106_113: 3, 11_17: 3, …) and 42 seam-orphan roots that survive into
-> `book2_stitched.jsonl` (51 roots). Porting the trace-right rule (seam x from
-> cumulative page widths, ×3 scale) is the next pipeline task after OCR review.
-
-Status as of 2026-08-24: **all 45 Book-2 subgraphs are LOCKED** — 0 within-graph
-orphans, green bridges match William's hand-verified ground truth, 0 box overlaps,
-Book 1 byte-identical. Next pipeline step: William reviews OCR.
-
-The automatic orphan-bridging (trace-right rule, `src/segment.py`) resolved every
-graph EXCEPT four, which needed surgical per-graph help. These are recorded here to
-revisit and (ideally) fold back into a more general automatic rule so the manual
-list can shrink. All manual fixes live in `src/segment.MANUAL_BRIDGES` and
-`src/segment.CROP_KEEP_LEFT`; the QA reads them and draws them green.
+> **v1 STATUS (2026-09-14, later): orphan-bridging IS ported to v1** --
+> `src/s5_build_tree.bridge_orphans`, run before parsing on multi-page graphs.
+> Everything below describes the v0 pass and its v0 pixel geometry; the v1 port
+> needed no manual bridges: 69_82's L-connector case (尚澜's bar stepping ~35 rows
+> at the p82|p81 seam) is closed automatically because the trace follows the bar's
+> row through vertical steps. v1 Book 2 after bridging: 2 empty bars (106_113,
+> 133_133 -- both cross-graph, bar runs to the graph edge), 16 green bridges, 17
+> hairline nick fills (`{stem}.nicks.json`, cyan in QA). Per-graph counts match
+> `docs/bridge-ground-truth.md`. See docs/history.md Era 10.
 
 ## The 4 graphs that needed manual help
 

@@ -83,7 +83,12 @@ run of continuation pages onto its start page into a single graph image, alignin
 the line endpoints at the page seam. Iterates only the pages Stage 3 cropped
 (so Book 3/4 biographies are naturally absent).
 
-Helpers: `merge_graphs`, `find_best_orphans`, `matched_shift` (`src/s4_merge_pages.py`).
+Helpers: `merge_graphs`, `find_best_orphans`, `matched_shift`, `seam_endpoints`
+(`src/s4_merge_pages.py`). A seam endpoint must be a real line end (>= 5 rows,
+>= 4 inked columns): the v1 ADF scans leave 1-4 row smear specks at page edges,
+and one such speck once shifted a page 388 rows. A page whose seam has no matched
+end is concatenated top-aligned, so its bars may step vertically at that seam;
+Stage 5's bridging follows such steps.
 
 **Bugs fixed vs old:** `merge_graphs` vstack sign bug; the old Book 2 run wrote
 merged graphs to `book1/4_graphs/` (copy-paste).
@@ -116,6 +121,19 @@ read decides the parent when the band read is ambiguous or disagrees with one
 clear hang-line, and adds child risers that end above the bottom band; a bar
 flush with the top (no hang-line) keeps the band read. Tests:
 `tests/test_s5_line_ends.py`.
+
+**Orphan bridging (`bridge_orphans`, multi-page graphs only):** a generation bar
+broken at a page seam leaves an *empty* node with children (a bar-orphan). Before
+parsing, each orphan's bar is traced right -- following its row through the
+vertical steps Stage 4 leaves at unaligned seams, hopping nicks -- and every break
+on the way plus the trace-right bridge from the bar's true end to the next bar is
+tried nearest-first. A fill is kept only if the graph still parses, the targeted
+orphan disappears (identified by its children's positions) and no child is newly
+orphaned. Only solid ink (>= 4 rows) counts, so ADF smear specks are ignored.
+Cross-page connectors go to `{stem}.imaginary.json` (green in QA), hairline nick
+fills (<= 60px, no step) to `{stem}.nicks.json` (cyan). An orphan whose bar runs
+to the graph's right edge is cross-graph and is left alone. Tests:
+`tests/test_s5_bridge.py`; ground truth: `docs/bridge-ground-truth.md`.
 
 ## Stage 6 — OCR (`src/s6_ocr.py`)
 

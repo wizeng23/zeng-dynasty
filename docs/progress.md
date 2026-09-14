@@ -7,17 +7,19 @@ Era 10 for the latest detail.
 | Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 build_tree | 6 OCR | 7 stitch |
 |------|-----------|------------|--------|---------|--------------|-------|----------|
 | 1 | done | — all-tree | done | done (14 graphs) | **done (163)** | **done (23 ovr, 2 flag)** | **done → book1_stitched.jsonl (150 nodes, 1 root 点, 56 gens)** |
-| 2 | done | — all-tree | done | done (44 graphs) | **done (1628 nodes; stepped-bar fix)** | **done (314 low-conf, 0 overrides — review pending)** | **done → book2_stitched.jsonl (1591 nodes, 51 roots: 1 main + 42 seam orphans + 8 OCR-mismatched section roots)** |
+| 2 | done | — all-tree | done (seam-speck fix) | done (44 graphs) | **done (1592 nodes; stepped-bar fix + orphan bridging: 16 bridges, 17 nick fills, 2 cross-graph empties)** | **done (285 low-conf, 0 overrides — review pending)** | **done → book2_stitched.jsonl (1555 nodes, 15 roots: 1 main lineage of 1300 + 8 OCR-mismatched section roots + 6 cross-graph orphans)** |
 | 3 | done | done (bio/tree split, human-verified) | done | not started | — | — | — |
 | 4 | done | done (bio/tree split, human-verified) | done | not started | — | — | — |
 
 **Book 1 is DONE end-to-end** and published to the website. **Book 2 runs end-to-end
-(stages 5→6→7)** but is not yet one tree: 42 roots are page-seam orphans (the v0
-orphan-bridging pass was never ported to v1 — 37 empty phantom bars across 12
-multi-page graphs) and 8 section roots are unmatched because their OCR reading
-differs from the canonical leaf's (烈/列, 熊/能, 杰/木, 斗/升, 亮/光 …). Next: William
-reviews Book 2 OCR (`scripts/qa/s6_ocr.py`), re-run `s6_ocr.apply_names` + `s7_stitch`;
-port orphan-bridging to v1. See `history.md` Era 10.
+(stages 4→7) with orphan bridging** and is a 15-root forest: the main lineage
+(1300 nodes) plus 8 section roots whose OCR reading differs from their canonical
+leaf (贞烈/贞列, 贞熊/贞能, 贞杰/贞木, 贞斗/贞升, 贞亮/贞光, 克太, 贞富, 贞年 — the OCR
+review resolves these; then `s6_ocr.apply_names` + `python -m src.s7_stitch --book
+book2`) and 6 cross-graph orphans (a bar or hang-line that runs to its graph's edge;
+parent on an adjacent graph — 106_113_5 with 18 nodes, 商科 6, 133_133_1 4, 毓揄 2,
+毓棋 2, 8_10_9 1). Next: William reviews Book 2 OCR (`scripts/qa/s6_ocr.py`, port
+8766) and the parse QA (`books/book2/qa/index.html`). See `history.md` Era 10.
 
 ## Comparison oracles for the rewrite
 

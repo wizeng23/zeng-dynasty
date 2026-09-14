@@ -67,6 +67,17 @@ that is the bug.
 **Several graphs currently emit green bridges where only scan-line fill is
 warranted.** Fixing that is part of the algorithm change.
 
+## v1 results (2026-09-14)
+
+The v1 port (`src/s5_build_tree.bridge_orphans`) reproduces every verdict below
+by COUNT: 11_17 4, 22_23 1, 28_30 1, 31_35 1, 36_52 4, 58_62 1 (+1 nick fill),
+69_82 2 (+ 尚澜's seam step, v0's manual L-connector), 114_120 1, 121_122 0,
+126_128 0. NOTE the coordinates in the verdicts are QA ROW-2 (joined compare
+image) pixels, not graph pixels, so they do not rescale to v1 graph coordinates;
+compare counts, seam anchoring (every v1 bridge's left end is on a page seam) and
+the QA overlay, not x values. Hairline nicks are now recorded separately
+(`{stem}.nicks.json`) and never drawn green, as the rule below requires.
+
 ## Per-graph verdicts (William, 2026-08-24)
 
 Page seams are the blue verticals in `qa` row 2. Coordinates below are in the

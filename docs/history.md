@@ -293,6 +293,42 @@ variant pairs between root and canonical leaf (贞烈/贞列, 贞熊/贞能, 贞
 Book 2 at startup for lacking v1 crops); port orphan-bridging to v1 (`src/v0/segment.py`
 → merge stage; ground truth in `docs/bridge-ground-truth.md` is v0-scaled); then Books 3/4.
 
+**Bridging ported to v1 (later on 2026-09-14).** `s5_build_tree.bridge_orphans`
+runs before parsing on multi-page graphs. Getting v0's trace-right rule to work on
+the v1 scans took four more fixes, each found by tracing a wrong bridge to its ink:
+
+1. **Stage 4 seam endpoints** (`s4_merge_pages.seam_endpoints`): 1-4 row ADF smear
+   specks at page edges were read as line ends; at 11_17's p16|p15 seam two specks
+   paired with real lines shifted page 15 down 388 rows (true shift 18). Now a seam
+   end needs >= 5 rows and >= 4 inked columns (measured over all 90 Book 2 seams).
+2. **Solid ink only** (`SPECK_MIN_ROWS = 4`): the bar trace hopped onto specks past
+   the real bar end and the reconnection scan stopped at specks.
+3. **Follow the bar through steps** (`trace_bar`): Stage 4 concatenates a page whose
+   seam has no matched line end without vertical alignment, so a bar can step 7-60
+   rows at a seam (69_82's gen-2 bar steps at 11 of 12 seams). The trace tracks the
+   bar's row (edges, not run centres), and every hop/step is a fill candidate tried
+   nearest-first -- this closes 69_82's 尚澜 step automatically, the case v0 fixed by
+   hand with an L-connector.
+4. **Targeted gate** (`bridge_resolves`): the count-only gate accepted a bogus
+   34,000px bridge on 69_82 that knocked out an *unrelated* orphan. Orphans are now
+   identified by their children's positions; a fill must remove the targeted orphan
+   and orphan no new child.
+
+Hairline nicks (<= 60px, no step) are recorded in `{stem}.nicks.json` (cyan in QA);
+green (`{stem}.imaginary.json`) is only for cross-page connectors, per William's rule.
+
+**Result (v1 Book 2, Stage 5→7):** 1592 nodes; empty phantom bars **37 -> 2** (both
+cross-graph: their bar runs to the graph's right edge), roots **86 -> 50** (44
+sections + 6 cross-graph orphans), sus 28 -> 2, grid 85 -> 15. 16 green bridges,
+17 nick fills. Per graph vs `docs/bridge-ground-truth.md`: 11_17 4/4, 22_23 1/1,
+28_30 1/1, 31_35 1/1, 36_52 4/4 (the over-extended one now seam-to-first-ink),
+58_62 1 bridge + 1 nick (= "1 correct, 1 scan-fill"), 69_82 2 + 尚澜's step,
+114_120 1/1, 121_122 and 126_128 0 (as ruled). No manual bridges needed.
+OCR re-run (285 low-conf, 1584 applied); stitch → `book2_stitched.jsonl` **1555
+nodes, 15 roots**: the main lineage (1300 nodes under 存学) + the same 8
+OCR-mismatched section roots + 6 cross-graph orphans (106_113_5, 商科, 133_133_1,
+毓揄, 毓棋, 8_10_9). Website still shows only Book 1.
+
 ---
 
 ## Pipeline status (snapshot)
@@ -305,13 +341,14 @@ rebuild (new ADF scans, `src/`) is redoing every stage from clean scans.
 | Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 tree | 6 OCR | 7 stitch |
 |------|-----------|------------|--------|---------|--------|-------|----------|
 | 1 | done (17) | — all-tree | done (17) | done (14 graphs) | **done (163 nodes)** | **done (23 overrides, 2 flags)** | **done (150 nodes, 1 root, 56 gens)** |
-| 2 | done (134) | — all-tree | done (134) | done (44 graphs) | **done (1628 nodes)** | **done (314 low-conf, review pending)** | **done (1591 nodes, 51 roots — seam orphans + OCR-mismatched roots remain)** |
+| 2 | done (134) | — all-tree | done (134) | done (44 graphs) | **done (1592 nodes; bridged, 2 cross-graph empties)** | **done (285 low-conf, review pending)** | **done (1555 nodes, 15 roots: main 1300 + 8 OCR-mismatched + 6 cross-graph)** |
 | 3 | done (292) | done (51 graph / 241 bio) | done (51) | not started | — | — | — |
 | 4 | done (317) | done (147 graph / 170 bio) | done (147) | not started | — | — | — |
 
 Book 1 is **fully done end-to-end** → `data/book1_stitched.jsonl`, published to the
-website. **Book 2 runs end-to-end** but stays a 51-root forest until the OCR review
-resolves 8 section roots and orphan-bridging is ported to v1 (42 seam-orphan roots).
+website. **Book 2 runs end-to-end with bridging**; what keeps it from one tree is the
+OCR review (section roots whose OCR differs from their canonical leaf) and 6
+cross-graph orphans (parent on an adjacent graph).
 
 **v0 pipeline (prior, archived):** books 1–2 reached tree + OCR (book 1 stitched by
 hand); superseded by the v1 rebuild above.

@@ -118,14 +118,17 @@ now matched **by name** (`find_merges` in `src/s7_stitch.py`), not the old hardc
 provenances (which were v0-keyed and mis-connected 7/13 under the v1 renumber).
 All on `main`, pushed.
 
-**Book 2 runs through all 7 stages** (2026-09-14) → `data/book2_stitched.jsonl`
-(1591 nodes) but is still a **51-root forest**: 42 roots are page-seam orphans
-(the v0 orphan-bridging pass in `src/v0/segment.py` was NEVER ported to v1; 37
-empty phantom bars in 12 multi-page graphs) and 8 section roots are unmatched
-because their OCR reading differs from the canonical leaf's (贞烈/贞列, 贞熊/贞能 …).
-Stage 5 gained a stroke-end read for stepped bars (67_68); Stage 7 now merges only
-`{graph}_0` section roots, falls back to non-leaf canonicals, and folds re-printed
-ancestor chains (克宣 → 龙润 …). Next: William reviews Book 2 OCR via
-`scripts/qa/s6_ocr.py`, then re-run `s6_ocr.apply_names` + `s7_stitch`; port bridging.
+**Book 2 runs through all 7 stages with orphan bridging** (2026-09-14) →
+`data/book2_stitched.jsonl`: 1555 nodes, **15 roots** = the main lineage (1300 nodes)
++ 8 section roots whose OCR reading differs from their canonical leaf (贞烈/贞列,
+贞熊/贞能, 贞杰/贞木, 贞斗/贞升, 贞亮/贞光, 克太, 贞富, 贞年) + 6 cross-graph orphans
+(bar/hang-line runs to the graph edge; parent on an adjacent graph). Stage 4 now
+rejects ADF smear specks as seam endpoints; Stage 5 has the stroke-end read for
+stepped bars and `bridge_orphans` (trace-right rule, follows seam steps, targeted
+gate; green `{stem}.imaginary.json`, cyan nicks `{stem}.nicks.json`); Stage 7
+merges only `{graph}_0` roots, falls back to non-leaf canonicals, folds re-printed
+chains. Next: William reviews Book 2 OCR (`scripts/qa/s6_ocr.py`) and parse QA, then
+re-run `s6_ocr.apply_names` + `s7_stitch`. Do NOT re-run Book 1 regression checks
+(William: Book 1 is confirmed correct).
 
 Books 3 & 4 are at Stage 2 (classify, human-verified) + Stage 3 (crop).
