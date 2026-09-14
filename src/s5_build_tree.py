@@ -960,6 +960,13 @@ MAX_BRIDGE_EXTENSIONS = 8
 # gap stays open) and the reconnection scan stops at a speck instead of the bar
 # (11_17's TOP gen-2 and LEFT-MID gen-4 bridges both failed that way).
 SPECK_MIN_ROWS = 4
+# A bar whose row jumps by at least this much between neighbouring columns has
+# STEPPED: the two pieces no longer overlap vertically (v1 bars are 6-7 rows
+# thick), so they are pixel-disconnected unless a seam fill happens to join them.
+# Stage 4 concatenates a page whose seam has no matched line end without any
+# vertical alignment, so a bar can step 7-60 rows at a page seam (69_82's gen-2
+# bar steps at 11 of its 12 seams). Each step is a fill candidate.
+STEP_MIN_ROWS = 6
 
 
 def _ink_band(a: np.ndarray, row: int, half: int) -> np.ndarray:
@@ -989,27 +996,93 @@ def find_orphans(nodes: list[LineNode], a: np.ndarray) -> list[LineNode]:
     ]
 
 
-def bar_true_end(a: np.ndarray, row: int, start_x: int) -> int:
-    """Rightmost column the bar at ``row`` reaches from ``start_x``, hopping nicks.
+def _solid_runs_near(a: np.ndarray, x: int, y: int) -> list[tuple[int, int]]:
+    """Solid ink runs ``(r0, r1)`` in column ``x`` within the drift band of ``y``."""
+    lo, hi = max(0, y - BRIDGE_CONNECT_YTOL), min(a.shape[0], y + BRIDGE_CONNECT_YTOL + 1)
+    ink = np.where(a[lo:hi, x] == 0)[0] + lo
+    if len(ink) == 0:
+        return []
+    breaks = np.where(np.diff(ink) > 1)[0]
+    starts = np.concatenate([[ink[0]], ink[breaks + 1]])
+    stops = np.concatenate([ink[breaks], [ink[-1]]])
+    return [(int(r0), int(r1)) for r0, r1 in zip(starts, stops) if r1 - r0 + 1 >= SPECK_MIN_ROWS]
 
-    Walks right through ink within :data:`BRIDGE_CONNECT_YTOL` rows, hopping any
-    gap of at most :data:`BAR_TRACE_HOP` columns (a scan nick), and stops at the
-    first wider gap -- the page break. Returns the last ink column reached.
+
+def _nearest_run_y(runs: list[tuple[int, int]], y: int) -> int | None:
+    """Centre row of the run nearest ``y``; ``None`` if no run."""
+    if not runs:
+        return None
+    r0, r1 = min(runs, key=lambda r: abs((r[0] + r[1]) // 2 - y))
+    return (r0 + r1) // 2
+
+
+def trace_bar(
+    a: np.ndarray, row: int, start_x: int
+) -> tuple[int, list[tuple[int, int, int, int]]]:
+    """Follow the bar at ``row`` rightward from ``start_x`` to its true end.
+
+    Walks column by column tracking the bar's current row. A column whose solid
+    run contains that row is the bar (or a riser crossing it -- the row is kept).
+    Otherwise the nearest solid run within the drift band is the bar having
+    STEPPED to a new row; a run of empty columns of at most :data:`BAR_TRACE_HOP`
+    is a nick or a seam gap and is hopped, resuming on the nearest run within the
+    band of the row before the gap. The first wider gap is the page break where
+    the bar truly ends.
+
+    Every hop or step is a place where the bar's pieces may be pixel-disconnected
+    (a nick, a seam gap, or a vertical step at a seam), so each is returned as a
+    fill candidate ``(x0, x1, y0, y1)``: the bar's last ink column and row before
+    the break, and its first ink column and row after it (``x1 == x0 + 1`` for an
+    abutting step).
+
+    Returns:
+        ``(true_end, steps)`` -- the last bar ink column reached and the breaks
+        crossed on the way, left to right.
     """
-    band = _ink_band(a, row, BRIDGE_CONNECT_YTOL)
     w = a.shape[1]
-    x = min(start_x, w - 1)
+    x = max(0, start_x)
+    # The caller's ``row`` is where the parser read the bar (its top edge for a
+    # flush bar); snap to the centre of the bar's own run so the walk tracks the
+    # bar, not its edge -- otherwise the first column reads as a phantom step.
+    y = _nearest_run_y(_solid_runs_near(a, x, row), row)
+    if y is None:
+        y = row
+    last_ink_x = x
+    steps: list[tuple[int, int, int, int]] = []
     while x < w:
-        if band[x]:
+        runs = _solid_runs_near(a, x, y)
+        if any(r0 <= y <= r1 for r0, r1 in runs):
+            last_ink_x = x
             x += 1
             continue
+        ny = _nearest_run_y(runs, y)
+        if ny is not None:
+            if abs(ny - y) >= STEP_MIN_ROWS:
+                steps.append((last_ink_x, x, y, ny))
+            y = ny
+            last_ink_x = x
+            x += 1
+            continue
+        # Gap: hop at most BAR_TRACE_HOP empty columns to the bar's continuation.
         j = x
-        while j < w and not band[j]:
+        ny = None
+        while j < w and j - x <= BAR_TRACE_HOP:
+            ny = _nearest_run_y(_solid_runs_near(a, j, y), y)
+            if ny is not None:
+                break
             j += 1
-        if j - x > BAR_TRACE_HOP:
+        if ny is None or j - x > BAR_TRACE_HOP:
             break
-        x = j
-    return x - 1
+        steps.append((last_ink_x, j, y, ny))
+        y = ny
+        last_ink_x = j
+        x = j + 1
+    return last_ink_x, steps
+
+
+def bar_true_end(a: np.ndarray, row: int, start_x: int) -> int:
+    """Rightmost column the bar at ``row`` reaches from ``start_x`` (see :func:`trace_bar`)."""
+    return trace_bar(a, row, start_x)[0]
 
 
 def first_ink_right(a: np.ndarray, row: int, start_x: int) -> int | None:
@@ -1063,29 +1136,52 @@ def _bar_ink_y(a: np.ndarray, row: int, x: int, look: str) -> int | None:
     return None
 
 
+def _bar_run_at(a: np.ndarray, row: int, col: int) -> tuple[int, int] | None:
+    runs = _bar_row_runs(a, row)
+    return next(
+        (r for r in runs if r[0] - BAR_RUN_SLACK <= col <= r[1] + BAR_RUN_SLACK), None
+    )
+
+
+def bridge_candidates(a: np.ndarray, row: int, col: int) -> list[tuple[int, int, int]]:
+    """Fill candidates for the bar-orphan at ``(row, col)``, nearest first.
+
+    Each is ``(row_at_left_end, c0, c1)`` for :func:`draw_bridge`. First come the
+    breaks :func:`trace_bar` crossed while following the orphan's bar (nicks, seam
+    gaps and vertical steps -- the short repairs), then the trace-right bridge
+    from the bar's true end across one page-break gap to the next bar. ``None``
+    entries never appear; an orphan with nothing to reach yields ``[]``.
+    """
+    bar_run = _bar_run_at(a, row, col)
+    if bar_run is None:
+        return []
+    true_end, steps = trace_bar(a, row, bar_run[0])
+    cands = [(y0, x0, x1) for x0, x1, y0, _y1 in steps]
+    y_end = steps[-1][3] if steps else row
+    connect = first_ink_right(a, y_end, true_end)
+    if (
+        connect is not None
+        and connect < a.shape[1] - GRAPH_EDGE_MARGIN
+        and connect - true_end >= MIN_BRIDGE_SPAN
+    ):
+        cands.append((y_end, true_end, connect))
+    return cands
+
+
 def bridge_candidate(
     a: np.ndarray, row: int, col: int
 ) -> tuple[int, int, int] | None:
-    """The bridge ``(row, true_end, connect)`` for the bar-orphan at ``(row, col)``.
-
-    Anchors at the orphan bar's true right end and reaches across exactly one
-    page-break gap to the next bar. ``None`` when there is nothing to reach, when
-    the landing is the graph's own right edge (a cross-graph orphan), or when
-    the span is too short to be a page break.
-    """
-    runs = _bar_row_runs(a, row)
-    bar_run = next(
-        (r for r in runs if r[0] - BAR_RUN_SLACK <= col <= r[1] + BAR_RUN_SLACK), None
-    )
-    if bar_run is None:
+    """The trace-right bridge ``(row, true_end, connect)`` for the bar-orphan at
+    ``(row, col)``, or ``None`` when the bar's true end has nothing to reach, the
+    landing is the graph's own right edge (a cross-graph orphan), or the span is
+    too short to be a page break. Step/nick fills are in :func:`bridge_candidates`."""
+    cands = bridge_candidates(a, row, col)
+    bar_run = _bar_run_at(a, row, col)
+    if not cands or bar_run is None:
         return None
-    true_end = bar_true_end(a, row, bar_run[1])
-    connect = first_ink_right(a, row, true_end)
-    if connect is None or connect >= a.shape[1] - GRAPH_EDGE_MARGIN:
-        return None
-    if connect - true_end < MIN_BRIDGE_SPAN:
-        return None
-    return (row, true_end, connect)
+    true_end, _steps = trace_bar(a, row, bar_run[0])
+    far = cands[-1]
+    return far if far[1] == true_end and far[2] - far[1] >= MIN_BRIDGE_SPAN else None
 
 
 def draw_bridge(a: np.ndarray, row: int, c0: int, c1: int) -> np.ndarray:
@@ -1103,67 +1199,116 @@ def draw_bridge(a: np.ndarray, row: int, c0: int, c1: int) -> np.ndarray:
     return out
 
 
+def _orphan_key(n: LineNode) -> frozenset[tuple[int, int]]:
+    """An orphan's identity across re-parses: where its children hang.
+
+    Child tops are riser bottoms, which a bar fill never moves; the orphan's own
+    top/bot do move when its bar merges with another piece.
+    """
+    return frozenset(c.top for c in n.children if c.top is not None)
+
+
+def bridge_resolves(
+    target: LineNode, before: list[LineNode], after: list[LineNode]
+) -> bool:
+    """Did a trial fill resolve ``target`` without collateral damage?
+
+    Accept only if the orphan count strictly dropped, no child is newly orphaned
+    (every child under an ``after`` orphan was already under a ``before`` orphan),
+    and the target no longer exists as a unit (no ``after`` orphan has exactly its
+    children). A fill that merely knocks out a DIFFERENT orphan -- 69_82's bogus
+    34,000px gen-2 bridge changed where an unrelated bar's top was read -- fails
+    the last check; a fill that welds two subtrees fails the first two.
+    """
+    if len(after) >= len(before):
+        return False
+    kids_before = frozenset().union(*(_orphan_key(o) for o in before))
+    kids_after = frozenset().union(*(_orphan_key(o) for o in after))
+    if not kids_after <= kids_before:
+        return False
+    tk = _orphan_key(target)
+    return all(_orphan_key(o) != tk for o in after)
+
+
 def bridge_orphans(
     a: np.ndarray, config: BookConfig
 ) -> tuple[np.ndarray, list[list[int]]]:
     """Repair the bar-orphans of one merged graph.
 
-    Re-derives the orphans each pass and, for each, proposes the trace-right
-    bridge. A bridge is accepted only if the graph still parses (no two-parent
-    weld) and the orphan count strictly drops; if one hop does not drop it, the
-    same bridge is extended to successive reconnections (a bar broken across
-    several page breaks) up to :data:`MAX_BRIDGE_EXTENSIONS` times. The strict-
-    drop gate is what rejects a bridge that would weld two subtrees and any
-    runaway extension across an already-connected bar.
+    Re-derives the orphans each pass and, for each, tries its fill candidates
+    nearest first (:func:`bridge_candidates`): the nicks, seam gaps and vertical
+    steps along its own bar, then the trace-right bridge from the bar's true end.
+    A candidate is accepted only if the graph still parses (no two-parent weld)
+    and :func:`bridge_resolves` holds -- the targeted orphan is gone, nothing new
+    is orphaned. If the trace-right bridge does not resolve it, the same bridge is
+    extended to successive reconnections (a bar broken across several page
+    breaks) up to :data:`MAX_BRIDGE_EXTENSIONS` times.
 
     Args:
         a: The graph's binary ink grid (ignore regions already blanked).
         config: The book's parse config, for the re-parse gate.
 
     Returns:
-        ``(bridged, imaginary)``: the repaired grid and the bridges drawn, each
+        ``(bridged, imaginary)``: the repaired grid and the fills drawn, each
         ``[r0, c0, r1, c1]`` in graph pixel coordinates.
     """
 
-    def orphan_count(grid: np.ndarray) -> int:
-        return len(find_orphans(parse_graph(grid, config), grid))
+    def orphans(grid: np.ndarray) -> list[LineNode]:
+        return find_orphans(parse_graph(grid, config), grid)
+
+    def accepted(target: LineNode, before: list[LineNode], trial: np.ndarray) -> bool:
+        try:
+            return bridge_resolves(target, before, orphans(trial))
+        except ValueError:
+            return False  # two-parent weld
 
     out = a
     imaginary: list[list[int]] = []
     attempted: set[tuple[int, int, int]] = set()
     while True:
-        base = orphan_count(out)
-        if base == 0:
+        before = orphans(out)
+        if not before:
             break
         progressed = False
-        for orphan in find_orphans(parse_graph(out, config), out):
+        for orphan in before:
             assert orphan.top is not None and orphan.bot is not None
             row, col = orphan.bot[0], orphan.top[1]
-            cand = bridge_candidate(out, row, col)
-            if cand is None or cand in attempted:
-                continue
-            attempted.add(cand)
-            r, c0, end = cand
-            accepted = None
-            for _ext in range(MAX_BRIDGE_EXTENSIONS):
+            cands = bridge_candidates(out, row, col)
+            far = bridge_candidate(out, row, col)
+            for cand in cands:
+                if cand in attempted:
+                    continue
+                attempted.add(cand)
+                r, c0, end = cand
                 trial = draw_bridge(out, r, c0, end)
-                try:
-                    if orphan_count(trial) < base:
-                        accepted = (trial, end)
-                        break
-                except ValueError:
-                    break  # two-parent weld -> stop extending
-                nxt = first_ink_right(out, r, bar_true_end(out, r, end))
-                if nxt is None or nxt >= out.shape[1] - GRAPH_EDGE_MARGIN:
-                    break
-                end = nxt
-            if accepted is None:
-                continue
-            out, end = accepted
-            imaginary.append([int(r), int(c0), int(r), int(end)])
-            logger.info("orphan-bridge: row=%d cols %d..%d", r, c0, end)
-            progressed = True
-            break
+                if accepted(orphan, before, trial):
+                    result = (trial, end)
+                elif cand == far:
+                    # Extend across further page breaks; stop at the first weld.
+                    result = None
+                    for _ext in range(MAX_BRIDGE_EXTENSIONS):
+                        nxt = first_ink_right(out, r, bar_true_end(out, r, end))
+                        if nxt is None or nxt >= out.shape[1] - GRAPH_EDGE_MARGIN:
+                            break
+                        end = nxt
+                        trial = draw_bridge(out, r, c0, end)
+                        try:
+                            if bridge_resolves(orphan, before, orphans(trial)):
+                                result = (trial, end)
+                                break
+                        except ValueError:
+                            break
+                else:
+                    result = None
+                if result is None:
+                    continue
+                out, end = result
+                imaginary.append([int(r), int(c0), int(r), int(end)])
+                logger.info("orphan-bridge: row=%d cols %d..%d", r, c0, end)
+                progressed = True
+                break
+            if progressed:
+                break
         if not progressed:
             break
     return out, imaginary

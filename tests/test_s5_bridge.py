@@ -192,3 +192,78 @@ def test_draw_bridge_ignores_a_speck_when_finding_bar_ink() -> None:
     out = bt.draw_bridge(a, 508, 1050, 1400)  # anchored past the bar end, beside the speck
     filled = np.where((out[:, 1200] == 0))[0]
     assert filled.min() >= 495 and filled.max() <= 515   # thin fill, not up to the speck
+
+
+# --- acceptance gate: the TARGETED orphan must be resolved, no new orphans -------
+
+
+def _ln(bot: tuple[int, int], kids: int) -> bt.LineNode:
+    n = bt.LineNode(top=(bot[0] - 30, bot[1]), bot=bot)
+    n.children = [bt.LineNode(top=(bot[0] + 300, bot[1] + 100 * i)) for i in range(kids)]
+    return n
+
+
+def test_gate_rejects_bridge_that_removes_a_different_orphan() -> None:
+    target = _ln((1121, 82), 1)
+    other = _ln((1146, 493), 3)
+    before = [target, other]
+    after = [_ln((1121, 82), 1)]            # count dropped, but the target survived
+    assert not bt.bridge_resolves(target, before, after)
+
+
+def test_gate_rejects_bridge_that_creates_a_new_orphan() -> None:
+    target = _ln((1121, 82), 1)
+    before = [target, _ln((2079, 7827), 2)]
+    after = [_ln((2079, 7827), 2), _ln((3300, 5000), 1)]
+    assert not bt.bridge_resolves(target, before, after)
+
+
+def test_gate_accepts_when_target_gone_and_nothing_new() -> None:
+    target = _ln((1121, 82), 1)
+    before = [target, _ln((2079, 7827), 2)]
+    after = [_ln((2079, 7827), 2)]
+    assert bt.bridge_resolves(target, before, after)
+
+
+# --- a bar that steps vertically at a seam --------------------------------------
+
+
+def test_trace_follows_the_bar_across_a_vertical_step() -> None:
+    a = _blank(w=3000)
+    _hline(a, 500, 300, 1000)                 # orphan's piece
+    _hline(a, 540, 1100, 2500)                # continues 40 rows lower after a 100px gap
+    end, steps = bt.trace_bar(a, 503, 300)
+    assert 2500 <= end <= 2500 + LINE
+    assert len(steps) == 1
+    (x0, x1, y0, y1), = steps
+    assert 1000 <= x0 <= 1000 + LINE and x1 == 1100 and abs(y0 - 503) <= LINE and abs(y1 - 543) <= LINE
+
+
+def test_bridge_orphans_fills_a_seam_step_instead_of_reaching_far() -> None:
+    """Book 2 69_82: 尚四's bar piece sits ~35 rows above the page-81 bar across a
+    ~100px seam gap. The repair is the short step fill at the seam, not a long
+    bridge along the lower bar."""
+    a = _blank(w=3000)
+    # parent tree on the right: named root, hang-line, bar at row 540 with a child
+    _name(a, 10, 2803)
+    _vline(a, 200, 540, 2800)
+    _hline(a, 540, 1100, 2800)
+    _vline(a, 540, 840, 2800)
+    _name(a, 870, 2803)
+    # orphan piece at row 500: bar 300..1000 with one child
+    _hline(a, 500, 300, 1000)
+    _vline(a, 500, 800, 400)
+    _name(a, 830, 403)
+    out, imaginary = bt.bridge_orphans(a, bt.BookConfig())
+    assert _orphans(out) == []
+    assert len(imaginary) == 1
+    r0, c0, r1, c1 = imaginary[0]
+    assert 1000 <= c0 <= 1000 + LINE and c1 == 1100      # fills the seam step only
+
+
+def test_trace_started_at_the_bar_top_edge_records_no_step() -> None:
+    a = _blank()
+    _hline(a, 500, 300, 1000)                 # bar rows 500..506; parser reports row 500
+    end, steps = bt.trace_bar(a, 500, 300)
+    assert steps == []
+    assert 1000 <= end <= 1000 + LINE
