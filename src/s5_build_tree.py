@@ -915,6 +915,246 @@ def build_parse_sidecar(
     return {"nodes": node_recs, "scrubbed": scrubbed or []}
 
 
+# ---------------------------------------------------------------------------
+# Orphan bridging: repair generation bars broken at a page seam.
+#
+# Stage 4 pastes a subtree's pages side by side. A horizontal generation bar that
+# continues from one page onto the next loses the segment the page break ate, so
+# its left piece floats: the children hanging off it parse fine, but the bar
+# connects to no parent and comes out as an EMPTY node with children -- a
+# "bar-orphan" -- and everything under it becomes its own root. William's
+# trace-right rule (docs/bridge-ground-truth.md) redraws the missing segment:
+# trace the orphan bar RIGHT through hairline scan nicks to its true end, cross
+# the one page-break gap to the first ink of the next bar, and fill so the result
+# is one traversable line. A candidate is accepted only if the graph still parses
+# and the orphan count strictly drops. Ported from the v0 pass (src/v0/segment.py)
+# with every pixel constant scaled by V1_SCALE; drawn bridges are recorded to
+# ``{stem}.imaginary.json`` so the QA overlay can show them green.
+# ---------------------------------------------------------------------------
+
+# Vertical drift tolerance when a bridge looks for the bar it reconnects to: page-
+# to-page scan drift can put the next bar this many rows off the orphan's row.
+BRIDGE_CONNECT_YTOL = int(round(20 * V1_SCALE))  # 60px
+# Largest gap hopped while tracing a bar to its true end: a gap this small is a
+# scan nick that does not really break the bar; the first larger gap is the
+# page break the bridge fills.
+BAR_TRACE_HOP = int(round(40 * V1_SCALE))         # 120px
+# A real page-break bridge is always wider than the hop the trace stopped at.
+MIN_BRIDGE_SPAN = BAR_TRACE_HOP + 1
+# A reconnection landing this close to the graph's right edge means the bar's
+# parent is on an adjacent GRAPH (resolved at stitching), not a missing bar here.
+GRAPH_EDGE_MARGIN = int(round(40 * V1_SCALE))     # 120px
+# Half-height of the row band treated as "the bar" when reading its ink runs.
+BAR_BAND_HALF = int(round(8 * V1_SCALE))          # 24px
+# How far past a bridge end to look for the bar ink the bridge must touch.
+BAR_INK_REACH = int(round(12 * V1_SCALE))         # 36px
+# Column slack when matching an orphan's reported column to its bar run.
+BAR_RUN_SLACK = int(round(5 * V1_SCALE))          # 15px
+# A bar broken across several page breaks is closed by extending one bridge to
+# successive reconnections; bound the extension (real bars span <= 17 pages).
+MAX_BRIDGE_EXTENSIONS = 8
+
+
+def _ink_band(a: np.ndarray, row: int, half: int) -> np.ndarray:
+    """Per-column: is there any ink within ``half`` rows of ``row``?"""
+    lo, hi = max(0, row - half), min(a.shape[0], row + half + 1)
+    return (1 - a[lo:hi, :]).sum(axis=0) > 0
+
+
+def _bar_row_runs(a: np.ndarray, row: int) -> list[tuple[int, int]]:
+    """Horizontal ink runs ``(c0, c1)`` in the bar band around ``row``."""
+    present = _ink_band(a, row, BAR_BAND_HALF)
+    cols = np.where(present)[0]
+    if len(cols) == 0:
+        return []
+    breaks = np.where(np.diff(cols) > 1)[0]
+    starts = np.concatenate([[cols[0]], cols[breaks + 1]])
+    stops = np.concatenate([cols[breaks], [cols[-1]]])
+    return [(int(s), int(e)) for s, e in zip(starts, stops)]
+
+
+def find_orphans(nodes: list[LineNode], a: np.ndarray) -> list[LineNode]:
+    """Bar-orphans: nodes with children whose own name crop is blank."""
+    return [
+        n for n in nodes
+        if n.top is not None and n.bot is not None and n.children
+        and _is_empty_name(n, a)
+    ]
+
+
+def bar_true_end(a: np.ndarray, row: int, start_x: int) -> int:
+    """Rightmost column the bar at ``row`` reaches from ``start_x``, hopping nicks.
+
+    Walks right through ink within :data:`BRIDGE_CONNECT_YTOL` rows, hopping any
+    gap of at most :data:`BAR_TRACE_HOP` columns (a scan nick), and stops at the
+    first wider gap -- the page break. Returns the last ink column reached.
+    """
+    band = _ink_band(a, row, BRIDGE_CONNECT_YTOL)
+    w = a.shape[1]
+    x = min(start_x, w - 1)
+    while x < w:
+        if band[x]:
+            x += 1
+            continue
+        j = x
+        while j < w and not band[j]:
+            j += 1
+        if j - x > BAR_TRACE_HOP:
+            break
+        x = j
+    return x - 1
+
+
+def first_ink_right(a: np.ndarray, row: int, start_x: int) -> int | None:
+    """First ink column past the ink at ``start_x`` and the gap after it.
+
+    Skips the bar's own trailing ink, then the empty page-break gap, and returns
+    the first column of the next ink within the drift band -- the leftmost pixel
+    of the bar the bridge reconnects to. ``None`` if the scan runs off the edge.
+    """
+    band = _ink_band(a, row, BRIDGE_CONNECT_YTOL)
+    w = a.shape[1]
+    x = max(0, start_x)
+    while x < w and band[x]:
+        x += 1
+    while x < w and not band[x]:
+        x += 1
+    return int(x) if x < w else None
+
+
+def _bar_ink_y(a: np.ndarray, row: int, x: int, look: str) -> int | None:
+    """Row of the bar ink just outside a bridge end (``look`` = 'left'/'right').
+
+    Drift can put a bar a few rows off ``row``; the drawn bridge must touch it, so
+    scan the columns just beyond the end for the ink row nearest ``row``.
+    """
+    if look == "right":
+        xs = range(x + 1, x + 1 + BAR_INK_REACH)
+    else:
+        xs = range(x - 1, x - 1 - BAR_INK_REACH, -1)
+    h, w = a.shape
+    for xx in xs:
+        if not 0 <= xx < w:
+            continue
+        for dy in range(0, BRIDGE_CONNECT_YTOL + 1):
+            for y in (row + dy, row - dy):
+                if 0 <= y < h and a[y, xx] == 0:
+                    return y
+    return None
+
+
+def bridge_candidate(
+    a: np.ndarray, row: int, col: int
+) -> tuple[int, int, int] | None:
+    """The bridge ``(row, true_end, connect)`` for the bar-orphan at ``(row, col)``.
+
+    Anchors at the orphan bar's true right end and reaches across exactly one
+    page-break gap to the next bar. ``None`` when there is nothing to reach, when
+    the landing is the graph's own right edge (a cross-graph orphan), or when
+    the span is too short to be a page break.
+    """
+    runs = _bar_row_runs(a, row)
+    bar_run = next(
+        (r for r in runs if r[0] - BAR_RUN_SLACK <= col <= r[1] + BAR_RUN_SLACK), None
+    )
+    if bar_run is None:
+        return None
+    true_end = bar_true_end(a, row, bar_run[1])
+    connect = first_ink_right(a, row, true_end)
+    if connect is None or connect >= a.shape[1] - GRAPH_EDGE_MARGIN:
+        return None
+    if connect - true_end < MIN_BRIDGE_SPAN:
+        return None
+    return (row, true_end, connect)
+
+
+def draw_bridge(a: np.ndarray, row: int, c0: int, c1: int) -> np.ndarray:
+    """Copy of ``a`` with the bridge ``c0..c1`` filled so it touches both bars.
+
+    Fills the full row range spanned by ``row`` and the bar ink found just
+    outside each end, so drifted bars and the bridge form one traversable line.
+    """
+    ys = [row]
+    for y in (_bar_ink_y(a, row, c0, "left"), _bar_ink_y(a, row, c1, "right")):
+        if y is not None:
+            ys.append(y)
+    out = a.copy()
+    out[max(0, min(ys) - 2): min(a.shape[0], max(ys) + 3), c0: c1 + 1] = 0
+    return out
+
+
+def bridge_orphans(
+    a: np.ndarray, config: BookConfig
+) -> tuple[np.ndarray, list[list[int]]]:
+    """Repair the bar-orphans of one merged graph.
+
+    Re-derives the orphans each pass and, for each, proposes the trace-right
+    bridge. A bridge is accepted only if the graph still parses (no two-parent
+    weld) and the orphan count strictly drops; if one hop does not drop it, the
+    same bridge is extended to successive reconnections (a bar broken across
+    several page breaks) up to :data:`MAX_BRIDGE_EXTENSIONS` times. The strict-
+    drop gate is what rejects a bridge that would weld two subtrees and any
+    runaway extension across an already-connected bar.
+
+    Args:
+        a: The graph's binary ink grid (ignore regions already blanked).
+        config: The book's parse config, for the re-parse gate.
+
+    Returns:
+        ``(bridged, imaginary)``: the repaired grid and the bridges drawn, each
+        ``[r0, c0, r1, c1]`` in graph pixel coordinates.
+    """
+
+    def orphan_count(grid: np.ndarray) -> int:
+        return len(find_orphans(parse_graph(grid, config), grid))
+
+    out = a
+    imaginary: list[list[int]] = []
+    attempted: set[tuple[int, int, int]] = set()
+    while True:
+        base = orphan_count(out)
+        if base == 0:
+            break
+        progressed = False
+        for orphan in find_orphans(parse_graph(out, config), out):
+            assert orphan.top is not None and orphan.bot is not None
+            row, col = orphan.bot[0], orphan.top[1]
+            cand = bridge_candidate(out, row, col)
+            if cand is None or cand in attempted:
+                continue
+            attempted.add(cand)
+            r, c0, end = cand
+            accepted = None
+            for _ext in range(MAX_BRIDGE_EXTENSIONS):
+                trial = draw_bridge(out, r, c0, end)
+                try:
+                    if orphan_count(trial) < base:
+                        accepted = (trial, end)
+                        break
+                except ValueError:
+                    break  # two-parent weld -> stop extending
+                nxt = first_ink_right(out, r, bar_true_end(out, r, end))
+                if nxt is None or nxt >= out.shape[1] - GRAPH_EDGE_MARGIN:
+                    break
+                end = nxt
+            if accepted is None:
+                continue
+            out, end = accepted
+            imaginary.append([int(r), int(c0), int(r), int(end)])
+            logger.info("orphan-bridge: row=%d cols %d..%d", r, c0, end)
+            progressed = True
+            break
+        if not progressed:
+            break
+    return out, imaginary
+
+
+def _is_multipage(graph_stem: str) -> bool:
+    """``"67_68"`` -> True, ``"6_6"`` -> False. Only multi-page graphs have seams."""
+    start, end = graph_stem.split("_")
+    return start != end
+
+
 def _graph_files(graphs_dir: str) -> list[str]:
     """Return the graph PNG filenames sorted by their starting page index."""
     files = [f for f in os.listdir(graphs_dir) if f.endswith(".png")]
@@ -1026,6 +1266,21 @@ def build_tree(
         # the ink is gone from the parse, but the reviewer still sees what was removed.
         scrubbed = [list(r) for r in config.ignore_regions.get(filename, [])]
         logger.info("Parsing graph %s", filepath)
+
+        # Repair generation bars broken at page seams (multi-page graphs only --
+        # a single page has no seam, so Book 1 is untouched). The drawn bridges go
+        # to a sidecar the QA overlay renders green; a stale sidecar is removed.
+        imaginary: list[list[int]] = []
+        if _is_multipage(filename):
+            a, imaginary = bridge_orphans(a, config)
+            if imaginary:
+                logger.info("%s: bridged %d orphan bar(s)", filepath, len(imaginary))
+        imaginary_path = os.path.join(graphs_dir, f"{filename}.imaginary.json")
+        if imaginary:
+            with open(imaginary_path, "w") as fh:
+                json.dump(imaginary, fh)
+        elif os.path.exists(imaginary_path):
+            os.remove(imaginary_path)
 
         raw_lines = find_lines(a, threshold=config.line_threshold)
         line_ends: list[tuple[tuple[int, int], list[tuple[int, int]]]] = []
