@@ -83,14 +83,19 @@ class BookConfig:
             and localized so it never suppresses real tree ink.
     """
 
-    line_threshold: int = 70
-    end_threshold: int = 50
-    merge_max_drop: int = 200
-    merge_max_shift: int = 20
-    node_min_height: int = 60
-    node_max_height: int = 250
-    gen_row_min: int = 280
-    gen_row_max: int = 345
+    # Defaults are v1-native (full 600dpi) pixel constants -- ~3x the old v0
+    # normalized-canvas values (v0 trimmed width ~1150; v1 native tree ~3500).
+    # The parse geometry is structural, so every v1 book shares these defaults
+    # (as in v0, where Book 1 used pure defaults and Book 2 changed a single
+    # threshold). Per-graph one-offs live in ``ignore_regions``.
+    line_threshold: int = 200
+    end_threshold: int = 150
+    merge_max_drop: int = 600
+    merge_max_shift: int = 60
+    node_min_height: int = 150
+    node_max_height: int = 750
+    gen_row_min: int = 800
+    gen_row_max: int = 1050
     ignore_regions: dict[str, list[tuple[int, int, int, int]]] = dataclasses.field(
         default_factory=dict
     )
@@ -116,25 +121,86 @@ class BookConfig:
 # 25 admits those; Book 2's smallest genuine non-merge shift is 35 (the 8_10
 # stray-ink vertical), and Book 1 has no near-miss merges in [15,30), so the
 # looser bound is safe and scoped to Book 2 only.
-# v1-scan configs: full-native 600dpi resolution. Pixel constants are the old
-# v0 values scaled up ~3x (v0 trimmed width ~1150; v1 native tree width ~3500).
-# Confirmed against native Book 1 graphs: generation drops measured ~886-939px
-# (vs v0's ~300px, ratio ~2.95); node heights ~190-205px (vs v0's ~60-70).
-BOOK_CONFIGS: dict[str, BookConfig] = {
-    "book1": BookConfig(
-        line_threshold=200,
-        end_threshold=150,
-        merge_max_drop=600,
-        merge_max_shift=60,
-        node_min_height=150,
-        node_max_height=750,
-        gen_row_min=800,
-        gen_row_max=1050,
-    ),
+# Every v1 book uses the shared v1-native defaults (BookConfig()); the parse
+# geometry is structural across books. A book only needs an entry here if it
+# requires a genuine override (e.g. per-graph ``ignore_regions``); unlisted books
+# fall back to defaults via ``config_for``.
+# Per-graph stray pen marks to blank before parsing (``ignore_regions``, each
+# ``(r0, c0, r1, c1)``). These are hand-drawn vertical strokes a family member
+# added beside a name -- once red (ignored) but black in the v1 bitonal scans, so
+# they read as spurious lines and break the parse. Found by an irregular-vertical-
+# beside-a-glyph detector, then each was human-confirmed as a real pen mark (a
+# false positive on 13_16's 性 character was excluded). See docs/history.md.
+BOOK1_PEN_MARKS: dict[str, list[tuple[int, int, int, int]]] = {
+    "2_2": [(2374, 780, 2577, 810)],
+    "3_3": [(1460, 1388, 1700, 1428), (2408, 1370, 2598, 1410),
+            (3319, 1069, 3524, 1108), (4235, 1096, 4477, 1129),
+            (5203, 773, 5426, 807)],
+    "5_5": [(4286, 496, 4454, 526), (5180, 197, 5392, 232)],
+    "6_6": [(3306, 782, 3466, 816)],
+    "7_7": [(1502, 1077, 1654, 1105), (2419, 790, 2689, 827),
+            (3365, 807, 3523, 834), (4280, 507, 4459, 538),
+            (5214, 491, 5501, 527)],
+    "8_8": [(5276, 1395, 5432, 1427)],
+    "13_16": [(2372, 7848, 2635, 7890), (5224, 5449, 5532, 5484)],
 }
+
+BOOK_CONFIGS: dict[str, BookConfig] = {
+    "book1": BookConfig(ignore_regions=BOOK1_PEN_MARKS),
+}
+
+
+def config_for(book: str) -> BookConfig:
+    """The parse config for a book: its BOOK_CONFIGS entry, or the shared default."""
+    return BOOK_CONFIGS.get(book, BookConfig())
 
 # Linear-resolution ratio of a v1 native page to the v0 normalized canvas.
 V1_SCALE = 3.0
+
+# Name-crop geometry (v1 native 600dpi). Exactly v0's scheme: the name sits in the
+# node's own line segment (top..bot), so each crop grabs that band and is trimmed to
+# the ACTUAL name ink with a fixed margin -- both dimensions follow the real name (a
+# 3-char name is naturally taller, a wide glyph wider), nothing normalized, clipped,
+# or character-counted. (A fixed box inferred the character count from the ink
+# height, but the between-character gap and the riser gap are the same size, so it
+# oscillated and clipped/over-grew names. A later ink-walk down from the top over-
+# reached past the segment into hand-written annotation notes below a name. v0
+# cropped the segment and never had either problem.)
+#
+# v0's unscaled 40px half-window clipped every v1 name -- the ~3x scale to 120 fixes
+# that. NAME_TRIM_PAD is v0's 10px margin, scaled ~3x to 30px, kept on every side.
+NAME_HALF_WIDTH = int(round(40 * V1_SCALE))   # 120px: half-window for the raw grab
+NAME_TRIM_PAD = int(round(10 * V1_SCALE))     # 30px: margin kept around trimmed ink
+
+# Top/bottom trim smooths the row-ink profile before finding the name extent, so a
+# stray ADF smear speck (a faint dot far from the name) does not hold the box open
+# down to it. NAME_SPECK_WIN: smoothing window (a speck narrower than this averages
+# away; a real character stroke, ~200px tall, survives). NAME_ROW_INK_MIN: smoothed
+# ink fraction a row must clear to count as real character ink.
+NAME_SPECK_WIN = 41           # ~half a character; averages out isolated specks
+NAME_ROW_INK_MIN = 0.015      # smoothed ink fraction floor for a real name row
+
+# infer_ends geometry: recovering the missing end of a leaf/root (or page-clipped)
+# node by scanning its column. REACH is how far past the known end to look for the
+# name's far edge -- v0's 200px scaled ~3x so it clears a full 2-/3-char name at v1
+# native resolution (unscaled it reached only one char, truncating 2-char leaves).
+INFER_END_REACH = int(round(200 * V1_SCALE))  # 600px: column scan depth
+INFER_END_PAD = int(round(10 * V1_SCALE))     # 30px: margin past the recovered ink
+INFER_END_PROBE_HALF = int(round(30 * V1_SCALE))  # 90px: +-column probe half-width
+
+# Name-band insets: skip the connection-point pixels at each end of the segment
+# before cropping the name (v0's 5px, scaled).
+NAME_END_INSET = int(round(5 * V1_SCALE))     # 15px
+
+# sort_nodes generation-band tolerance: two nodes are on the same generation row
+# when their ``top`` rows are within this many px (v0's 60px, scaled). Siblings
+# hang from one bar so in practice sit on the identical row; the band is generous.
+GEN_BAND_TOL = int(round(60 * V1_SCALE))      # 180px
+
+# Blank-crop ink threshold: a name crop with fewer than this many inked pixels is
+# effectively empty (a seam stub, not a real name). This counts AREA, so it scales
+# with V1_SCALE**2 (a v1 crop has ~9x the pixels of the same v0 crop) -- v0's 30.
+BLANK_NAME_MAX_INK = int(round(30 * V1_SCALE * V1_SCALE))  # 270
 
 
 @dataclasses.dataclass
@@ -403,7 +469,7 @@ def drop_blank_leaf_nodes(
         blank = (
             n.top is not None
             and n.bot is not None
-            and int((1 - get_name_image(n, a)).sum()) < 30
+            and int((1 - get_name_image(n, a)).sum()) < BLANK_NAME_MAX_INK
         )
         if blank and not n.children:
             logger.info("dropping blank childless phantom node: %s", n)
@@ -413,12 +479,21 @@ def drop_blank_leaf_nodes(
 
 
 def infer_ends(nodes: list[LineNode], a: np.ndarray) -> None:
-    """Fill in any node end that ran off the edge of its page.
+    """Infer the missing end of a node that has only one endpoint.
 
-    A line dangling off the top or bottom of a page leaves a node with a missing
-    ``top`` or ``bot``. This walks inward from the known end along the node's
-    column until it meets ink, recovering the missing endpoint (with a small pad
-    so the later name crop keeps a margin). Mutates ``nodes`` in place.
+    A leaf (a child with no line segment of its own below it) has a ``top`` but no
+    ``bot``; a subgraph root has a ``bot`` but no ``top``; a line dangling off a
+    page edge likewise loses an end. In every case the name still occupies the
+    node's column, so this recovers the missing end by scanning the column from
+    :data:`INFER_END_REACH` px past the known end and walking back to the last
+    inked row -- i.e. the far edge of the name -- then padding
+    :data:`INFER_END_PAD` px for a crop margin. Mutates ``nodes`` in place.
+
+    :data:`INFER_END_REACH` must clear a full 2-/3-char name: it is v0's 200px
+    scaled to v1 native resolution (v0's ~65px/char made 200px ~3 chars; at v1's
+    ~200px/char an unscaled 200 reaches only ONE char, truncating every 2-char
+    leaf -- the bug this scaling fixes). The walk stops at the LAST ink within the
+    reach, so it takes the whole name but not a distant annotation past a gap.
 
     Args:
         nodes: The merged line nodes.
@@ -427,23 +502,23 @@ def infer_ends(nodes: list[LineNode], a: np.ndarray) -> None:
     for n in nodes:
         if n.top is None:
             assert n.bot is not None
-            top = max(0, n.bot[0] - 200)
+            top = max(0, n.bot[0] - INFER_END_REACH)
             y = n.bot[1]
-            min_y = max(0, y - 30)
-            max_y = min(a.shape[1] - 1, y + 30)
+            min_y = max(0, y - INFER_END_PROBE_HALF)
+            max_y = min(a.shape[1] - 1, y + INFER_END_PROBE_HALF)
             while top < n.bot[0] and 0 not in a[top][min_y:max_y]:
                 top += 1
-            top = max(0, top - 10)
+            top = max(0, top - INFER_END_PAD)
             n.top = (top, y)
         if n.bot is None:
             assert n.top is not None
-            bot = min(a.shape[0] - 1, n.top[0] + 200)
+            bot = min(a.shape[0] - 1, n.top[0] + INFER_END_REACH)
             y = n.top[1]
-            min_y = max(0, y - 30)
-            max_y = min(a.shape[1] - 1, y + 30)
+            min_y = max(0, y - INFER_END_PROBE_HALF)
+            max_y = min(a.shape[1] - 1, y + INFER_END_PROBE_HALF)
             while bot > n.top[0] and 0 not in a[bot][min_y:max_y]:
                 bot -= 1
-            bot = min(bot + 10, a.shape[0] - 1)
+            bot = min(bot + INFER_END_PAD, a.shape[0] - 1)
             n.bot = (bot, y)
 
 
@@ -516,8 +591,9 @@ def check_grid_consistency(
 def sort_nodes(nodes: list[LineNode]) -> list[LineNode]:
     """Order nodes top-to-bottom by generation-row, right-to-left within a row.
 
-    Nodes are banded into generation-rows (``top`` rows within 60px of each
-    other), then each band is ordered **right-to-left** so the eldest sibling
+    Nodes are banded into generation-rows (``top`` rows within
+    :data:`GEN_BAND_TOL` px of each other), then each band is ordered
+    **right-to-left** so the eldest sibling
     (rightmost in the book) comes first. This is the core RTL / eldest-first fix
     over the old left-to-right ordering (see the design spec); it makes the
     subsequent ID assignment BFS-by-generation, right-to-left.
@@ -543,7 +619,7 @@ def sort_nodes(nodes: list[LineNode]) -> list[LineNode]:
         j = i + 1
         while j < len(nodes_sorted):
             assert nodes_sorted[j].top is not None and nodes_sorted[i].top is not None
-            if abs(nodes_sorted[j].top[0] - nodes_sorted[i].top[0]) < 60:
+            if abs(nodes_sorted[j].top[0] - nodes_sorted[i].top[0]) < GEN_BAND_TOL:
                 group.append(nodes_sorted[j])
                 j += 1
             else:
@@ -555,63 +631,144 @@ def sort_nodes(nodes: list[LineNode]) -> list[LineNode]:
     return result
 
 
+def _tight_ink_box(node: LineNode, a: np.ndarray) -> tuple[int, int, int, int]:
+    """Trim to the actual name ink: ``(left, top, right, bottom)`` in graph px.
+
+    Exactly v0's scheme: the name lives in the node's own line segment (its
+    ``top..bot`` band), so grab that band -- a +-:data:`NAME_HALF_WIDTH` column
+    window between ``top`` and ``bot`` -- and trim to ANY ink with a
+    :data:`NAME_TRIM_PAD` margin on every side. Both dimensions follow the real
+    name; nothing is normalized, character-counted, or walked past the segment.
+
+    Cropping to the segment (not walking down through nearby ink) is what keeps a
+    node with hand-written annotation notes below its name (e.g. 7_7's 文迦, whose
+    notes sit just under it) from swallowing them. A degenerate stub (no ink)
+    falls back to the raw window so no dimension collapses.
+    """
+    assert node.top is not None and node.bot is not None
+    y = node.top[1]
+    top_row = node.top[0] + NAME_END_INSET
+    bot_row = max(node.bot[0] - NAME_END_INSET, top_row + 1)
+    left0 = max(0, y - NAME_HALF_WIDTH)
+    right0 = min(a.shape[1], y + NAME_HALF_WIDTH)
+    # ``top`` and ``bot`` are BOTH hard boundaries: ``top`` is where the node hangs
+    # from its parent (the name cannot be above it -- above sits the parent's riser
+    # tip) and ``bot`` is where the line fans out to children (the name cannot be
+    # below it -- below sits this node's own riser). So the measurement band is
+    # exactly [top_row, bot_row]; it never pads past either endpoint into a riser.
+    # The NAME_END_INSET already steps the band inside the connection points, and the
+    # top/bottom margins come from the whitespace between the endpoints and the ink.
+    band_top = top_row
+    band_bot = bot_row
+    band = a[band_top:band_bot, left0:right0]
+
+    col_present = np.sum(1 - band, axis=0)
+    if np.any(col_present):
+        inked = np.where(col_present > 0)[0]
+        left = left0 + max(int(inked[0]) - NAME_TRIM_PAD, 0)
+        right = left0 + min(int(inked[-1]) + NAME_TRIM_PAD, band.shape[1] - 1) + 1
+    else:
+        left, right = left0, right0
+
+    # Top/bottom trim to the real character ink, with the pad. A plain any-ink trim
+    # is fooled by a stray ADF speck (a faint smear dot far below the name), keeping
+    # a huge empty block down to it -- e.g. 8 (1 char + smear stroke) and 133 (2 char
+    # + a speck 250px below). So smooth the row profile over NAME_SPECK_WIN rows and
+    # keep only rows whose smoothed ink fraction clears NAME_ROW_INK_MIN: an isolated
+    # speck averages away, while a real (even thin) character stroke survives. This
+    # keeps thin top strokes like 点's dot while dropping artifact blocks.
+    win_w = band.shape[1]
+    row_frac = np.sum(1 - band, axis=1) / max(win_w, 1)
+    kern = np.ones(NAME_SPECK_WIN) / NAME_SPECK_WIN
+    smoothed = np.convolve(row_frac, kern, mode="same")
+    real = np.where(smoothed > NAME_ROW_INK_MIN)[0]
+    if len(real):
+        top = band_top + max(int(real[0]) - NAME_TRIM_PAD, 0)
+        bottom = band_top + min(int(real[-1]) + NAME_TRIM_PAD, band.shape[0] - 1) + 1
+    else:
+        top, bottom = top_row, bot_row
+    return left, top, right, bottom
+
+
+def name_box_coords(node: LineNode, a: np.ndarray) -> tuple[int, int, int, int]:
+    """The name box ``(left, top, right, bottom)`` in graph pixels.
+
+    Crops tight to the actual name ink with a :data:`NAME_TRIM_PAD` margin on every
+    side -- exactly v0's scheme (its 10px pad scaled ~3x to 30px for v1 native
+    resolution). Both dimensions follow the real name: a 3-character name is taller,
+    a wide glyph is wider. Nothing is normalized, clipped, or character-counted (an
+    earlier fixed box mis-counted characters where the between-character gap matched
+    the riser gap, and over-padded narrow glyphs to the rare widest one).
+
+    Single source of truth for the crop: :func:`get_name_image` crops to this box,
+    and Stage 5 records it in the parse sidecar so the QA overlay draws the exact
+    same box (no re-derivation, no drift).
+    """
+    return _tight_ink_box(node, a)
+
+
 def get_name_image(node: LineNode, a: np.ndarray) -> np.ndarray:
-    """Crop the name-character image sitting at a node's top endpoint.
+    """Crop the name image at a node's top endpoint.
 
-    Grabs the band between the node's ``top`` and ``bot`` around the node's
-    column, pads it, then trims the surrounding whitespace to a tight box around
-    the name ink.
+    Crops to :func:`name_box_coords` -- the name ink, height following the name
+    length and its width the glyph, both with a :data:`NAME_TRIM_PAD` margin.
 
-    A degenerate node (a short broken-line fragment near a page seam, height
-    ``bot - top`` only ~10px) has no name band and no ink to trim to. Rather than
-    crash the save on a zero-size crop -- and rather than silently drop the node,
-    which would hide a real mis-parse -- this returns whatever padded band it has
-    and never collapses either dimension below one pixel. Such nodes are already
-    surfaced by :func:`verify_nodes` (their height falls outside the band).
+    A degenerate node (a ~10px broken-line stub near a page seam) has almost no
+    ink; its box is still non-empty. Such nodes are surfaced by
+    :func:`verify_nodes`.
 
     Args:
         node: The line node whose name to crop (``top`` and ``bot`` set).
         a: The graph's binary ink grid.
 
     Returns:
-        The cropped, tightly-trimmed name image (binary ink grid); never empty.
+        The cropped name image (binary ink grid), fixed-box sized; never empty.
     """
-    assert node.top is not None and node.bot is not None
-    y = node.top[1]
-    # Clamp the vertical band so a fragment shorter than the 5px insets still
-    # yields a non-empty slice before padding.
-    top_row = node.top[0] + 5
-    bot_row = max(node.bot[0] - 5, top_row + 1)
-    name = a[top_row:bot_row, max(0, y - 40) : min(a.shape[1], y + 40)]
-    name = pad_image(name, "udlr")
+    left, top, right, bottom = name_box_coords(node, a)
+    return a[top:bottom, left:right]
 
-    # Trim left/right whitespace. If the band is all background (a degenerate
-    # fragment), keep the padded image rather than collapsing to zero width.
-    col_present = np.sum(1 - name, axis=0)
-    if np.any(col_present):
-        min_y = 0
-        while min_y < len(col_present) and not col_present[min_y]:
-            min_y += 1
-        min_y = max(min_y - 10, 0)
-        max_y = len(col_present) - 1
-        while max_y > min_y and not col_present[max_y]:
-            max_y -= 1
-        max_y = min(max_y + 10, len(col_present) - 1)
-        name = name[:, min_y:max_y]
 
-    # Trim top/bottom whitespace, with the same empty-band guard.
-    row_present = np.sum(1 - name, axis=1)
-    if np.any(row_present):
-        min_x = 0
-        while min_x < len(row_present) and not row_present[min_x]:
-            min_x += 1
-        min_x = max(min_x - 10, 0)
-        max_x = len(row_present) - 1
-        while max_x > 0 and not row_present[max_x]:
-            max_x -= 1
-        max_x = min(max_x + 10, len(row_present) - 1)
-        name = name[min_x:max_x, :]
-    return name
+def _is_empty_name(node: LineNode, a: np.ndarray) -> bool:
+    """True if the node's name crop is essentially blank -- a phantom/orphan node.
+
+    A cross-page connector broken at a seam leaves a tiny endpoint that reads as a
+    node but has no name under it. Threshold mirrors the QA's old check.
+    """
+    if node.top is None or node.bot is None:
+        return True
+    return int((1 - get_name_image(node, a)).sum()) < BLANK_NAME_MAX_INK
+
+
+def build_parse_sidecar(
+    nodes: list[LineNode], a: np.ndarray, scrubbed: list[list[int]] | None = None
+) -> dict:
+    """The reviewable parse geometry for one graph, for the QA overlay to read.
+
+    Records, per node: its name ``box`` ``[left, top, right, bottom]`` (from
+    :func:`name_box_coords`, the same box :func:`get_name_image` crops), its
+    ``top``/``bot`` endpoints, whether it is ``empty`` (a nameless orphan), and
+    its children's ``top`` points so the QA can draw parent->child edges. Also
+    records ``scrubbed`` -- the ``[r0, c0, r1, c1]`` boxes of stray pen marks
+    blanked before parsing (the graph's ``ignore_regions`` in its
+    :class:`BookConfig`) -- so the QA shows what was removed. This is the single
+    source of truth: the QA draws exactly what Stage 5 produced.
+    """
+    node_recs = []
+    for n in nodes:
+        if n.top is None or n.bot is None:
+            continue
+        left, top, right, bottom = name_box_coords(n, a)
+        node_recs.append({
+            "id": n.id,
+            "box": [int(left), int(top), int(right), int(bottom)],
+            "top": [int(n.top[0]), int(n.top[1])],
+            "bot": [int(n.bot[0]), int(n.bot[1])],
+            "empty": _is_empty_name(n, a),
+            "children_top": [
+                [int(c.top[0]), int(c.top[1])] for c in n.children if c.top is not None
+            ],
+        })
+    return {"nodes": node_recs, "scrubbed": scrubbed or []}
 
 
 def _graph_files(graphs_dir: str) -> list[str]:
@@ -693,11 +850,7 @@ def build_tree(
         Every domain :class:`src.model.Node` written, in ID order.
     """
     if config is None:
-        if book not in BOOK_CONFIGS:
-            raise KeyError(
-                f"no BookConfig for {book!r}; known books: {sorted(BOOK_CONFIGS)}"
-            )
-        config = BOOK_CONFIGS[book]
+        config = config_for(book)
 
     graphs_dir = os.path.join(books_dir, book, graphs_dir_name)
     names_dir = os.path.join(books_dir, book, names_dir_name)
@@ -725,6 +878,9 @@ def build_tree(
         filename = os.path.splitext(filepath)[0]
         a = get_image(os.path.join(graphs_dir, filepath))
         a = apply_ignore_regions(a, filename, config)
+        # Record the blanked pen-mark rectangles so the QA draws them (magenta):
+        # the ink is gone from the parse, but the reviewer still sees what was removed.
+        scrubbed = [list(r) for r in config.ignore_regions.get(filename, [])]
         logger.info("Parsing graph %s", filepath)
 
         raw_lines = find_lines(a, threshold=config.line_threshold)
@@ -781,6 +937,12 @@ def build_tree(
             for c in live_children:
                 father_of[c.id] = n.id
             node_records.append((n.id, a, n, f"{filename}_{local_index}"))
+
+        # Write the parse sidecar for this graph -- the QA overlay reads it
+        # instead of re-running the parser, so it draws exactly what Stage 5 made.
+        sidecar_path = os.path.join(graphs_dir, f"{filename}.parse.json")
+        with open(sidecar_path, "w") as fh:
+            json.dump(build_parse_sidecar(nodes, a, scrubbed), fh)
 
     # Infer generations: each root (no father) is generation 1; every child is
     # one generation deeper. Nodes unreachable from any root keep -1.
@@ -852,8 +1014,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--book",
         required=True,
-        choices=sorted(BOOK_CONFIGS),
-        help="Book to process (e.g. book1).",
+        help="Book to process (e.g. book1). Uses BOOK_CONFIGS[book] if present, "
+             "else the shared v1 defaults.",
     )
     parser.add_argument(
         "--books-dir",

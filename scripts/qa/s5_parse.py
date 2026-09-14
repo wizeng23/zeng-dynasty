@@ -27,6 +27,7 @@ import argparse
 import json
 import logging
 import os
+import time
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -36,7 +37,6 @@ from PIL import Image, ImageDraw, ImageFont
 Image.MAX_IMAGE_PIXELS = None
 
 from src import s3_segment as seg
-from src import s5_build_tree as bt
 from src.imaging import get_image
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 RED = (220, 30, 30)
 BLUE = (40, 90, 220)
 GREEN = (20, 170, 60)
+MAGENTA = (200, 30, 200)  # stray pen marks scrubbed before parsing
 
 
 def _to_rgb(a: np.ndarray) -> Image.Image:
@@ -61,55 +62,39 @@ def _font(size: int = 22) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def name_box(node: bt.LineNode, width: int) -> tuple[int, int, int, int]:
-    """The (left, top, right, bottom) name box for a node, matching get_name_image.
-
-    get_name_image crops the band between top and bot, in a +-40px column window
-    around the node's column. We draw that same window (in graph coordinates:
-    node.top/.bot are (row, col)).
-    """
-    assert node.top is not None and node.bot is not None
-    col = node.top[1]
-    top_row = node.top[0]
-    bot_row = node.bot[0]
-    left = max(0, col - 40)
-    right = min(width, col + 40)
-    return (left, top_row, right, bot_row)
-
-
 ORANGE = (240, 140, 0)
-
-
-def _is_empty_node(node: bt.LineNode, a: np.ndarray) -> bool:
-    """True if the node's name crop is essentially blank — a phantom node.
-
-    These are the seam-break artifacts: a horizontal connector line broken across
-    a page seam leaves a tiny endpoint that reads as a node, but no name sits
-    there. We flag them so the merge failures are visible at a glance.
-    """
-    if node.top is None or node.bot is None:
-        return True
-    return int((1 - bt.get_name_image(node, a)).sum()) < 30
 
 
 def draw_parse_overlay(
     a: np.ndarray,
-    nodes: list[bt.LineNode],
+    parse: dict,
     imaginary: list[list[int]] | None = None,
 ) -> Image.Image:
     """Overlay the parse: red = names + edges, ORANGE = empty phantoms, GREEN = bridges.
 
-    Empty nodes (blank name crop) are circled in orange — the seam-break artifacts
+    ``parse`` is the Stage-5 sidecar (``{stem}.parse.json``, from
+    :func:`src.s5_build_tree.build_parse_sidecar``): per node its name ``box``,
+    ``top``/``bot`` endpoints, ``empty`` flag, and ``children_top`` points. The QA
+    draws exactly what Stage 5 produced -- no re-parsing, no geometry re-derived
+    here (so the box can never drift from the actual crop).
+
+    Empty nodes (blank name crop) are circled in orange -- the seam-break artifacts
     where a cross-page connector failed to join, so a child mis-attaches to a
     nameless endpoint instead of its true cross-page parent.
 
-    ``imaginary`` (from the graph's ``{stem}.imaginary.json`` sidecar) lists the
-    synthetic connectors the orphan-bridge pass drew, each ``[r0, c0, r1, c1]``.
-    They are drawn in GREEN so a human can confirm every invented line joins the
-    right two fragments.
+    ``imaginary`` (from ``{stem}.imaginary.json``) lists the synthetic orphan-bridge
+    connectors, each ``[r0, c0, r1, c1]``, drawn GREEN for confirmation.
     """
     img = _to_rgb(a)
     draw = ImageDraw.Draw(img)
+    nodes = parse.get("nodes", [])
+
+    # Magenta = stray pen marks Stage 5 scrubbed before parsing. Filled semi-boldly
+    # + outlined so you see exactly what was removed (the ink is already gone from
+    # the graph, so this marks where it was).
+    scrubbed = parse.get("scrubbed", [])
+    for r0, c0, r1, c1 in scrubbed:
+        draw.rectangle([c0 - 6, r0 - 6, c1 + 6, r1 + 6], outline=MAGENTA, width=8)
 
     # Green synthetic bridges first, so red edges/boxes sit on top where they meet.
     for r0, c0, r1, c1 in imaginary or []:
@@ -117,44 +102,53 @@ def draw_parse_overlay(
         draw.ellipse([c1 - 13, r1 - 13, c1 + 13, r1 + 13], outline=GREEN, width=4)
         draw.ellipse([c0 - 13, r0 - 13, c0 + 13, r0 + 13], outline=GREEN, width=4)
 
-    # Edges: from each parent's fan-out point (bot) to each child's top, drawn as
-    # the book's actual routing — down from the parent to the sibling bar, across
-    # to the child's column, then down into the child. The parent's `bot` row is
-    # where its line fans out; the children's `top` rows share a common bar just
-    # below it, so we route through a bar at the parent's bot row.
+    # Edges: from each parent's fan-out point (bot) down to the sibling bar, across
+    # to each child's column, then down into the child. The bar is drawn HALFWAY
+    # between the parent's bot row and the children's top rows (rather than flush
+    # with the parent) so the fan-out reads clearly. Detected endpoints -- the
+    # parent fan-out point and each child top -- are circled for inspection.
+    ENDPOINT_R = 22
     for n in nodes:
-        if n.bot is None or not n.children:
-            continue
-        pr, pc = n.bot  # parent fan-out point (row, col)
-        bar_row = pr  # the horizontal sibling bar sits at the parent's bot row
-        for child in n.children:
-            if child.top is None:
-                continue
-            cr, cc = child.top  # child's own top (row, col)
-            # vertical from parent down to the bar, across to child column, down to child
-            draw.line([(pc, pr), (pc, bar_row)], fill=RED, width=3)
-            draw.line([(pc, bar_row), (cc, bar_row)], fill=RED, width=3)
-            draw.line([(cc, bar_row), (cc, cr)], fill=RED, width=3)
+        pr, pc = n["bot"]
+        kids = n["children_top"]
+        if kids:
+            # Bar sits midway between the parent bot and the shallowest child top.
+            child_top = min(cr for cr, _cc in kids)
+            bar_row = (pr + child_top) // 2
+            draw.line([(pc, pr), (pc, bar_row)], fill=RED, width=8)
+            for cr, cc in kids:
+                draw.line([(pc, bar_row), (cc, bar_row)], fill=RED, width=8)
+                draw.line([(cc, bar_row), (cc, cr)], fill=RED, width=8)
+        # Circle the parent's fan-out endpoint and every child-top endpoint.
+        draw.ellipse(
+            [pc - ENDPOINT_R, pr - ENDPOINT_R, pc + ENDPOINT_R, pr + ENDPOINT_R],
+            outline=RED, width=5)
+        for cr, cc in kids:
+            draw.ellipse(
+                [cc - ENDPOINT_R, cr - ENDPOINT_R, cc + ENDPOINT_R, cr + ENDPOINT_R],
+                outline=RED, width=5)
 
     # Name boxes (red) for real names; empty phantom nodes circled in orange.
     empty_count = 0
     for n in nodes:
-        if n.top is None or n.bot is None:
-            continue
-        left, top, right, bottom = name_box(n, a.shape[1])
-        if _is_empty_node(n, a):
+        if n["empty"]:
             empty_count += 1
-            r = 34
-            cx, cy = n.top[1], (n.top[0] + n.bot[0]) // 2
-            draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=ORANGE, width=5)
+            tr, tc = n["top"]
+            br = n["bot"][0]
+            r = 40
+            cy = (tr + br) // 2
+            draw.ellipse([tc - r, cy - r, tc + r, cy + r], outline=ORANGE, width=8)
         else:
-            draw.rectangle([left, top, right, bottom], outline=RED, width=3)
+            left, top, right, bottom = n["box"]
+            draw.rectangle([left, top, right, bottom], outline=RED, width=8)
 
     parts = []
     if empty_count:
         parts.append(f"{empty_count} empty (orphan) node(s)")
     if imaginary:
         parts.append(f"{len(imaginary)} green bridge(s)")
+    if scrubbed:
+        parts.append(f"{len(scrubbed)} scrubbed pen mark(s)")
     if parts:
         draw.text(
             (10, 10),
@@ -211,28 +205,37 @@ def stacked_compare(
     # band here, and onward to the parse row.
     col_w = max(im.width for im in raw_cols)  # uniform raw page width
     raw_band_w = col_w * len(order)
-    div = 3  # blue divider width between cropped pages
+    div = 10  # blue divider width between cropped pages
     crop_band_w = sum(im.width for im in crop_cols) + div * len(order)
     W = max(raw_band_w, crop_band_w)
 
-    gap = 20  # blue divider band between the two rows
+    gap = 130  # blue divider band between the two rows (holds the row-legend text)
     H = raw_h + gap + crop_h
     canvas = Image.new("RGB", (W, H), (255, 255, 255))
     draw = ImageDraw.Draw(canvas)
-    font = _font(30)
+    # These labels ride on the full-resolution composite (~11000px tall) but are
+    # displayed at ~1 screen height, so a small font renders illegibly. Size the
+    # font (and its label box) to the composite so it reads at the display scale.
+    LABEL_FONT = 120
+    LABEL_PAD = 24        # px of box padding around the text
+    font = _font(LABEL_FONT)
+    lh = LABEL_FONT + LABEL_PAD   # label-box height
 
     # Raw band: uniform columns, right-aligned as a block to the composite edge.
     raw_x0 = W - raw_band_w
     for idx, page_i in enumerate(order):
         x0 = raw_x0 + idx * col_w
         canvas.paste(raw_cols[idx], (x0 + col_w - raw_cols[idx].width, 0))
-        draw.line([(x0, 0), (x0, raw_h)], fill=BLUE, width=3)
+        draw.line([(x0, 0), (x0, raw_h)], fill=BLUE, width=6)
         label = f"p{page_i}"
         tb = draw.textbbox((0, 0), label, font=font)
         tw = tb[2] - tb[0]
         cx = x0 + col_w // 2
-        draw.rectangle([cx - tw // 2 - 7, 6, cx + tw // 2 + 7, 48], fill=BLUE)
-        draw.text((cx - tw // 2, 8), label, fill=(255, 255, 255), font=font)
+        draw.rectangle(
+            [cx - tw // 2 - LABEL_PAD, 6, cx + tw // 2 + LABEL_PAD, 6 + lh],
+            fill=BLUE)
+        draw.text((cx - tw // 2, 6 + LABEL_PAD // 2), label,
+                  fill=(255, 255, 255), font=font)
 
     # Cropped band: tight-packed pages (no column whitespace) with blue dividers,
     # right-aligned as a block so its right edge matches the raw band's.
@@ -249,12 +252,15 @@ def stacked_compare(
         tb = draw.textbbox((0, 0), label, font=font)
         tw = tb[2] - tb[0]
         lx = cx + crop_cols[idx].width // 2 - tw // 2
-        draw.rectangle([lx - 7, cy + 6, lx + tw + 7, cy + 48], fill=BLUE)
-        draw.text((lx, cy + 8), label, fill=(255, 255, 255), font=font)
+        draw.rectangle(
+            [lx - LABEL_PAD, cy + 6, lx + tw + LABEL_PAD, cy + 6 + lh], fill=BLUE)
+        draw.text((lx, cy + 6 + LABEL_PAD // 2), label,
+                  fill=(255, 255, 255), font=font)
         cx += crop_cols[idx].width
 
     draw.rectangle([0, raw_h, W, raw_h + gap], fill=BLUE)
-    draw.text((8, raw_h + gap + 2), "▲ raw scan   ▼ kept after crop", fill=(255, 255, 255), font=_font(22))
+    draw.text((8, raw_h + gap + 8), "▲ raw scan   ▼ kept after crop",
+              fill=(255, 255, 255), font=_font(90))
     return canvas
 
 
@@ -294,13 +300,14 @@ def _page_of(x: int, seam_pages: list[tuple[int, int]]) -> int:
     return page
 
 
-def _generation_rows(nodes: list[bt.LineNode]) -> list[int]:
+def _generation_rows(nodes: list[dict]) -> list[int]:
     """Sorted distinct generation-bar y-rows (each node's top row), top-first.
 
     Clusters node top-rows (a generation's names/bars sit at ~the same y) so a
-    bridge's y can be mapped to "gen N" (gen 1 = topmost bar).
+    bridge's y can be mapped to "gen N" (gen 1 = topmost bar). ``nodes`` are the
+    parse-sidecar node dicts.
     """
-    tops = sorted({n.top[0] for n in nodes if n.top is not None})
+    tops = sorted({n["top"][0] for n in nodes})
     rows: list[int] = []
     for t in tops:
         if not rows or t - rows[-1] > 60:  # new generation band
@@ -362,7 +369,6 @@ def qa_book(
     used to iterate on a few problem graphs while the rest are frozen.
     """
     seg_cfg = seg.BOOK_CONFIGS[book]
-    bt_cfg = bt.BOOK_CONFIGS[book]
     graphs_dir = os.path.join(books_dir, book, "4_graphs")
     qa_dir = os.path.join(books_dir, book, "qa")
     os.makedirs(qa_dir, exist_ok=True)
@@ -379,12 +385,20 @@ def qa_book(
         stem = os.path.splitext(fname)[0]
         start, end = (int(x) for x in stem.split("_"))
         a = get_image(os.path.join(graphs_dir, fname))
-        a = bt.apply_ignore_regions(a, stem, bt_cfg)
 
-        nodes = bt.parse_graph(a, bt_cfg, graph_stem=stem)
-        sidecar = os.path.join(graphs_dir, f"{stem}.imaginary.json")
-        imaginary = json.load(open(sidecar)) if os.path.exists(sidecar) else None
-        parse_img = draw_parse_overlay(a, nodes, imaginary)
+        # Read Stage 5's parse sidecar rather than re-parsing (single source of
+        # truth; also fast). Missing sidecar => Stage 5 hasn't been run here.
+        parse_path = os.path.join(graphs_dir, f"{stem}.parse.json")
+        if not os.path.exists(parse_path):
+            logger.warning("%s: no %s.parse.json -- run Stage 5 (s5_build_tree) "
+                           "first; skipping", stem, stem)
+            continue
+        parse = json.load(open(parse_path))
+        nodes = parse["nodes"]
+
+        imag_path = os.path.join(graphs_dir, f"{stem}.imaginary.json")
+        imaginary = json.load(open(imag_path)) if os.path.exists(imag_path) else None
+        parse_img = draw_parse_overlay(a, parse, imaginary)
         parse_name = f"{stem}_parse.png"
         parse_img.save(os.path.join(qa_dir, parse_name))
 
@@ -392,12 +406,7 @@ def qa_book(
         compare_name = f"{stem}_compare.png"
         compare_img.save(os.path.join(qa_dir, compare_name))
 
-        n_orphans = sum(
-            1
-            for n in nodes
-            if n.top is not None and n.bot is not None and n.children
-            and _is_empty_node(n, a)
-        )
+        n_orphans = sum(1 for n in nodes if n["empty"] and n["children_top"])
         # Page-seam x-positions (left->right = end..start) and generation-bar y-rows,
         # so bridge notes can read "p13" and "gen 2" instead of raw pixels.
         seam_pages = _page_seams(book, start, end, seg_cfg, books_dir)
@@ -420,23 +429,30 @@ def _write_index(
     path: str, book: str, rows: list[tuple[str, str, str, int, int, int, str]]
 ) -> None:
     total_nodes = sum(r[3] for r in rows)
-    # The compare row is shown at a fixed height; the parse row is scaled to the
-    # SAME source-pixel-to-screen ratio so its tree renders the same size as the
-    # compare tree (both come from the same scans at the same DPI). Per card:
-    #   parse_h = COMPARE_H_VH * (parse_img_h / compare_img_h)
-    compare_h_vh = 80
+    # EVERY image -- compare and parse, across all graphs -- is displayed at the
+    # SAME source-pixel-to-screen ratio (a fixed pixels-per-vh), so a name glyph is
+    # the same on-screen size in the raw page, the crop, and the parse graph, and
+    # you can compare stage-to-stage side by side. Display height (vh) is simply
+    # ``image_pixel_height / PX_PER_VH``. PX_PER_VH ~= a full-page compare image
+    # (~11000px) at ~104vh, the size that reads well; taller graphs get taller (and
+    # scroll), shorter ones get shorter, but the *scale* never changes.
+    PX_PER_VH = 106.0
+    # Cache-buster: a fresh version stamp each regeneration so the browser refetches
+    # the overlays instead of showing stale cached PNGs (same filename, new content).
+    ver = int(time.time())
     card_parts = []
     for stem, parse, compare, n, parse_ih, compare_ih, notes in rows:
-        parse_h_vh = round(compare_h_vh * parse_ih / compare_ih, 1) if compare_ih else 40
+        compare_h_vh = round(compare_ih / PX_PER_VH, 1)
+        parse_h_vh = round(parse_ih / PX_PER_VH, 1)
         card_parts.append(
             f"""
     <section class="graph">
       <h2>{stem} <span class="count">{n} nodes</span></h2>
       <p class="notes">{notes}</p>
       <figure><figcaption>① raw scan (top) → ② kept after crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
-        <img class="compare" src="{compare}" style="height:{compare_h_vh}vh" loading="lazy"></figure>
-      <figure><figcaption>③ parse: red = detected names + edges (same size as row ②)</figcaption>
-        <img class="parse" src="{parse}" style="height:{parse_h_vh}vh" loading="lazy"></figure>
+        <img class="compare" src="{compare}?v={ver}" style="height:{compare_h_vh}vh" loading="lazy"></figure>
+      <figure><figcaption>③ parse: red = detected names + edges (same scale as rows ①②)</figcaption>
+        <img class="parse" src="{parse}?v={ver}" style="height:{parse_h_vh}vh" loading="lazy"></figure>
     </section>"""
         )
     cards = "\n".join(card_parts)
@@ -478,6 +494,7 @@ def _write_index(
   <span style="color:#f87171">red</span> = detected names/edges,
   <span style="color:#f08c00">orange</span> = empty orphan node,
   <span style="color:#22c55e">green</span> = synthetic orphan-bridge,
+  <span style="color:#c81ec8">magenta</span> = scrubbed pen mark,
   <span style="color:#93c5fd">blue</span> = raw-vs-cropped page columns</header>
 {cards}
 </body></html>"""

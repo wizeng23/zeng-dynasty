@@ -178,16 +178,36 @@ def pinyin_of(text: str) -> str:
     return " ".join(p[0] for p in pinyin(text, style=Style.TONE))
 
 
+def _ink_bbox(image: Image.Image) -> tuple[int, int, int, int]:
+    """The (left, top, right, bottom) bounding box of the crop's actual ink.
+
+    The name crops carry a uniform ~30px whitespace pad on every side (Stage 5's
+    NAME_TRIM_PAD). All character-count / split geometry must ignore that pad and
+    work on the ink itself; the pad is only for display.
+    """
+    a = np.asarray(image.convert("L"))
+    ink = a < 128
+    cols = np.where(ink.any(axis=0))[0]
+    rows = np.where(ink.any(axis=1))[0]
+    if len(cols) == 0 or len(rows) == 0:
+        return (0, 0, image.width, image.height)
+    return (int(cols[0]), int(rows[0]), int(cols[-1]) + 1, int(rows[-1]) + 1)
+
+
 def char_count(image: Image.Image) -> int:
     """Estimate the number of stacked characters from the crop's aspect ratio.
 
-    Names are single glyphs in ~square cells stacked vertically, so
-    ``round(height / width)`` is the count (exact on all 163 Book 1 crops).
+    Names are single glyphs in ~square cells stacked vertically, so the count is
+    ``round(ink_height / ink_width)``. The ratio is measured on the INK bounding
+    box, not the padded crop: the ~30px pad on each side widens the crop and drags
+    the ratio down, so a padded 3-char name (e.g. 宪七郎, ink ~136x451 -> 3.32, but
+    padded 196x486 -> 2.48) would misround to 2 and mis-split.
     """
-    w, h = image.size
-    if w == 0:
+    l, t, r, b = _ink_bbox(image)
+    iw, ih = r - l, b - t
+    if iw <= 0:
         return 1
-    return max(1, round(h / w))
+    return max(1, round(ih / iw))
 
 
 def split_bands(image: Image.Image, n: int) -> list[tuple[int, int]]:
@@ -238,6 +258,34 @@ def save_override(book: str, key: str, name: str) -> None:
         json.dump(overrides, f, ensure_ascii=False, indent=2, sort_keys=True)
 
 
+def _flags_path(book: str) -> str:
+    return os.path.join(DATA_DIR, f"{book}_flags.json")
+
+
+def _load_flags(book: str) -> set[str]:
+    """Return the set of node provenances flagged 'impossible' (unresolvable name).
+
+    Persisted server-side (not just in the browser) because it is a real annotation
+    about the data -- names whose correct digital character couldn't be determined
+    and should be revisited -- separate from the reviewer's session progress.
+    """
+    path = _flags_path(book)
+    if not os.path.exists(path):
+        return set()
+    return set(json.load(open(path)))
+
+
+def save_flag(book: str, prov: str, flagged: bool) -> None:
+    """Set or clear the 'impossible' flag for a node (by provenance)."""
+    flags = _load_flags(book)
+    if flagged:
+        flags.add(prov)
+    else:
+        flags.discard(prov)
+    with open(_flags_path(book), "w") as f:
+        json.dump(sorted(flags), f, ensure_ascii=False, indent=2)
+
+
 def build_cells() -> list[dict]:
     """One row per CHARACTER across all books, in book -> id -> char order.
 
@@ -249,9 +297,17 @@ def build_cells() -> list[dict]:
         jsonl = os.path.join(DATA_DIR, f"{book}.jsonl")
         if not os.path.exists(jsonl):
             continue
+        # Skip a book whose v1 name crops haven't been generated yet (Stage 5 not
+        # re-run): its cells would all show broken images. It reappears once
+        # books/{book}/5_names/ is populated.
+        names_dir = os.path.join(BOOKS_DIR, book, "5_names")
+        if not (os.path.isdir(names_dir) and os.listdir(names_dir)):
+            logger.info("skipping %s: no v1 crops in %s", book, names_dir)
+            continue
         sidecar_path = os.path.join(DATA_DIR, f"{book}_names.json")
         sidecar = json.load(open(sidecar_path)) if os.path.exists(sidecar_path) else {}
         overrides = _load_overrides(book)
+        flags = _load_flags(book)
         page_ranks = _page_ranks(book)
         nodes = [json.loads(line) for line in open(jsonl) if line.strip()]
         nodes.sort(key=lambda n: n["id"])
@@ -265,12 +321,12 @@ def build_cells() -> list[dict]:
             crop = n["name_images"][0] if n.get("name_images") else ""
             crop_name = os.path.basename(crop) if crop else ""
             # Determine character count from the crop aspect ratio; fall back to
-            # the OCR length when there's no crop.
+            # the OCR length when there's no crop. Read the v1 crop at the path the
+            # jsonl records (books/{book}/5_names/{id}.png) -- NOT the archived v0
+            # crops.
             n_by_ratio = None
-            if crop_name:
-                fpath = os.path.join(BOOKS_DIR, book, "v0", "names", crop_name)
-                if os.path.exists(fpath):
-                    n_by_ratio = char_count(Image.open(fpath))
+            if crop and os.path.exists(crop):
+                n_by_ratio = char_count(Image.open(crop))
             n_chars = n_by_ratio or max(1, len(ocr_name))
             mismatch = bool(ocr_name) and n_by_ratio is not None and n_by_ratio != len(ocr_name)
             # Page from the parse (_page_ranks gives the correct page per node); the
@@ -310,6 +366,7 @@ def build_cells() -> list[dict]:
                         "low_conf": entry.get("low_conf", False),
                         "override": overrides.get(key, ""),
                         "count_mismatch": mismatch,
+                        "flagged": prov in flags,
                     }
                 )
     return cells
@@ -325,10 +382,12 @@ PAGE = r"""<!doctype html>
   :root {
     --bg:#f7f5f0; --fg:#1a1a1a; --muted:#6b6b6b; --card:#fff; --line:#e3ddd2;
     --focus:#8a1f1f; --low:#c25a00; --low-bg:#fbe9d6; --ovr:#2f7d32; --ovr-bg:#dcefdc;
+    --flag:#8a2be2; --flag-bg:#efe4fb;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#1a1815; --fg:#ececec; --muted:#9a9a9a; --card:#252220; --line:#3a352f;
-      --focus:#e07a7a; --low:#e0913a; --low-bg:#3a2a18; --ovr:#7bc47f; --ovr-bg:#1e2e1e; }
+      --focus:#e07a7a; --low:#e0913a; --low-bg:#3a2a18; --ovr:#7bc47f; --ovr-bg:#1e2e1e;
+      --flag:#b57bff; --flag-bg:#2a1e3a; }
   }
   * { box-sizing:border-box; }
   body { margin:0; font-family:ui-sans-serif,system-ui,sans-serif; background:var(--bg);
@@ -360,6 +419,34 @@ PAGE = r"""<!doctype html>
   .cell.low .cropbox { background:#fff; }
   .cell.ovr .txt { border-color:var(--ovr); background:var(--ovr-bg); }
   .cell.mismatch .cropbox { box-shadow:0 0 0 2px var(--low) inset; }
+  /* reviewed = you pressed Enter (confirmed) on this cell */
+  .cell.reviewed .cropbox::after { content:"✓"; position:absolute; margin:-6px 0 0 -6px;
+    color:var(--ovr); font-size:20px; font-weight:700; }
+  .cell.reviewed .cropbox { position:relative; }
+  .cell.reviewed { opacity:.7; }
+  /* flagged = 'impossible' (can't determine the digital character); revisit later.
+     Independent of reviewed. Purple frame + ⚑ badge. */
+  .cell.flagged .cropbox, .cell.flagged .txt { border-color:var(--flag); }
+  .cell.flagged .txt { background:var(--flag-bg); }
+  .cell.flagged .cropbox { position:relative; }
+  .cell.flagged .cropbox::before { content:"⚑"; position:absolute; top:2px; right:6px;
+    color:var(--flag); font-size:22px; font-weight:700; }
+  /* Status band = the obvious per-cell state stripe at the very top of the cell.
+     Green = reviewed, purple = flagged, both = split. Neutral otherwise. */
+  .status { width:var(--cw); height:26px; border-radius:6px; display:flex;
+    align-items:center; justify-content:center; font-size:12px; font-weight:700;
+    letter-spacing:.03em; color:var(--muted); background:var(--card);
+    border:1px solid var(--line); overflow:hidden; }
+  .status .half { flex:1; height:100%; display:flex; align-items:center;
+    justify-content:center; }
+  .cell.reviewed .status { color:#fff; background:var(--ovr); border-color:var(--ovr); }
+  .cell.flagged .status { color:#fff; background:var(--flag); border-color:var(--flag); }
+  .cell.reviewed.flagged .status { background:none; padding:0; font-size:9.5px;
+    letter-spacing:0; }
+  .cell.reviewed.flagged .status .rev { background:var(--ovr); color:#fff; }
+  .cell.reviewed.flagged .status .flg { background:var(--flag); color:#fff; }
+  .status .half:first-child { border-radius:6px 0 0 6px; }
+  .status .half:last-child { border-radius:0 6px 6px 0; }
   .tag { font-size:11px; line-height:1.35; color:var(--muted);
     font-variant-numeric:tabular-nums; min-height:74px; text-align:center; }
   .py { font-size:13px; color:var(--muted); height:18px; letter-spacing:.02em;
@@ -379,12 +466,15 @@ PAGE = r"""<!doctype html>
       <span><span class="swatch" style="background:var(--low)"></span>low-conf</span>
       <span><span class="swatch" style="background:var(--ovr)"></span>edited</span>
       <span><span class="swatch" style="background:var(--low);box-shadow:0 0 0 2px var(--low) inset"></span>count mismatch</span>
+      <span><span class="swatch" style="background:var(--ovr)"></span>✓ reviewed</span>
+      <span><span class="swatch" style="background:var(--flag)"></span>⚑ flagged</span>
       <label class="filter"><input type="checkbox" id="onlyLow"> only low-conf</label>
+      <label class="filter"><input type="checkbox" id="onlyFlag"> only flagged</label>
     </div>
   </header>
   <div class="stage"><div class="strip" id="strip"></div></div>
   <div class="footer">
-    <span class="hint">← / → move · type to edit the focused character · Enter save+next · Esc revert</span>
+    <span class="hint">← / → move (no review) · type to edit · Enter = confirm ✓ + next · Esc revert · Alt+F = flag ⚑ (impossible, revisit)</span>
     <span class="saved" id="saved"></span>
   </div>
 
@@ -392,17 +482,35 @@ PAGE = r"""<!doctype html>
 let cells = [];
 let idx = 0;
 let onlyLow = false;
+let onlyFlag = false;
 const KEY = "ocr_review_char_pos";
+const REVIEWED_KEY = "ocr_review_reviewed";  // per-book set of confirmed cell keys
 const WINDOW = 8; // cells rendered each side of focus
 const $ = (id) => document.getElementById(id);
 
-function visible() { return cells.map((c,i)=>i).filter(i => !onlyLow || cells[i].low_conf); }
+// A cell is 'reviewed' only once you press Enter (confirm) on it -- cells you
+// filter/scroll past without confirming never count. Keyed by book+provenance+char
+// so it survives reloads and re-parses.
+let reviewed = new Set();
+try { reviewed = new Set(JSON.parse(localStorage.getItem(REVIEWED_KEY) || "[]")); } catch {}
+const cellKey = (c) => `${c.book}:${c.provenance}#${c.char_index}`;
+function markReviewed(c) {
+  reviewed.add(cellKey(c));
+  try { localStorage.setItem(REVIEWED_KEY, JSON.stringify([...reviewed])); } catch {}
+}
+
+function visible() {
+  return cells.map((c,i)=>i).filter(i =>
+    (!onlyLow || cells[i].low_conf) && (!onlyFlag || cells[i].flagged));
+}
 
 function cellClasses(c, focused) {
   let k = "cell";
   if (c.low_conf) k += " low";
   if (c.override) k += " ovr";
   if (c.count_mismatch) k += " mismatch";
+  if (reviewed.has(cellKey(c))) k += " reviewed";
+  if (c.flagged) k += " flagged";
   if (focused) k += " focus";
   return k;
 }
@@ -432,7 +540,14 @@ function render() {
       lines.push(scoreLbl);
       tag = lines.join("<br>");
     }
+    const rev = reviewed.has(cellKey(c)), flg = c.flagged;
+    let status;
+    if (rev && flg) status = `<span class="half rev">✓&nbsp;REVIEWED</span><span class="half flg">⚑&nbsp;FLAGGED</span>`;
+    else if (rev) status = "✓ REVIEWED";
+    else if (flg) status = "⚑ FLAGGED";
+    else status = "unreviewed";
     el.innerHTML =
+      `<div class="status">${status}</div>` +
       `<div class="tag">${tag}</div>` +
       `<div class="cropbox">${c.crop_url ? `<img src="${c.crop_url}">` : ""}</div>` +
       (focused
@@ -449,7 +564,11 @@ function render() {
   const rendered = to - from + 1;
   const focusOffset = (pos - from);
   strip.style.transform = `translateX(${(rendered/2 - focusOffset - 0.5) * cellPx}px)`;
-  $("progress").textContent = `${pos+1} / ${vis.length}  (${cells.length} chars total)`;
+  const revCount = cells.filter(c => reviewed.has(cellKey(c))).length;
+  const flagCount = cells.filter(c => c.flagged).length;
+  const scope = onlyFlag ? "flagged" : (onlyLow ? "low-conf" : "all");
+  $("progress").textContent =
+    `${pos+1} / ${vis.length} ${scope}  ·  ${revCount}/${cells.length} reviewed  ·  ${flagCount} flagged`;
   const input = $("focusInput");
   if (input) { input.focus(); input.select(); input.oninput = markDirty; }
   localStorage.setItem(KEY, idx);
@@ -508,9 +627,32 @@ function step(dir) {
   idx = vis[pos]; render();
 }
 
+// Toggle the 'impossible' flag on the focused NODE (all its character cells share
+// the flag, keyed by provenance). Independent of reviewed. Persisted server-side.
+async function toggleFlag() {
+  const c = cells[idx];
+  const now = !c.flagged;
+  const res = await fetch("/flag", { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({book:c.book, prov:c.provenance, flagged:now}) });
+  if (res.ok) {
+    for (const cc of cells) if (cc.book===c.book && cc.provenance===c.provenance) cc.flagged = now;
+    $("saved").textContent = now ? "flagged ⚑" : "unflagged";
+    render();
+  } else { $("saved").textContent = "flag failed"; }
+}
+
 document.addEventListener("keydown", (e) => {
   if (e.isComposing) return; // let the IME finish
-  if (e.key === "Enter") { e.preventDefault(); saveFocus().then(()=>step(1)); }
+  // Alt+F toggles the 'impossible' flag on the focused node. Alt so it never
+  // collides with typing an 'f' (or a Chinese char) into the name field.
+  if ((e.altKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
+    e.preventDefault(); toggleFlag(); return;
+  }
+  // Enter = confirm: save, mark THIS cell reviewed, advance. Arrows just move
+  // (and save any pending edit) without marking reviewed -- so scrolling/skipping
+  // past a cell never counts it as reviewed.
+  if (e.key === "Enter") { e.preventDefault(); const c = cells[idx];
+    saveFocus().then(()=>{ markReviewed(c); step(1); }); }
   else if (e.key === "ArrowRight") { e.preventDefault(); saveFocus().then(()=>step(1)); }
   else if (e.key === "ArrowLeft") { e.preventDefault(); saveFocus().then(()=>step(-1)); }
   else if (e.key === "Escape") {
@@ -524,6 +666,12 @@ document.addEventListener("keydown", (e) => {
 });
 $("onlyLow").onchange = (e) => {
   onlyLow = e.target.checked;
+  const vis = visible();
+  if (vis.length && !vis.includes(idx)) idx = vis[0];
+  render();
+};
+$("onlyFlag").onchange = (e) => {
+  onlyFlag = e.target.checked;
   const vis = visible();
   if (vis.length && !vis.includes(idx)) idx = vis[0];
   render();
@@ -542,8 +690,8 @@ fetch("/data").then(r=>r.json()).then(d=>{
 
 
 def _crop_band_png(book: str, fname: str, i: int, n: int) -> bytes:
-    """Return PNG bytes of the i-th (of n) character band of a name crop."""
-    fpath = os.path.join(BOOKS_DIR, book, "v0", "names", os.path.basename(fname))
+    """Return PNG bytes of the i-th (of n) character band of a v1 name crop."""
+    fpath = os.path.join(BOOKS_DIR, book, "5_names", os.path.basename(fname))
     im = Image.open(fpath).convert("L")
     bands = split_bands(im, n)
     if 0 <= i < len(bands):
@@ -592,15 +740,27 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, b"not found", "text/plain")
 
     def do_POST(self):
-        if urlparse(self.path).path != "/save":
+        route = urlparse(self.path).path
+        if route not in ("/save", "/flag"):
             self._send(404, b"not found", "text/plain")
             return
         length = int(self.headers.get("Content-Length", 0))
         payload = json.loads(self.rfile.read(length) or b"{}")
         book = payload.get("book")
+        if book not in BOOKS:
+            self._send(400, json.dumps({"error": "bad request"}))
+            return
+        if route == "/flag":
+            prov = payload.get("prov")
+            if not prov:
+                self._send(400, json.dumps({"error": "bad request"}))
+                return
+            save_flag(book, prov, bool(payload.get("flagged")))
+            self._send(200, json.dumps({"ok": True}))
+            return
         key = payload.get("key")
         name = payload.get("name", "").strip()
-        if book not in BOOKS or not key:
+        if not key:
             self._send(400, json.dumps({"error": "bad request"}))
             return
         save_override(book, key, name)

@@ -98,22 +98,87 @@ BOOK_CONFIGS: dict[str, BookConfig] = {
 }
 
 
+# Top-border detection (see _top_border_cut). A row is part of a border band when
+# its ink spans at least this fraction of the page width; bands are the printed
+# horizontal frame lines. The v1 ADF scans smeared ink, so some pages carry extra
+# whitespace (or a faint phantom line) above the true top border -- a fixed inset
+# would leave it, misaligning the graph top across pages at the merge seam. So the
+# top is cut past the *bottommost* border band instead of at a fixed offset.
+BORDER_ROW_COVERAGE = 0.5
+BORDER_SEARCH_ROWS = _s(120)   # look for border bands within the top ~350px
+
+
+def _top_border_cut(a: np.ndarray) -> int:
+    """Row to cut the top at: just past the bottommost full-width border band.
+
+    Scans the top ``BORDER_SEARCH_ROWS`` for bands of rows whose ink covers
+    >=``BORDER_ROW_COVERAGE`` of the width (the printed frame lines: a thick outer
+    line, then a thin inner line). Returns the row just below the lowest band, so
+    both border lines and any smear/whitespace above them are removed. Falls back
+    to the fixed ``_s(30)`` inset when no band is found.
+    """
+    cols = a.shape[1]
+    cov = np.sum(1 - a[:BORDER_SEARCH_ROWS], axis=1) / cols
+    black = cov >= BORDER_ROW_COVERAGE
+    last_band_end = -1
+    r = 0
+    while r < len(black):
+        if black[r]:
+            while r < len(black) and black[r]:
+                r += 1
+            last_band_end = r - 1
+        else:
+            r += 1
+    return last_band_end + 1 if last_band_end >= 0 else _s(30)
+
+
 def trim_borders(a: np.ndarray) -> np.ndarray:
     """Trim the page's printed border frame off all four sides.
 
-    The top and bottom insets are always border. For the left/right border,
-    whichever side carries more ink in its outer band is the framed side and gets
-    the larger trim; the other side gets the smaller. Scaled from v0's
-    30px/120px insets.
+    The bottom inset is always border. The top is cut past the bottommost border
+    band (:func:`_top_border_cut`) so the graph top is standardized regardless of
+    smear-induced whitespace above the border. For the left/right border, whichever
+    side carries more ink in its outer band is the framed side and gets the larger
+    trim; the other side gets the smaller. Insets scaled from v0's 30px/120px.
     """
     rows, cols = a.shape
     small = _s(30)
     big = _s(120)
-    a = a[small : rows - small, :]
+    a = a[_top_border_cut(a) : rows - small, :]
     col_present = np.sum(1 - a, axis=0)
     if np.sum(col_present[:big]) > np.sum(col_present[-big:]):
         return a[:, big : cols - small]
     return a[:, small : cols - big]
+
+
+# trim_borders leaves the page's TOP edge just past the top inner border and its
+# BOTTOM edge at the bottom inner border (the frame is removed). Measured from the
+# inner border, the graph sits inside a fixed margin: it starts ~250px below the top
+# inner border and ends ~200px above the bottom inner border. Whitening exactly that
+# margin (anchored to the trimmed edges = the inner borders) wipes any residual
+# smear, page-number text, or faint phantom line there -- which would otherwise
+# corrupt shrink_page's column/row analysis (a stray full-width smear row makes the
+# horizontal grow-walk latch across the whole width) -- without ever touching the
+# graph. These are measured v1-native pixel margins, so they are NOT re-scaled.
+# (An earlier fixed ~300px bottom slab, and a density-thresholded adaptive version,
+# both cut into low-hanging 3-char leaf names like page 13's 信九郎/宪七郎; anchoring
+# to the inner border at the true 200px margin is what fixes it.)
+WHITEN_TOP = 250     # px below the top inner border (graph starts here)
+WHITEN_BOTTOM = 200  # px above the bottom inner border (graph ends here)
+
+
+def whiten_margins(a: np.ndarray) -> np.ndarray:
+    """Blank the fixed graph-free margin inside each inner border (top & bottom).
+
+    ``a`` is a border-trimmed page, so its top edge is the top inner border and its
+    bottom edge the bottom inner border. The graph lives ``WHITEN_TOP`` px below the
+    top and ``WHITEN_BOTTOM`` px above the bottom; whitening those margins clears
+    smear/page-numbers there without touching a character.
+    """
+    a = a.copy()
+    a[:WHITEN_TOP, :] = 1
+    a[-WHITEN_BOTTOM:, :] = 1
+    return a
 
 
 def shrink_page(a: np.ndarray, keep_left: int | None = None) -> np.ndarray:
@@ -260,6 +325,7 @@ def segment(
             logger.info("Page %d starts a subtree (label at x=%d)", i, tree_start_x)
             a = a[:, :tree_start_x]
         starts[str(i)] = tree_start_x != -1
+        a = whiten_margins(a)
         keep_left = CROP_KEEP_LEFT.get(book, {}).get(i)
         a = shrink_page(a, keep_left=keep_left)
         out_path = os.path.join(crops_dir, f"{i}.png")
