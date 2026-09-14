@@ -121,7 +121,7 @@ def test_bridge_orphans_reconnects_and_records_the_bridge() -> None:
     a = _blank()
     _right_page_tree(a)
     _left_page_floating_bar(a)
-    out, imaginary = bt.bridge_orphans(a, bt.BookConfig())
+    out, imaginary, _nicks = bt.bridge_orphans(a, bt.BookConfig())
     assert _orphans(out) == []
     assert len(imaginary) == 1
     r0, c0, r1, c1 = imaginary[0]
@@ -135,7 +135,7 @@ def test_bridge_orphans_reconnects_and_records_the_bridge() -> None:
 def test_bridge_orphans_leaves_cross_graph_orphan_alone() -> None:
     a = _blank(w=1300)
     _left_page_floating_bar(a)                # nothing to the right: parent is off-graph
-    out, imaginary = bt.bridge_orphans(a, bt.BookConfig())
+    out, imaginary, _nicks = bt.bridge_orphans(a, bt.BookConfig())
     assert imaginary == []
     assert len(_orphans(out)) == 1
 
@@ -153,7 +153,7 @@ def test_bridge_orphans_extends_across_two_page_breaks() -> None:
     _hline(a, 502, 1500, 1650)
     # page 1: the floating bar with two children
     _left_page_floating_bar(a)
-    out, imaginary = bt.bridge_orphans(a, bt.BookConfig())
+    out, imaginary, _nicks = bt.bridge_orphans(a, bt.BookConfig())
     assert _orphans(out) == []
     assert len(imaginary) == 1
     assert imaginary[0][3] == 2600                          # extended to the far bar
@@ -254,7 +254,7 @@ def test_bridge_orphans_fills_a_seam_step_instead_of_reaching_far() -> None:
     _hline(a, 500, 300, 1000)
     _vline(a, 500, 800, 400)
     _name(a, 830, 403)
-    out, imaginary = bt.bridge_orphans(a, bt.BookConfig())
+    out, imaginary, _nicks = bt.bridge_orphans(a, bt.BookConfig())
     assert _orphans(out) == []
     assert len(imaginary) == 1
     r0, c0, r1, c1 = imaginary[0]
@@ -267,3 +267,35 @@ def test_trace_started_at_the_bar_top_edge_records_no_step() -> None:
     end, steps = bt.trace_bar(a, 500, 300)
     assert steps == []
     assert 1000 <= end <= 1000 + LINE
+
+
+# --- nicks are scan-line fills, not green bridges --------------------------------
+
+
+def test_hairline_nick_fill_is_recorded_separately_from_bridges() -> None:
+    a = _blank()
+    _right_page_tree(a)
+    # the left-page piece is itself broken by a 43px nick at the same row
+    _hline(a, 505, 300, 600)
+    _hline(a, 505, 650, 1000)
+    for c in (400, 900):
+        _vline(a, 505, 805, c)
+        _name(a, 835, c + 3)
+    out, imaginary, nicks = bt.bridge_orphans(a, bt.BookConfig())
+    assert _orphans(out) == []
+    assert len(nicks) == 1 and 600 <= nicks[0][1] <= 600 + LINE and nicks[0][3] == 650
+    assert len(imaginary) == 1 and imaginary[0][3] == 1400
+
+
+def test_seam_step_counts_as_a_bridge_not_a_nick() -> None:
+    a = _blank(w=3000)
+    _name(a, 10, 2803)
+    _vline(a, 200, 540, 2800)
+    _hline(a, 540, 1100, 2800)
+    _vline(a, 540, 840, 2800)
+    _name(a, 870, 2803)
+    _hline(a, 500, 300, 1000)
+    _vline(a, 500, 800, 400)
+    _name(a, 830, 403)
+    out, imaginary, nicks = bt.bridge_orphans(a, bt.BookConfig())
+    assert nicks == [] and len(imaginary) == 1

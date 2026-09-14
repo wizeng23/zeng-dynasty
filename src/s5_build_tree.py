@@ -967,6 +967,12 @@ SPECK_MIN_ROWS = 4
 # vertical alignment, so a bar can step 7-60 rows at a page seam (69_82's gen-2
 # bar steps at 11 of its 12 seams). Each step is a fill candidate.
 STEP_MIN_ROWS = 6
+# A fill no wider than this on an unstepped bar is a hairline scan NICK -- the
+# scanner dropped a few px of one printed bar. docs/bridge-ground-truth.md: "scan
+# nick (<=~20px hairline)" in v0 units, "scan-line fill, never a green bridge". It
+# is recorded in ``{stem}.nicks.json``, not drawn green: only a genuine cross-page
+# connector (a seam gap or step the page break lost) is a bridge.
+NICK_MAX_SPAN = int(round(20 * V1_SCALE))        # 60px
 
 
 def _ink_band(a: np.ndarray, row: int, half: int) -> np.ndarray:
@@ -1232,7 +1238,7 @@ def bridge_resolves(
 
 def bridge_orphans(
     a: np.ndarray, config: BookConfig
-) -> tuple[np.ndarray, list[list[int]]]:
+) -> tuple[np.ndarray, list[list[int]], list[list[int]]]:
     """Repair the bar-orphans of one merged graph.
 
     Re-derives the orphans each pass and, for each, tries its fill candidates
@@ -1249,8 +1255,10 @@ def bridge_orphans(
         config: The book's parse config, for the re-parse gate.
 
     Returns:
-        ``(bridged, imaginary)``: the repaired grid and the fills drawn, each
-        ``[r0, c0, r1, c1]`` in graph pixel coordinates.
+        ``(bridged, imaginary, nicks)``: the repaired grid, the seam bridges drawn
+        (green in QA) and the hairline nick fills, each ``[r0, c0, r1, c1]`` in
+        graph pixel coordinates. A fill is a nick when it spans at most
+        :data:`NICK_MAX_SPAN` and the bar does not step across it.
     """
 
     def orphans(grid: np.ndarray) -> list[LineNode]:
@@ -1262,8 +1270,16 @@ def bridge_orphans(
         except ValueError:
             return False  # two-parent weld
 
+    def is_nick(grid: np.ndarray, r: int, c0: int, c1: int) -> bool:
+        if c1 - c0 > NICK_MAX_SPAN:
+            return False
+        yl = _bar_ink_y(grid, r, c0, "left")
+        yr = _bar_ink_y(grid, r, c1, "right")
+        return yl is not None and yr is not None and abs(yl - yr) < STEP_MIN_ROWS
+
     out = a
     imaginary: list[list[int]] = []
+    nicks: list[list[int]] = []
     attempted: set[tuple[int, int, int]] = set()
     while True:
         before = orphans(out)
@@ -1302,16 +1318,18 @@ def bridge_orphans(
                     result = None
                 if result is None:
                     continue
+                nick = is_nick(out, r, c0, end)
                 out, end = result
-                imaginary.append([int(r), int(c0), int(r), int(end)])
-                logger.info("orphan-bridge: row=%d cols %d..%d", r, c0, end)
+                (nicks if nick else imaginary).append([int(r), int(c0), int(r), int(end)])
+                logger.info("%s: row=%d cols %d..%d",
+                            "nick-fill" if nick else "orphan-bridge", r, c0, end)
                 progressed = True
                 break
             if progressed:
                 break
         if not progressed:
             break
-    return out, imaginary
+    return out, imaginary, nicks
 
 
 def _is_multipage(graph_stem: str) -> bool:
@@ -1436,16 +1454,19 @@ def build_tree(
         # a single page has no seam, so Book 1 is untouched). The drawn bridges go
         # to a sidecar the QA overlay renders green; a stale sidecar is removed.
         imaginary: list[list[int]] = []
+        nicks: list[list[int]] = []
         if _is_multipage(filename):
-            a, imaginary = bridge_orphans(a, config)
-            if imaginary:
-                logger.info("%s: bridged %d orphan bar(s)", filepath, len(imaginary))
-        imaginary_path = os.path.join(graphs_dir, f"{filename}.imaginary.json")
-        if imaginary:
-            with open(imaginary_path, "w") as fh:
-                json.dump(imaginary, fh)
-        elif os.path.exists(imaginary_path):
-            os.remove(imaginary_path)
+            a, imaginary, nicks = bridge_orphans(a, config)
+            if imaginary or nicks:
+                logger.info("%s: bridged %d orphan bar(s), filled %d nick(s)",
+                            filepath, len(imaginary), len(nicks))
+        for suffix, fills in (("imaginary", imaginary), ("nicks", nicks)):
+            path = os.path.join(graphs_dir, f"{filename}.{suffix}.json")
+            if fills:
+                with open(path, "w") as fh:
+                    json.dump(fills, fh)
+            elif os.path.exists(path):
+                os.remove(path)
 
         raw_lines = find_lines(a, threshold=config.line_threshold)
         line_ends: list[tuple[tuple[int, int], list[tuple[int, int]]]] = []
