@@ -45,6 +45,7 @@ RED = (220, 30, 30)
 BLUE = (40, 90, 220)
 GREEN = (20, 170, 60)
 MAGENTA = (200, 30, 200)  # stray pen marks scrubbed before parsing
+CYAN = (0, 170, 200)      # hairline scan-nick fills (not cross-page bridges)
 
 
 def _to_rgb(a: np.ndarray) -> Image.Image:
@@ -69,6 +70,7 @@ def draw_parse_overlay(
     a: np.ndarray,
     parse: dict,
     imaginary: list[list[int]] | None = None,
+    nicks: list[list[int]] | None = None,
 ) -> Image.Image:
     """Overlay the parse: red = names + edges, ORANGE = empty phantoms, GREEN = bridges.
 
@@ -83,11 +85,18 @@ def draw_parse_overlay(
     nameless endpoint instead of its true cross-page parent.
 
     ``imaginary`` (from ``{stem}.imaginary.json``) lists the synthetic orphan-bridge
-    connectors, each ``[r0, c0, r1, c1]``, drawn GREEN for confirmation.
+    connectors, each ``[r0, c0, r1, c1]``, drawn GREEN for confirmation. ``nicks``
+    (from ``{stem}.nicks.json``) are the hairline scan-nick fills Stage 5 made on
+    the way -- a few px of one printed bar the scanner dropped -- drawn CYAN, since
+    William's rule keeps green for genuine cross-page connectors only.
     """
     img = _to_rgb(a)
     draw = ImageDraw.Draw(img)
     nodes = parse.get("nodes", [])
+
+    for r0, c0, r1, c1 in nicks or []:
+        draw.line([(c0, r0), (c1, r1)], fill=CYAN, width=6)
+        draw.ellipse([c0 - 10, r0 - 10, c1 + 10, r1 + 10], outline=CYAN, width=4)
 
     # Magenta = stray pen marks Stage 5 scrubbed before parsing. Filled semi-boldly
     # + outlined so you see exactly what was removed (the ink is already gone from
@@ -147,6 +156,8 @@ def draw_parse_overlay(
         parts.append(f"{empty_count} empty (orphan) node(s)")
     if imaginary:
         parts.append(f"{len(imaginary)} green bridge(s)")
+    if nicks:
+        parts.append(f"{len(nicks)} cyan nick fill(s)")
     if scrubbed:
         parts.append(f"{len(scrubbed)} scrubbed pen mark(s)")
     if parts:
@@ -328,6 +339,7 @@ def _card_notes(
     n_orphans: int = 0,
     seam_pages: list[tuple[int, int]] | None = None,
     gen_rows: list[int] | None = None,
+    nicks: list[list[int]] | None = None,
 ) -> str:
     """Searchable plain-text status line for a card: green bridges + orphans.
 
@@ -354,6 +366,8 @@ def _card_notes(
         segs.append(f"green: {len(imaginary)} bridge(s) — " + ", ".join(parts))
     else:
         segs.append("no bridges")
+    if nicks:
+        segs.append(f"nick: {len(nicks)} hairline fill(s)")
     if n_orphans:
         segs.append(f"orphan: {n_orphans} unresolved")
     return " · ".join(segs)
@@ -398,7 +412,9 @@ def qa_book(
 
         imag_path = os.path.join(graphs_dir, f"{stem}.imaginary.json")
         imaginary = json.load(open(imag_path)) if os.path.exists(imag_path) else None
-        parse_img = draw_parse_overlay(a, parse, imaginary)
+        nick_path = os.path.join(graphs_dir, f"{stem}.nicks.json")
+        nicks = json.load(open(nick_path)) if os.path.exists(nick_path) else None
+        parse_img = draw_parse_overlay(a, parse, imaginary, nicks)
         parse_name = f"{stem}_parse.png"
         parse_img.save(os.path.join(qa_dir, parse_name))
 
@@ -411,7 +427,7 @@ def qa_book(
         # so bridge notes can read "p13" and "gen 2" instead of raw pixels.
         seam_pages = _page_seams(book, start, end, seg_cfg, books_dir)
         gen_rows = _generation_rows(nodes)
-        notes = _card_notes(imaginary, n_orphans, seam_pages, gen_rows)
+        notes = _card_notes(imaginary, n_orphans, seam_pages, gen_rows, nicks)
         rows.append(
             (stem, parse_name, compare_name, len(nodes), parse_img.height,
              compare_img.height, notes)
