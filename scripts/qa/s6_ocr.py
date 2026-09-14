@@ -14,7 +14,7 @@ Escape reverts the focused cell to the OCR reading. Your position is remembered.
 
 Corrections are a SEPARATE ground-truth layer, keyed by ``{provenance}#{charIndex}``
 (0-based), written to ``data/{book}_overrides.json``. Re-running OCR never touches
-them; ``src.s7_ocr.apply_names`` reassembles each node's name from its per-character
+them; ``src.s6_ocr.apply_names`` reassembles each node's name from its per-character
 overrides (falling back to the OCR character where there is no override), so an
 override always wins.
 
@@ -27,9 +27,9 @@ node is flagged (``count_mismatch``) so you can eyeball it.
 
 Run::
 
-    python -m scripts.qa.s7_ocr              # then open http://localhost:8767/
+    python -m scripts.qa.s6_ocr              # then open http://localhost:8766/
 
-Nothing here writes into ``{book}.jsonl`` -- run ``src.s7_ocr.apply_names`` afterward
+Nothing here writes into ``{book}.jsonl`` -- run ``src.s6_ocr.apply_names`` afterward
 to fold overrides + OCR into the tree.
 """
 
@@ -609,7 +609,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--port", type=int, default=8767)
+    ap.add_argument("--port", type=int, default=8766)
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     n = len(build_cells())

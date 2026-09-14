@@ -241,11 +241,11 @@ def get_engine(name: str) -> OcrEngine:
         model = name.split(":", 1)[1] if ":" in name else "gpt-4o"
         return OpenAIVisionEngine(model=model)
     if name == "paddle":
-        from src.ocr_paddle import PaddleEngine  # optional dependency
+        from src.s6_ocr_paddle import PaddleEngine  # optional dependency
 
         return PaddleEngine()
     if name in ("mistral", "google:vision", "google:docai"):
-        from src import ocr_cloud  # optional dependencies (SDKs + auth)
+        from src import s6_ocr_cloud as ocr_cloud  # optional deps (SDKs + auth)
 
         if name == "mistral":
             return ocr_cloud.MistralOCREngine()
@@ -287,7 +287,7 @@ def populate_names(
 
     Returns the sidecar dict it wrote.
     """
-    from src.ocr_paddle import PaddleEngine
+    from src.s6_ocr_paddle import PaddleEngine
 
     jsonl = os.path.join(data_dir, f"{book}.jsonl")
     ids = [json.loads(line)["id"] for line in open(jsonl) if line.strip()]
@@ -375,7 +375,7 @@ def apply_names(book: str, data_dir: str = "data") -> int:
     """Merge OCR names + manual per-character overrides into ``{book}.jsonl``.
 
     Precedence: manual overrides in ``{book}_overrides.json`` (the human
-    ground-truth layer written by ``scripts/qa/s7_ocr.py``, keyed
+    ground-truth layer written by ``scripts/qa/s6_ocr.py``, keyed
     ``{provenance}#{charIndex}``) win, character by character, over the OCR reading
     in ``{book}_names.json``. Sets each node's ``name`` and rewrites the ``ocr_*``
     tags in ``notes`` (idempotent): ``ocr_conf=<score>`` always, ``ocr_low_conf``

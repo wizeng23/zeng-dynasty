@@ -11,8 +11,8 @@ Stages are numbered as whole integers (no `.5`s). The v1 order:
 3. **segment** — crop each tree page to its line-graph (`src/s3_segment.py`)
 4. **merge_pages** — stitch a subtree's pages into one graph (`src/s4_merge_pages.py`)
 5. **build_tree** — parse graphs → tree JSONL + name crops (`src/s5_build_tree.py`)
-6. **stitch** — connect the per-graph subtrees into one lineage (`src/s6_stitch.py`)
-7. **OCR** — name crops → Unicode (`src/s7_ocr.py`)
+6. **OCR** — name crops → Unicode (`src/s6_ocr.py`)
+7. **stitch** — connect the per-graph subtrees into one lineage (`src/s7_stitch.py`, TODO)
 
 ## Stage 1 — Spreads → pages
 
@@ -107,22 +107,7 @@ left-to-right.
 Old helpers: `find_lines`, `find_line_ends`, `sort_nodes`, `infer_ends`,
 `get_name_image`.
 
-## Stage 6 — Cross-graph stitching (`src/s6_stitch.py`)
-
-**In:** `data/bookN.jsonl` (a forest — one subtree per Stage-4 graph)
-**Out:** `data/bookN_stitched.jsonl` (one connected tree, absolute generations).
-
-Each graph's root (`{graph}_0`) is a **duplicate** of a person who appears as a
-*leaf* in an earlier graph (the subtree-start page repeats the parent name).
-Merging each duplicate into its canonical leaf connects the forest into one
-lineage, then recomputes absolute generations (root=1) and reassigns BFS/RTL ids.
-
-**Matching is unsolved automatically** (name-crop pixel-matching ≈ 4/13 on Book
-1). Merges are an explicit per-book list (`BOOK_MERGES`, Book 1's done by hand);
-`find_merges()` is where an automated matcher will plug in. Verified against
-`data/oracles/book1_merged.jsonl` via `scripts/verify_stitch.py`.
-
-## Stage 7 — OCR
+## Stage 6 — OCR (`src/s6_ocr.py`)
 
 **In:** `books/bookN/5_names/*.png` + `data/bookN.jsonl` (node ids)
 **Out:** `data/bookN_names.json` (sidecar) → merged into `name` on each node.
@@ -133,26 +118,50 @@ Chinese-specialized, local, free, and the bake-off winner (96.6% single-char /
 pipeline reads multi-character *stacked* names in one pass, so no pre-splitting
 is needed for the write path.
 
+**OCR runs before stitching (Stage 7):** stitching matches each graph's duplicate
+root to its canonical leaf, and that match is by *name* — so the names must exist
+first.
+
 Run (after Stage 5, since it reads `bookN.jsonl` for ids and writes names into
 it):
 
 ```
-python -m src.s7_ocr --book bookN --populate
+python -m src.s6_ocr --book bookN --populate
 ```
 
 This writes a **sidecar** `data/bookN_names.json` (`{id: {name, confidence,
 low_conf}}`) and merges it into `data/bookN.jsonl` — setting `name` and appending
 `ocr_conf=<score>` (and `ocr_low_conf` when confidence < 0.90) to `notes`. The
 sidecar is the source of truth for names, so a Stage-5 re-parse never loses them:
-just re-run `--populate` (or `ocr.apply_names`) afterward. `write-all` policy —
+just re-run `--populate` (or `s6_ocr.apply_names`) afterward. `write-all` policy —
 every node gets whatever PP-OCRv5 returns; low-confidence glyphs are flagged for
 review, not dropped. Nodes with a blank crop keep `name=""` so the website falls
-back to the image. For the stitched Book 1, `ocr.apply_names_by_crop` maps the
+back to the image. For the stitched Book 1, `s6_ocr.apply_names_by_crop` maps the
 book1 sidecar onto `book1_stitched.jsonl` by crop id.
 
+Per-character human corrections live in `data/bookN_overrides.json` (a
+ground-truth layer applied on top of the OCR reading). Review tool:
+`scripts/qa/s6_ocr.py` (port 8766).
+
 Cloud engines (Google Vision, Google Document AI, Mistral) are wired in
-`src/s7_ocr_cloud.py` for comparison but lost the bake-off (document/layout engines,
+`src/s6_ocr_cloud.py` for comparison but lost the bake-off (document/layout engines,
 weak on isolated glyphs) — kept as optional second opinions, not the default.
+
+## Stage 7 — Cross-graph stitching (`src/s7_stitch.py`, TODO; v0 in `src/v0/stitch.py`)
+
+**In:** `data/bookN.jsonl` (a forest — one subtree per Stage-4 graph, names filled in by Stage 6)
+**Out:** `data/bookN_stitched.jsonl` (one connected tree, absolute generations).
+
+Each graph's root (`{graph}_0`) is a **duplicate** of a person who appears as a
+*leaf* in an earlier graph (the subtree-start page repeats the parent name).
+Merging each duplicate into its canonical leaf connects the forest into one
+lineage, then recomputes absolute generations (root=1) and reassigns BFS/RTL ids.
+
+**Matching is unsolved automatically** (name-crop pixel-matching ≈ 4/13 on Book
+1). Merges are an explicit per-book list (`BOOK_MERGES`, Book 1's done by hand);
+`find_merges()` is where an automated matcher will plug in. Verified against
+`data/oracles/book1_merged.jsonl` via `scripts/verify_stitch.py`. Not yet ported
+to the v1 pipeline — v0 logic lives in `src/v0/stitch.py`.
 
 ## Golden data (separate, manual — verification)
 

@@ -28,7 +28,7 @@ import re
 
 from PIL import Image
 
-from src.s7_ocr import Crop, pack_grid
+from src.s6_ocr import Crop, pack_grid
 
 logger = logging.getLogger(__name__)
 

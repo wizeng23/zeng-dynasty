@@ -12,8 +12,8 @@ Interactive review servers (open in a browser):
   * ``s2_classify`` — Stage 2 (classify): page grid colored tree/bio; click a cell
                       to flip a wrong label (saved as an override crop/merge honor).
                       Port 8762.  →  python -m scripts.qa.s2_classify
-  * ``s7_ocr``      — Stage 7 (OCR): per-character name filmstrip for correcting
-                      OCR readings.  Port 8767.  →  python -m scripts.qa.s7_ocr
+  * ``s6_ocr``      — Stage 6 (OCR): per-character name filmstrip for correcting
+                      OCR readings.  Port 8766.  →  python -m scripts.qa.s6_ocr
 
 Static-artifact generators (write images + an HTML index to click through):
   * ``s5_parse``      — Stage 5 (build_tree): parse overlays per subtree graph
@@ -24,6 +24,6 @@ Static-artifact generators (write images + an HTML index to click through):
                         parse, side by side). Cross-stage page tracer.
                         →  python -m scripts.qa.all_filmstrip --book bookN ...
 
-The three servers use ports 8761 / 8762 / 8767 (last digit = stage), all clear of
+The three servers use ports 8761 / 8762 / 8766 (last digit = stage), all clear of
 8000, so they can run at the same time and never collide with local dev on 8000.
 """
