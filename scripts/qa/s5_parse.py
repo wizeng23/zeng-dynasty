@@ -47,6 +47,18 @@ GREEN = (20, 170, 60)
 MAGENTA = (200, 30, 200)  # stray pen marks scrubbed before parsing
 CYAN = (0, 170, 200)      # hairline scan-nick fills (not cross-page bridges)
 
+# Browsers refuse to decode an image wider than ~32k px (Chrome: 32,767; Safari is
+# stricter), and 36_52's compare strip is 64,719 px. Overlays wider than this are
+# downscaled for the page; the on-screen scale is unchanged (display height comes
+# from the ORIGINAL pixel height), and every bridge/nick also gets a full-res crop.
+MAX_IMG_WIDTH = 16000
+# Full-res crop around each fill: this much context beyond the fill's ends/rows.
+FILL_CROP_PAD_X = 300
+FILL_CROP_PAD_Y = 250
+# A fill longer than this gets two end crops instead of one (the anchors matter).
+FILL_CROP_MAX_SPAN = 1800
+FILL_END_HALF = 600
+
 
 def _to_rgb(a: np.ndarray) -> Image.Image:
     """Binary ink grid (0=ink,1=bg) -> white-background RGB image."""
@@ -373,6 +385,44 @@ def _card_notes(
     return " · ".join(segs)
 
 
+def _fit_width(img: Image.Image) -> Image.Image:
+    """Downscale ``img`` to at most MAX_IMG_WIDTH wide (LANCZOS); unchanged if narrower."""
+    if img.width <= MAX_IMG_WIDTH:
+        return img
+    f = img.width / MAX_IMG_WIDTH
+    return img.resize((MAX_IMG_WIDTH, max(1, round(img.height / f))), Image.LANCZOS)
+
+
+def _fill_crops(
+    parse_img: Image.Image, fills: list[list[int]], kind: str, stem: str, qa_dir: str,
+    seam_pages: list[tuple[int, int]], gen_rows: list[int],
+) -> list[tuple[str, str]]:
+    """Full-resolution crops of the parse overlay around each fill.
+
+    Returns ``(caption, filename)`` pairs. A short fill gets one crop spanning it;
+    a long bridge gets a crop of each END (where it anchors on the seam and lands
+    on the next bar -- the parts worth checking), since a 3000px span would not fit.
+    """
+    out: list[tuple[str, str]] = []
+    w, h = parse_img.size
+    for i, (r0, c0, r1, c1) in enumerate(fills, 1):
+        gen = _gen_of(r0, gen_rows)
+        p_l, p_r = _page_of(c0, seam_pages), _page_of(c1, seam_pages)
+        span = f"p{p_l}->p{p_r}" if p_l != p_r else f"p{p_l}"
+        label = f"{kind} {i}: gen{gen} {span} (x{c0}->{c1}, {c1 - c0}px)"
+        top, bot = max(0, min(r0, r1) - FILL_CROP_PAD_Y), min(h, max(r0, r1) + FILL_CROP_PAD_Y)
+        if c1 - c0 <= FILL_CROP_MAX_SPAN:
+            boxes = [(max(0, c0 - FILL_CROP_PAD_X), min(w, c1 + FILL_CROP_PAD_X), "")]
+        else:
+            boxes = [(max(0, c0 - FILL_END_HALF), min(w, c0 + FILL_END_HALF), " — left end"),
+                     (max(0, c1 - FILL_END_HALF), min(w, c1 + FILL_END_HALF), " — right end")]
+        for j, (x0, x1, suffix) in enumerate(boxes):
+            name = f"{stem}_{kind}{i}{'ab'[j] if len(boxes) > 1 else ''}.png"
+            parse_img.crop((x0, top, x1, bot)).save(os.path.join(qa_dir, name))
+            out.append((label + suffix, name))
+    return out
+
+
 def qa_book(
     book: str, books_dir: str = "books", only: set[str] | None = None
 ) -> str:
@@ -416,11 +466,13 @@ def qa_book(
         nicks = json.load(open(nick_path)) if os.path.exists(nick_path) else None
         parse_img = draw_parse_overlay(a, parse, imaginary, nicks)
         parse_name = f"{stem}_parse.png"
-        parse_img.save(os.path.join(qa_dir, parse_name))
+        parse_h = parse_img.height
+        _fit_width(parse_img).save(os.path.join(qa_dir, parse_name))
 
         compare_img = stacked_compare(book, start, end, seg_cfg, books_dir)
         compare_name = f"{stem}_compare.png"
-        compare_img.save(os.path.join(qa_dir, compare_name))
+        compare_h = compare_img.height
+        _fit_width(compare_img).save(os.path.join(qa_dir, compare_name))
 
         n_orphans = sum(1 for n in nodes if n["empty"] and n["children_top"])
         # Page-seam x-positions (left->right = end..start) and generation-bar y-rows,
@@ -428,9 +480,10 @@ def qa_book(
         seam_pages = _page_seams(book, start, end, seg_cfg, books_dir)
         gen_rows = _generation_rows(nodes)
         notes = _card_notes(imaginary, n_orphans, seam_pages, gen_rows, nicks)
+        fills = _fill_crops(parse_img, imaginary or [], "bridge", stem, qa_dir, seam_pages, gen_rows)
+        fills += _fill_crops(parse_img, nicks or [], "nick", stem, qa_dir, seam_pages, gen_rows)
         rows.append(
-            (stem, parse_name, compare_name, len(nodes), parse_img.height,
-             compare_img.height, notes)
+            (stem, parse_name, compare_name, len(nodes), parse_h, compare_h, notes, fills)
         )
         logger.info("%s: %d nodes, pages %d-%d", stem, len(nodes), start, end)
 
@@ -441,9 +494,7 @@ def qa_book(
     return index_path
 
 
-def _write_index(
-    path: str, book: str, rows: list[tuple[str, str, str, int, int, int, str]]
-) -> None:
+def _write_index(path: str, book: str, rows: list[tuple]) -> None:
     total_nodes = sum(r[3] for r in rows)
     # EVERY image -- compare and parse, across all graphs -- is displayed at the
     # SAME source-pixel-to-screen ratio (a fixed pixels-per-vh), so a name glyph is
@@ -457,9 +508,22 @@ def _write_index(
     # the overlays instead of showing stale cached PNGs (same filename, new content).
     ver = int(time.time())
     card_parts = []
-    for stem, parse, compare, n, parse_ih, compare_ih, notes in rows:
+    for stem, parse, compare, n, parse_ih, compare_ih, notes, fills in rows:
+        # Heights come from the ORIGINAL pixel heights, so an overlay that was
+        # downscaled to fit the browser's width limit still renders at the same
+        # on-screen scale as every other card (just softer).
         compare_h_vh = round(compare_ih / PX_PER_VH, 1)
         parse_h_vh = round(parse_ih / PX_PER_VH, 1)
+        fill_html = ""
+        if fills:
+            thumbs = "\n".join(
+                f'<figure class="fill"><figcaption>{cap}</figcaption>'
+                f'<img src="{fn}?v={ver}" loading="lazy"></figure>'
+                for cap, fn in fills
+            )
+            fill_html = f"""
+      <div class="fills"><p class="fills-title">④ full-resolution crops of each fill (green = seam bridge, cyan = hairline nick) — check both anchors</p>
+        {thumbs}</div>"""
         card_parts.append(
             f"""
     <section class="graph">
@@ -468,7 +532,7 @@ def _write_index(
       <figure><figcaption>① raw scan (top) → ② kept after crop (bottom) — same page columns; scan down to confirm nothing lost</figcaption>
         <img class="compare" src="{compare}?v={ver}" style="height:{compare_h_vh}vh" loading="lazy"></figure>
       <figure><figcaption>③ parse: red = detected names + edges (same scale as rows ①②)</figcaption>
-        <img class="parse" src="{parse}?v={ver}" style="height:{parse_h_vh}vh" loading="lazy"></figure>
+        <img class="parse" src="{parse}?v={ver}" style="height:{parse_h_vh}vh" loading="lazy"></figure>{fill_html}
     </section>"""
         )
     cards = "\n".join(card_parts)
@@ -505,11 +569,17 @@ def _write_index(
      wider one fully scrollable. */
   img {{ border: 1px solid #a8a29e; background: #fff; display: block; max-width: none;
     margin-left: auto; }}
+  /* Full-res fill crops: natural pixels, wrapped left-to-right, capped in height. */
+  .fills {{ display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }}
+  .fills-title {{ flex-basis: 100%; margin: 0; font-size: 12px; color: #57534e; }}
+  .fill {{ margin: 0; overflow: visible; }}
+  .fill img {{ margin-left: 0; height: 260px; width: auto; }}
 </style></head><body>
 <header>Parse QA — <b>{book}</b> · {len(rows)} graphs · {total_nodes} nodes ·
   <span style="color:#f87171">red</span> = detected names/edges,
   <span style="color:#f08c00">orange</span> = empty orphan node,
   <span style="color:#22c55e">green</span> = synthetic orphan-bridge,
+  <span style="color:#00aac8">cyan</span> = hairline nick fill,
   <span style="color:#c81ec8">magenta</span> = scrubbed pen mark,
   <span style="color:#93c5fd">blue</span> = raw-vs-cropped page columns</header>
 {cards}
