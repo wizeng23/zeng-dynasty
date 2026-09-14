@@ -140,10 +140,15 @@ def draw_parse_overlay(
             for cr, cc in kids:
                 draw.line([(pc, bar_row), (cc, bar_row)], fill=RED, width=8)
                 draw.line([(cc, bar_row), (cc, cr)], fill=RED, width=8)
-        # Circle the parent's fan-out endpoint and every child-top endpoint.
-        draw.ellipse(
-            [pc - ENDPOINT_R, pr - ENDPOINT_R, pc + ENDPOINT_R, pr + ENDPOINT_R],
-            outline=RED, width=5)
+        # Circle only DETECTED endpoints: a parent's fan-out point (it has children
+        # hanging off it) and every child-top. A leaf's ``bot`` is not a line end --
+        # Stage 5 infers it by scanning down the column for the last ink, and an ADF
+        # smear speck below the name drags it 100+ rows past the box (36_52 p37,
+        # 毓辇/毓瑛), so circling it just draws a misleading dot under the name.
+        if kids:
+            draw.ellipse(
+                [pc - ENDPOINT_R, pr - ENDPOINT_R, pc + ENDPOINT_R, pr + ENDPOINT_R],
+                outline=RED, width=5)
         for cr, cc in kids:
             draw.ellipse(
                 [cc - ENDPOINT_R, cr - ENDPOINT_R, cc + ENDPOINT_R, cr + ENDPOINT_R],
@@ -444,7 +449,7 @@ def qa_book(
     if only:
         files = [f for f in files if os.path.splitext(f)[0] in only]
     # (stem, parse, compare, n, parse_img_height, compare_img_height, notes)
-    rows: list[tuple[str, str, str, int, int, int, str]] = []
+    rows: list[tuple] = []
     for fname in files:
         stem = os.path.splitext(fname)[0]
         start, end = (int(x) for x in stem.split("_"))

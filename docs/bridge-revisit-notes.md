@@ -107,3 +107,14 @@ targeting (needs reliable generation-band detection — the ad-hoc top-row clust
 used in QA's `_generation_rows` is a starting point but was noisy; use the parse's
 structure instead). Verify against `docs/bridge-ground-truth.md` before removing any
 manual entry, and re-check the freeze (Book 1 + all other Book 2 graphs).
+
+## infer_ends is not speck-tolerant (2026-09-14) — cosmetic, REVISIT
+`s5_build_tree.infer_ends` recovers a leaf's missing `bot` (and a root's `top`) by
+scanning the column for the LAST ink within `INFER_END_REACH` (600px). An ADF smear
+speck 100+ rows below a name (36_52 p37: 毓辇, 毓瑛 — 6 and 14 ink px) pulls the
+inferred end down to the speck. The name crop is unaffected (`_tight_ink_box` trims
+with the speck-tolerant smoothed row profile), and a leaf's `bot` feeds no merge,
+sort or grid check — so this is cosmetic (the parse sidecar's `bot` and the QA's
+node height). The QA no longer circles inferred ends. Fix later: apply the same
+`NAME_SPECK_WIN` smoothing / `SPECK_MIN_ROWS` floor in `infer_ends`; requires a
+Stage-5 re-run to update sidecars.
