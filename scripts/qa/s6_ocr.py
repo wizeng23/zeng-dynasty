@@ -1016,8 +1016,12 @@ class Handler(BaseHTTPRequestHandler):
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--port", type=int, default=8766)
+    ap.add_argument("--books", default=",".join(BOOKS),
+                    help="comma-separated books to serve (default: all with v1 crops); "
+                         "run one server per book on its own port to review them separately")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    BOOKS[:] = [b.strip() for b in args.books.split(",") if b.strip()]
     n = len(build_cells())
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     logger.info("OCR review filmstrip: %d characters. Open http://localhost:%d/", n, args.port)
