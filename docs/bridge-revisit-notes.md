@@ -149,3 +149,11 @@ lines can't drag it. Book 2 currently carries these as `recrop` entries in
 entries redundant (keep them until verified). Consider also NAME_HALF_WIDTH 120→160
 together with a streak-tolerant column trim (10 of 1586 Book 2 names touch the
 window edge; 1 was a real clip, 9 were ADF streaks beside the glyph).
+Preview on the five hand-recropped Book 2 names: the rule matches the recrops for
+毓塘 (6658 vs 6658), 尚澜 (top 1445 vs 1464) and 衍谟 (top 2404 vs 2419). It does NOT
+fix 毓援/毓棋 (114_120_56/_54): their leaf `bot` was inferred by walking down the
+column and ran down the hang-line a phantom had taken, and the row trim keeps
+line-only rows (a 7px line in a 240px window = 0.03 > NAME_ROW_INK_MIN 0.015), so
+the bottom edge sits on the line and the walk goes further DOWN. Fix later: treat
+rows whose ink is a single narrow run (<= ~14px, a line) as blank in the row trim,
+and/or stop `infer_ends` at the first line-only row. Keep those two recrops.
