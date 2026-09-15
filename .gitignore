@@ -261,3 +261,6 @@ data/book*_v2_*.jsonl
 # The small v0 glass-scan PDFs (books/*/v0/bookN.pdf) are already tracked and stay.
 books/*/book?.pdf
 books/*/gray/*.pdf
+
+# Frozen, hand-corrected pipeline outputs (not regenerable; kept on disk, not in git)
+books/*/frozen_*/
