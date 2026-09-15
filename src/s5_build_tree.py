@@ -358,8 +358,15 @@ def find_lines(
         # find_lines' original bound is (max - min) > threshold; a component's
         # width/height stat is (max - min + 1), so compare against threshold + 1.
         if width > threshold + 1 or height > threshold + 1:
-            rows, cols = np.where(labels == label)
-            results.append(set(zip(rows.tolist(), cols.tolist())))
+            # Scan only the component's own bounding box, not the whole label
+            # array. `np.where(labels == label)` costs a full 100M+-element pass
+            # PER component (~9s on 106_113's 5924x22998 grid, x32 comps); the
+            # bbox slice is ~60x faster with identical pixel sets. Matters most
+            # for bridging, which re-parses the graph once per trial fill.
+            x = stats[label, cv2.CC_STAT_LEFT]
+            y = stats[label, cv2.CC_STAT_TOP]
+            sub_rows, sub_cols = np.where(labels[y:y + height, x:x + width] == label)
+            results.append(set(zip((sub_rows + y).tolist(), (sub_cols + x).tolist())))
     return results
 
 
