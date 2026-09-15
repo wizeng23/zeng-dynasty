@@ -64,3 +64,27 @@ def test_edge_in_whitespace_is_unchanged() -> None:
     # the row trim is smoothed (NAME_SPECK_WIN), so top/bottom sit a few rows outside
     assert 300 - bt.NAME_TRIM_PAD - 8 <= top <= 300 - bt.NAME_TRIM_PAD
     assert 700 + bt.NAME_TRIM_PAD <= bottom <= 700 + bt.NAME_TRIM_PAD + 8
+
+
+def test_specks_touching_the_edge_do_not_trigger_a_walk() -> None:
+    a = _graph()
+    col = 600
+    a[300:700, col - 70:col + 70] = 0
+    rng = np.random.default_rng(0)
+    # sparse ADF grain above the box (isolated 2px dots), some landing ON the top edge
+    for _ in range(60):
+        r = int(rng.integers(300 - 130, 300 - 28)); c = int(rng.integers(col - 60, col + 60))
+        a[r:r + 2, c:c + 2] = 0
+    _l, top, _r, _b = bt._tight_ink_box(bt.LineNode(top=(250, col), bot=(750, col)), a)
+    assert top >= 300 - bt.NAME_TRIM_PAD - 10, top      # stays at the glyph, not the grain
+
+
+def test_thin_sliver_along_the_edge_does_not_trigger_a_walk() -> None:
+    """A 2px smear streak lying along the box edge is not a stroke crossing it."""
+    a = _graph()
+    col = 600
+    a[300:700, col - 70:col + 70] = 0
+    edge = col - 70 - bt.NAME_TRIM_PAD
+    a[320:680, edge - 1:edge + 1] = 0                   # sliver straddling the pad edge
+    left, *_ = bt._tight_ink_box(bt.LineNode(top=(250, col), bot=(750, col)), a)
+    assert left >= edge - 1 - bt.NAME_TRIM_PAD, left     # at most the trim's own pad past the sliver

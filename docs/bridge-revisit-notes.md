@@ -157,3 +157,18 @@ line-only rows (a 7px line in a 240px window = 0.03 > NAME_ROW_INK_MIN 0.015), s
 the bottom edge sits on the line and the walk goes further DOWN. Fix later: treat
 rows whose ink is a single narrow run (<= ~14px, a line) as blank in the row trim,
 and/or stop `infer_ends` at the first line-only row. Keep those two recrops.
+
+## Glyph-aware ink + stroke-crossing walk-out (2026-09-14, later) — IMPLEMENTED, effective next Stage 5 run
+`_row_kinds`/`_line_only_rows`: a bare line (single narrow run, >= 60 rows, reaching
+the band edge or a full-width bar row) is not name ink in `infer_ends`, the box row
+trim, the vertical walk-out, and `_is_empty_name` (narrow-only rows never count).
+`_walk_out_of_ink` now triggers only when a stroke CROSSES the edge (ink at the edge
+and 8px inward on >= 4 rows/cols) and walks over solid runs only. Verified in-memory
+on frozen Book 2 graphs: 毓援/毓棋/毓塘 boxes now match the hand recrops within 4px
+(so `data/book2_fixes.json` recrops for 114_120_54/_55/_56 become redundant on
+re-run); four 69_82 衍X names regain ~38 clipped rows. Known leftovers: 8_10 闻诣's
+box takes in grandpa's handwriting flush against it (add a book2 `ignore_regions`
+entry or accept); smear streaks beside a glyph still add 10-34px (any-ink column
+trim — the streak-tolerant column trim is still pending); 0_3 惟秀 gains ~32 rows of
+its own riser's grainy smear. 8_10_9 (line fragment whose crop overlaps two real
+names) remains a `delete` fix.

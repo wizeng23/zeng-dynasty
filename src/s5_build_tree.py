@@ -622,6 +622,105 @@ def drop_blank_leaf_nodes(
     return kept
 
 
+# Glyph-aware ink. A bare LINE is not part of a name, but several reads below
+# treat any ink as name ink: a hang-line running under a leaf's name (after a
+# phantom took its children) made infer_ends put the leaf's bottom 600 rows down
+# and the name box run down the line (114_120 毓援/毓棋).
+#
+# A NARROW row has one ink run of <= LINE_RUN_MAX px (v1 lines are 6-9px) plus at
+# most LINE_SPECK_PX of ADF specks. A BAR row's run crosses the whole band (a
+# generation bar; a glyph's widest stroke, 丁's ~140px, does not). A stretch of
+# narrow rows (gaps <= LINE_GAP_ROWS) is a LINE when it is >= LINE_MIN_ROWS long
+# and at least one end reaches, within LINE_GAP_ROWS, the band's edge or a bar
+# row -- a hang-line runs from the name (after ~40 rows of whitespace) down to the
+# bar or out of the band, and a riser comes from the bar or the band edge down to
+# the name. A glyph's lone vertical (丁, 下, 十, 中) is bounded by its own bar and
+# by the whitespace before the next character, so it never qualifies; 门/川's
+# parallel verticals are several runs per row and never qualify. The rule is
+# column-agnostic on purpose: the line under a name can sit off the node's
+# column when a misprint offsets the two halves of a hang-line (毓援: 70px) --
+# the very thing that creates phantoms.
+LINE_RUN_MAX = 14
+LINE_MIN_ROWS = 60
+LINE_SPECK_PX = 6
+LINE_GAP_ROWS = 6
+BAR_ROW_FRAC = 0.9
+
+
+def _row_kinds(band: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Per row of ``band`` (0 == ink): ``(narrow, bar)`` boolean arrays."""
+    ink = band == 0
+    h, w = band.shape
+    total = ink.sum(axis=1)
+    narrow = np.zeros(h, dtype=bool)
+    bar = np.zeros(h, dtype=bool)
+    for r in np.where(total > 0)[0]:
+        cols = np.where(ink[r])[0]
+        breaks = np.where(np.diff(cols) > 1)[0]
+        starts = np.concatenate([[cols[0]], cols[breaks + 1]])
+        stops = np.concatenate([cols[breaks], [cols[-1]]])
+        widths = stops - starts + 1
+        widest = int(widths.max())
+        if widest >= BAR_ROW_FRAC * w:
+            bar[r] = True
+        elif widest <= LINE_RUN_MAX and int(widths.sum()) - widest <= LINE_SPECK_PX:
+            narrow[r] = True
+    return narrow, bar
+
+
+def _stretches(flags: np.ndarray) -> list[tuple[int, int]]:
+    """Maximal runs of True in ``flags`` allowing gaps of <= LINE_GAP_ROWS: (start, last)."""
+    out: list[tuple[int, int]] = []
+    h = len(flags)
+    r = 0
+    while r < h:
+        if not flags[r]:
+            r += 1
+            continue
+        start = r
+        last = r
+        while r < h:
+            if flags[r]:
+                last = r
+                r += 1
+            elif r - last <= LINE_GAP_ROWS:
+                r += 1
+            else:
+                break
+        out.append((start, last))
+        r = last + 1
+    return out
+
+
+def _line_only_rows(band: np.ndarray, center_col: int | None = None) -> np.ndarray:
+    """Boolean per row of ``band`` (0 == ink): True where the row is bare line.
+
+    ``center_col`` is accepted for call-site symmetry and unused (the rule is
+    column-agnostic; see the note above).
+    """
+    del center_col
+    narrow, bar = _row_kinds(band)
+    h = band.shape[0]
+
+    def reaches(row: int, step: int) -> bool:
+        for k in range(1, LINE_GAP_ROWS + 2):
+            rr = row + step * k
+            if rr < 0 or rr >= h or bar[rr]:
+                return True
+        return False
+
+    line = np.zeros(h, dtype=bool)
+    for start, last in _stretches(narrow):
+        if last - start + 1 >= LINE_MIN_ROWS and (reaches(start, -1) or reaches(last, +1)):
+            line[start:last + 1] = True
+    return line
+
+
+def _glyph_ink_rows(band: np.ndarray, center_col: int) -> np.ndarray:
+    """Row indices of ``band`` carrying glyph ink (any ink, minus bare line rows)."""
+    return np.where((band == 0).any(axis=1) & ~_line_only_rows(band, center_col))[0]
+
+
 def infer_ends(nodes: list[LineNode], a: np.ndarray) -> None:
     """Infer the missing end of a node that has only one endpoint.
 
@@ -638,32 +737,32 @@ def infer_ends(nodes: list[LineNode], a: np.ndarray) -> None:
     ~200px/char an unscaled 200 reaches only ONE char, truncating every 2-char
     leaf -- the bug this scaling fixes). The walk stops at the LAST ink within the
     reach, so it takes the whole name but not a distant annotation past a gap.
+    Bare line rows (see :func:`_line_only_rows`) never count as the name's edge.
 
     Args:
         nodes: The merged line nodes.
         a: The graph's binary ink grid, used to probe for the missing end.
     """
+    h, w = a.shape
     for n in nodes:
         if n.top is None:
             assert n.bot is not None
-            top = max(0, n.bot[0] - INFER_END_REACH)
             y = n.bot[1]
-            min_y = max(0, y - INFER_END_PROBE_HALF)
-            max_y = min(a.shape[1] - 1, y + INFER_END_PROBE_HALF)
-            while top < n.bot[0] and 0 not in a[top][min_y:max_y]:
-                top += 1
-            top = max(0, top - INFER_END_PAD)
-            n.top = (top, y)
+            lo, hi = max(0, y - INFER_END_PROBE_HALF), min(w - 1, y + INFER_END_PROBE_HALF)
+            start = max(0, n.bot[0] - INFER_END_REACH)
+            band = a[start:n.bot[0], lo:hi]
+            rows = _glyph_ink_rows(band, y - lo)   # bare line rows (a riser above) don't count
+            top = start + int(rows[0]) if len(rows) else n.bot[0]
+            n.top = (max(0, top - INFER_END_PAD), y)
         if n.bot is None:
             assert n.top is not None
-            bot = min(a.shape[0] - 1, n.top[0] + INFER_END_REACH)
             y = n.top[1]
-            min_y = max(0, y - INFER_END_PROBE_HALF)
-            max_y = min(a.shape[1] - 1, y + INFER_END_PROBE_HALF)
-            while bot > n.top[0] and 0 not in a[bot][min_y:max_y]:
-                bot -= 1
-            bot = min(bot + INFER_END_PAD, a.shape[0] - 1)
-            n.bot = (bot, y)
+            lo, hi = max(0, y - INFER_END_PROBE_HALF), min(w - 1, y + INFER_END_PROBE_HALF)
+            end = min(h - 1, n.top[0] + INFER_END_REACH)
+            band = a[n.top[0] + 1:end + 1, lo:hi]
+            rows = _glyph_ink_rows(band, y - lo)   # a hang-line below the name doesn't count
+            bot = n.top[0] + 1 + int(rows[-1]) if len(rows) else n.top[0]
+            n.bot = (min(bot + INFER_END_PAD, h - 1), y)
 
 
 def verify_nodes(nodes: list[LineNode], config: BookConfig) -> list[LineNode]:
@@ -823,15 +922,18 @@ def _tight_ink_box(node: LineNode, a: np.ndarray) -> tuple[int, int, int, int]:
     # keeps thin top strokes like 点's dot while dropping artifact blocks.
     win_w = band.shape[1]
     row_frac = np.sum(1 - band, axis=1) / max(win_w, 1)
-    kern = np.ones(NAME_SPECK_WIN) / NAME_SPECK_WIN
-    smoothed = np.convolve(row_frac, kern, mode="same")
-    real = np.where(smoothed > NAME_ROW_INK_MIN)[0]
+    if len(row_frac) >= NAME_SPECK_WIN:
+        kern = np.ones(NAME_SPECK_WIN) / NAME_SPECK_WIN
+        smoothed = np.convolve(row_frac, kern, mode="same")
+    else:
+        smoothed = row_frac  # band shorter than the window: nothing to smooth
+    real = np.where((smoothed > NAME_ROW_INK_MIN) & ~_line_only_rows(band, y - left0))[0]
     if len(real):
         top = band_top + max(int(real[0]) - NAME_TRIM_PAD, 0)
         bottom = band_top + min(int(real[-1]) + NAME_TRIM_PAD, band.shape[0] - 1) + 1
     else:
         top, bottom = top_row, bot_row
-    return _walk_out_of_ink(a, left, top, right, bottom)
+    return _walk_out_of_ink(a, left, top, right, bottom, y)
 
 
 # A box edge must never bisect ink. The window/band trim above clamps at the
@@ -843,41 +945,79 @@ def _tight_ink_box(node: LineNode, a: np.ndarray) -> tuple[int, int, int, int]:
 # a neighbour's line (>= ~100px past the window) cannot drag the box across the
 # page; an edge already in whitespace -- the normal case -- is left exactly as is.
 NAME_WALK_MAX = 80
+# The edge must BISECT a stroke: ink at the edge AND ink WALK_BISECT_DEPTH px
+# inward at the same row/column (a stroke crossing the edge). Ink merely touching
+# the edge from outside -- an ADF speck cloud (0_3 惟秀/九舟), a smear streak
+# (58_62 兴近), grandpa's handwriting beside 8_10's 闻诣 -- has whitespace (the pad)
+# just inside and does not qualify. While walking, the next row/column must carry
+# a SOLID run (>= WALK_SOLID_RUN px), so grain never sustains a walk.
+WALK_BISECT_DEPTH = 8
+WALK_BISECT_MIN = 4   # rows/columns that must show the crossing (a stroke is >= 6px thick)
+WALK_SOLID_RUN = 6
+
+
+def _has_solid_run(vec: np.ndarray) -> bool:
+    """Does the 1-D 0/1 vector hold a contiguous ink (0) run of >= WALK_SOLID_RUN?"""
+    ink = np.where(vec == 0)[0]
+    if len(ink) < WALK_SOLID_RUN:
+        return False
+    breaks = np.where(np.diff(ink) > 1)[0]
+    starts = np.concatenate([[ink[0]], ink[breaks + 1]])
+    stops = np.concatenate([ink[breaks], [ink[-1]]])
+    return bool((stops - starts + 1).max() >= WALK_SOLID_RUN)
 
 
 def _walk_out_of_ink(
-    a: np.ndarray, left: int, top: int, right: int, bottom: int
+    a: np.ndarray, left: int, top: int, right: int, bottom: int, line_col: int
 ) -> tuple[int, int, int, int]:
-    """Push each box edge that bisects ink outward to whitespace (+ pad), capped."""
+    """Push each box edge that bisects a stroke outward to whitespace (+ pad), capped."""
+    del line_col  # kept for call-site symmetry; the line rule is column-agnostic
     h, w = a.shape
 
-    def ink_col(x: int) -> bool:
-        return 0 <= x < w and bool((a[top:bottom, x] == 0).any())
+    def col_bisected(x: int, inward: int) -> bool:
+        xi = min(max(x + inward * WALK_BISECT_DEPTH, 0), w - 1)
+        return 0 <= x < w and int(((a[top:bottom, x] == 0) & (a[top:bottom, xi] == 0)).sum()) >= WALK_BISECT_MIN
 
-    def ink_row(y: int) -> bool:
-        return 0 <= y < h and bool((a[y, left:right] == 0).any())
+    def row_bisected(y: int, inward: int) -> bool:
+        yi = min(max(y + inward * WALK_BISECT_DEPTH, 0), h - 1)
+        return 0 <= y < h and int(((a[y, left:right] == 0) & (a[yi, left:right] == 0)).sum()) >= WALK_BISECT_MIN
 
-    if ink_col(left):
+    def solid_col(x: int) -> bool:
+        return 0 <= x < w and _has_solid_run(a[top:bottom, x])
+
+    line_flags = np.zeros(0, dtype=bool)
+    r0 = 0
+
+    def solid_row(y: int) -> bool:
+        if not (0 <= y < h) or not _has_solid_run(a[y, left:right]):
+            return False
+        return not (r0 <= y < r0 + len(line_flags) and line_flags[y - r0])
+
+    if col_bisected(left, +1):
         x, n = left, 0
-        while n < NAME_WALK_MAX and ink_col(x - 1):
+        while n < NAME_WALK_MAX and solid_col(x - 1):
             x -= 1
             n += 1
         left = max(0, x - NAME_TRIM_PAD)
-    if ink_col(right - 1):
+    if col_bisected(right - 1, -1):
         x, n = right - 1, 0
-        while n < NAME_WALK_MAX and ink_col(x + 1):
+        while n < NAME_WALK_MAX and solid_col(x + 1):
             x += 1
             n += 1
         right = min(w, x + NAME_TRIM_PAD + 1)
-    if ink_row(top):
+    # Vertical walks ignore bare line rows (a hang-line under the name is not glyph).
+    r0 = max(0, top - NAME_WALK_MAX - 1)
+    r1 = min(h, bottom + NAME_WALK_MAX + 2)
+    line_flags = _line_only_rows(a[r0:r1, left:right])
+    if row_bisected(top, +1) and not line_flags[top - r0]:
         y, n = top, 0
-        while n < NAME_WALK_MAX and ink_row(y - 1):
+        while n < NAME_WALK_MAX and solid_row(y - 1):
             y -= 1
             n += 1
         top = max(0, y - NAME_TRIM_PAD)
-    if ink_row(bottom - 1):
+    if row_bisected(bottom - 1, -1) and not line_flags[bottom - 1 - r0]:
         y, n = bottom - 1, 0
-        while n < NAME_WALK_MAX and ink_row(y + 1):
+        while n < NAME_WALK_MAX and solid_row(y + 1):
             y += 1
             n += 1
         bottom = min(h, y + NAME_TRIM_PAD + 1)
@@ -930,7 +1070,10 @@ def _is_empty_name(node: LineNode, a: np.ndarray) -> bool:
     """
     if node.top is None or node.bot is None:
         return True
-    return int((1 - get_name_image(node, a)).sum()) < BLANK_NAME_MAX_INK
+    crop = get_name_image(node, a)
+    narrow, _bar = _row_kinds(crop)   # no real name is only narrow verticals
+    glyph = (crop == 0) & ~narrow[:, None]
+    return int(glyph.sum()) < BLANK_NAME_MAX_INK
 
 
 def build_parse_sidecar(
