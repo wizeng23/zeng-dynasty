@@ -137,3 +137,15 @@ longer (69_82: 尚澜's riser ends at 1442, endpoint reported at 1496 → crop c
 the top of 尚 → OCR 回澜). The stroke read already knows each stroke's true end;
 switching to it changes coordinates for every child (Book 1 too), so it waits for a
 deliberate re-run. Post-fixed via `recrop` for 69_82_7 and 69_82_20.
+
+## Name box: edges must not bisect ink (2026-09-14) — IMPLEMENTED, effective next Stage 5 run
+`_tight_ink_box` clamps at the +-NAME_HALF_WIDTH (120px) window edge when a glyph
+reaches it (114_120's 毓塘: 毓 centred 50px left of its line lost 12px) and at the
+band top when the parent endpoint was read inside the glyph (69_82's 尚澜, 回澜 in
+OCR). William's rule, now in `_walk_out_of_ink`: an edge with ink on it walks outward
+to whitespace, then pads; capped at NAME_WALK_MAX=80px so smear streaks / neighbour
+lines can't drag it. Book 2 currently carries these as `recrop` entries in
+`data/book2_fixes.json`; after the next Stage 5 run the rule should make those
+entries redundant (keep them until verified). Consider also NAME_HALF_WIDTH 120→160
+together with a streak-tolerant column trim (10 of 1586 Book 2 names touch the
+window edge; 1 was a real clip, 9 were ADF streaks beside the glyph).

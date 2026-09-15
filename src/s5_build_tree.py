@@ -831,6 +831,56 @@ def _tight_ink_box(node: LineNode, a: np.ndarray) -> tuple[int, int, int, int]:
         bottom = band_top + min(int(real[-1]) + NAME_TRIM_PAD, band.shape[0] - 1) + 1
     else:
         top, bottom = top_row, bot_row
+    return _walk_out_of_ink(a, left, top, right, bottom)
+
+
+# A box edge must never bisect ink. The window/band trim above clamps at the
+# window edge when a glyph reaches it (a wide 毓 centred 50px off its line -- Book
+# 2's 毓塘 lost 12px of its left side) or at the band top when the parent endpoint
+# was read inside the glyph (69_82's 尚澜, whose top 36px were cut and OCR'd 回澜).
+# William's rule: from an edge that still has ink on it, walk outward until true
+# whitespace, then pad. The walk is capped so an ADF smear streak beside a name or
+# a neighbour's line (>= ~100px past the window) cannot drag the box across the
+# page; an edge already in whitespace -- the normal case -- is left exactly as is.
+NAME_WALK_MAX = 80
+
+
+def _walk_out_of_ink(
+    a: np.ndarray, left: int, top: int, right: int, bottom: int
+) -> tuple[int, int, int, int]:
+    """Push each box edge that bisects ink outward to whitespace (+ pad), capped."""
+    h, w = a.shape
+
+    def ink_col(x: int) -> bool:
+        return 0 <= x < w and bool((a[top:bottom, x] == 0).any())
+
+    def ink_row(y: int) -> bool:
+        return 0 <= y < h and bool((a[y, left:right] == 0).any())
+
+    if ink_col(left):
+        x, n = left, 0
+        while n < NAME_WALK_MAX and ink_col(x - 1):
+            x -= 1
+            n += 1
+        left = max(0, x - NAME_TRIM_PAD)
+    if ink_col(right - 1):
+        x, n = right - 1, 0
+        while n < NAME_WALK_MAX and ink_col(x + 1):
+            x += 1
+            n += 1
+        right = min(w, x + NAME_TRIM_PAD + 1)
+    if ink_row(top):
+        y, n = top, 0
+        while n < NAME_WALK_MAX and ink_row(y - 1):
+            y -= 1
+            n += 1
+        top = max(0, y - NAME_TRIM_PAD)
+    if ink_row(bottom - 1):
+        y, n = bottom - 1, 0
+        while n < NAME_WALK_MAX and ink_row(y + 1):
+            y += 1
+            n += 1
+        bottom = min(h, y + NAME_TRIM_PAD + 1)
     return left, top, right, bottom
 
 
