@@ -237,6 +237,88 @@ class LineNode:
         return f"LineNode(id={self.id}, top={self.top}, bot={self.bot})"
 
 
+# Hairline gap fill before connected components (v0 had this; v1 did not).
+# A bar can lose a few columns to the scan (133_133: a 3px nick right at 尚星's
+# riser cut its bar from 贞杰's and left the other four sons an orphan bar). A
+# background run of <= GAP_FILL_H bounded on both sides, in the same row, by
+# BAR-PIECE ink (runs >= BAR_PIECE_MIN wide) is refilled. Only bar pieces may
+# bound a gap: specks and thin strokes (grandpa's cursive note in 8_10) are not
+# sources, so grain and handwriting are never linked onto a line. (v0 also filled
+# 3px VERTICAL gaps; at v1 resolution every variant tried either missed the real
+# pinch or welded a glyph's top tick to the riser above it -- a hang-line often
+# starts within a few rows of a glyph -- so a pinched hang-line is handled
+# structurally in merge_nodes instead: see the continuation-stub rule.)
+GAP_FILL_H = int(round(9 * V1_SCALE))   # 27px
+_GAP_CHUNK = 512                         # rows per pass; keeps the index arrays small
+def _fill_short_gaps(
+    fg: np.ndarray, max_gap: int, axis: int,
+    source: np.ndarray | None = None, anchor: np.ndarray | None = None,
+) -> np.ndarray:
+    """Fill background runs of <= ``max_gap`` bounded on both sides along ``axis``.
+
+    ``fg`` is a boolean ink mask; ``source`` (default ``fg``) is the mask whose
+    pixels may bound a gap -- pass a lines-only mask to bridge lines but not
+    glyphs. ``anchor``, if given, must hold at least ONE of the two bounding
+    pixels (e.g. "sits in a vertical stack": a line has that on at least one
+    side of a pinch; a chain of specks has it on neither). ``axis=1`` fills
+    horizontal gaps (within a row), ``axis=0`` vertical (within a column).
+    Returns ``fg`` with the gap pixels added.
+    """
+    src = fg if source is None else source
+    if axis == 0:
+        return _fill_short_gaps(fg.T, max_gap, 1, src.T, None if anchor is None else anchor.T).T
+    out = fg.copy()
+    h, w = fg.shape
+    idx = np.arange(w, dtype=np.int32)
+    for r0 in range(0, h, _GAP_CHUNK):
+        block = src[r0:r0 + _GAP_CHUNK]
+        left = np.where(block, idx, -1).astype(np.int32)
+        left = np.maximum.accumulate(left, axis=1)
+        right = np.where(block, idx, w).astype(np.int32)
+        right = np.minimum.accumulate(right[:, ::-1], axis=1)[:, ::-1]
+        gap = right - left - 1
+        fill = (~fg[r0:r0 + _GAP_CHUNK]) & (left >= 0) & (right < w) & (gap <= max_gap)
+        if anchor is not None:
+            anc = anchor[r0:r0 + _GAP_CHUNK]
+            l_ok = np.take_along_axis(anc, np.clip(left, 0, w - 1), axis=1)
+            r_ok = np.take_along_axis(anc, np.clip(right, 0, w - 1), axis=1)
+            fill &= l_ok | r_ok
+        out[r0:r0 + _GAP_CHUNK] |= fill
+    return out
+
+
+def _run_lengths(block: np.ndarray) -> np.ndarray:
+    """Per pixel: length of the horizontal ink run it belongs to (0 for background)."""
+    h, w = block.shape
+    fwd = np.zeros(block.shape, dtype=np.int32)
+    acc = np.zeros(h, dtype=np.int32)
+    for c in range(w):
+        acc = np.where(block[:, c], acc + 1, 0)
+        fwd[:, c] = acc
+    bwd = np.zeros(block.shape, dtype=np.int32)
+    acc = np.zeros(h, dtype=np.int32)
+    for c in range(w - 1, -1, -1):
+        acc = np.where(block[:, c], acc + 1, 0)
+        bwd[:, c] = acc
+    return np.where(block, fwd + bwd - 1, 0)
+
+
+# Source for the HORIZONTAL fill: only pixels in runs at least this wide -- bar
+# pieces. Specks (1-3px) and thin strokes (grandpa's cursive note in 8_10, ~10px)
+# are excluded, so the fill rejoins a nicked bar but never links grain or
+# handwriting onto a line.
+BAR_PIECE_MIN = 20
+
+
+def _bar_pixels(fg: np.ndarray) -> np.ndarray:
+    """Ink in horizontal runs >= BAR_PIECE_MIN wide: bar-piece ink."""
+    out = np.zeros_like(fg)
+    for r0 in range(0, fg.shape[0], _GAP_CHUNK):
+        block = fg[r0:r0 + _GAP_CHUNK]
+        out[r0:r0 + _GAP_CHUNK] = _run_lengths(block) >= BAR_PIECE_MIN
+    return out
+
+
 def find_lines(
     image: np.ndarray, threshold: int = 70
 ) -> list[set[tuple[int, int]]]:
@@ -246,7 +328,9 @@ def find_lines(
     foreground and keeps every component whose bounding box spans more than
     ``threshold`` pixels in width or height. This replaces the old hand-rolled
     pixel BFS -- verified to return the identical pixel sets, but in C and with
-    bounding boxes for free (see the design spec).
+    bounding boxes for free (see the design spec). Hairline scan gaps are filled
+    first (:func:`_fill_short_gaps`) so a nicked bar or a pinched hang-line is one
+    component; the returned pixel sets include the filled pixels.
 
     Args:
         image: Binary ink grid (0 == ink, 1 == background).
@@ -260,7 +344,9 @@ def find_lines(
         return []
 
     # cv2 labels the nonzero foreground; our ink is 0, so invert to make ink 1.
-    foreground = (1 - image).astype(np.uint8)
+    fg = image == 0
+    fg = _fill_short_gaps(fg, GAP_FILL_H, axis=1, source=_bar_pixels(fg))
+    foreground = fg.astype(np.uint8)
     num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(
         foreground, connectivity=4
     )
@@ -572,6 +658,27 @@ def merge_nodes(nodes: list[LineNode], config: BookConfig) -> list[LineNode]:
                 break
         if not made_progress:
             break
+
+    # Second pass -- a pinched hang-line. When the line under a name breaks
+    # completely for a few rows (114_120 毓揄: 3 blank rows with a sideways step),
+    # the parse sees TWO fan-out components under one name: the upper one fuses with
+    # the name above (first pass), the lower one is a bottom-only stub with no top
+    # stub of its own. It sits on the same column just below the complete node --
+    # within one segment length, far above where that node's children fan out
+    # (~a generation-row, gen_row_min) -- so it is the node's continuation: the
+    # node takes its children. Otherwise it would become a phantom over the name.
+    complete = [n for n in nodes if n.top is not None and n.bot is not None]
+    for stub in [n for n in nodes if n.top is None and n.bot is not None]:
+        bx, by = stub.bot
+        owner = None
+        best = config.merge_max_shift
+        for n in complete:
+            nbx, nby = n.bot
+            if 0 < bx - nbx < config.merge_max_drop and abs(by - nby) < best:
+                owner, best = n, abs(by - nby)
+        if owner is not None:
+            owner.children = owner.children + stub.children
+            nodes.remove(stub)
     return nodes
 
 

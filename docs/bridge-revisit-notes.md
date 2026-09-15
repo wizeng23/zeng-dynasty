@@ -172,3 +172,19 @@ entry or accept); smear streaks beside a glyph still add 10-34px (any-ink column
 trim — the streak-tolerant column trim is still pending); 0_3 惟秀 gains ~32 rows of
 its own riser's grainy smear. 8_10_9 (line fragment whose crop overlaps two real
 names) remains a `delete` fix.
+
+## Hairline nicks + pinched hang-lines (2026-09-14, later) — IMPLEMENTED, effective next Stage 5 run
+- `find_lines` refills horizontal gaps <= 27px bounded on both sides by bar-piece ink
+  (runs >= 20px): 133_133's orphan bar (3px nick at 尚星's riser) heals with no
+  bridging. Specks/thin strokes never bound a fill (8_10's handwriting stays apart).
+- A VERTICAL pixel fill was tried and rejected: every variant that bridged 毓揄's
+  3-row pinch also welded some glyph tick or cursive stroke to a line elsewhere
+  (0_3 存学, 58_62, 8_10). Pinches are repaired structurally: `merge_nodes` second
+  pass gives a bottom-only stub on a complete node's column, within one segment
+  below it, to that node (continuation-stub rule).
+- `merge_max_shift` 60→90 with nearest-wins (毓棋/毓援 61-70px misprints).
+- Child endpoints now at each riser's own bottom (尚澜/衍谟 clipped tops).
+Frozen-graph check (fills applied, in memory): 0_3, 22_23, 58_62, 69_82, 114_120,
+133_133 identical to the hand-fixed results with 0 orphans; 8_10 differs only by the
+line-fragment phantom 8_10_9 (still a `delete` fix). So `data/book2_fixes.json`
+reduces to that one delete + the 106_113 merge on a re-run.
