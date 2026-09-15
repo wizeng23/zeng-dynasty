@@ -354,6 +354,78 @@ nodes, 15 roots**: the main lineage (1300 nodes under 存学) + the same 8
 OCR-mismatched section roots + 6 cross-graph orphans (106_113_5, 商科, 133_133_1,
 毓揄, 毓棋, 8_10_9). Website still shows only Book 1.
 
+## Era 11 — Book-3 prep fixes; whitening anchor, bbox speedup, and two stale diagnoses retired (2026-09-14 → 2026-09-15)
+
+Working through the `docs/handoff.md` item list, all without re-running Book 2
+(frozen at `books/book2/frozen_2026-09-14`; every change validated in memory
+against those graphs). The theme of the era is that **not every handoff item was a
+real bug** — two dissolved on inspection, one would have made things worse — and
+the wins came from measuring before cutting.
+
+**Stage 3 whitening anchored to the inner border.** The bottom whitening had been
+measured from the trimmed page edge, but `trim_borders` cuts ~34px *above* the
+inner border, so the fixed 200px band reached only ~234px above the border — 8px
+of clearance from the lowest-hanging 3-char names on p42, which then lost their
+last …子 character. Fix (`src/s3_segment.py`): `bottom_inner_border_row` detects
+the two-band printed frame at the page bottom (outer line flush with the edge,
+inner line ~40px up) and returns the inner one; `whiten_margins(a, bottom_anchor=)`
+whitens from `anchor − WHITEN_BOTTOM_FROM_BORDER` (=180) down — a band fixed
+*relative to the border*, not the trimmed edge. A 134-page in-memory scan confirmed
+it: min clearance **8px → 57px**, every page finds a real 2-band frame (border 56–60px
+above the page bottom, no fallbacks), and — the safety property — **no page has
+glyph ink inside the whitened band**. The six cut …子 names are safe on the next
+re-run. (Book 2's crops are already regenerated with this; downstream is not.)
+
+**`find_lines` component extraction — the real bridging-speed bottleneck.** The
+handoff blamed bridging's per-candidate whole-graph re-parse and suggested caching
+the labelling. Profiling said otherwise: `parse_graph` was 12.9s on 106_113, and
+**11.6s of it was `find_lines`** — specifically `np.where(labels == label)` run
+*once per kept component*, each a full pass over the 5924×22998 (136M-element) label
+array (~9s across 32 components). Slicing each component out of its own
+`connectedComponentsWithStats` bounding box gives **identical pixel sets ~60× faster**:
+parse_graph **12.9s → 4.1s**, `bridge_orphans` on 106_113 **78s → 23s**, Book 2
+Stage 5 ~50min → ~15min. No caching, no behaviour change, and it speeds *every*
+parse — matters most for Book 3's big graphs. The lesson: the slow thing was an
+array scan hiding inside the parse, not the re-parsing the handoff pointed at.
+
+**Two stale diagnoses retired by reproduction.** (a) The "106_113 gate refusal" —
+supposedly the orphan bar couldn't bridge because doing so orphaned two other bars
+— no longer happens: `bridge_orphans` on the raw frozen graph auto-resolves the
+sole orphan with a single nick and reproduces the hand-fixed parse **node-for-node**
+(100 nodes, 0 unmatched, 0 child-set mismatches). The `find_lines` hairline-nick
+refill (Era 10's 1a9917b) welds the broken bar before orphan detection, so the gate
+now passes. Consequence: `data/book2_fixes.json` reduces to **just `delete 8_10_9`**
+on a re-run (both the 106_113 merge and everything else are now automatic). (b) The
+Stage 4 adjacency guard was left as an in-flight commit that *raises* on a
+page-number gap rather than silently welding tree pages across missing biography
+pages (Books 3/4's 10_138 / 202_247 bogus graphs) — a loud failure is correct here,
+because a gap means an upstream start-detection miss, not a wide subtree.
+
+**A regression avoided: the name window stays at ±120.** The handoff wanted
+`NAME_HALF_WIDTH` widened to ±160 plus a streak-tolerant column trim. An in-memory
+sweep of all frozen Book 2 graphs killed the idea: **173 boxes grow ≥15px at 160**,
+a cluster to exactly 320px (the full 2×160 window) as the any-ink trim starts
+pulling in the neighbour ~300px away (8_10_8 → 430px, 8_10_9 → 540px), and it
+doesn't even fix the wide glyphs — 114_120_54 毓塘 just re-clamps at the wider edge.
+Meanwhile the marquee cases (毓援/毓棋/毓塘, 8_10_3, 58_62_68) are **already rescued
+by the walk-out** — only ~5 marginal nodes stay clamped. Widening safely would
+require the risky streak-trim (a column analog of `_line_only_rows`, must not erase
+thin real strokes) for a small payoff on a frozen book. Verdict: leave it at 120;
+revisit only if Book 3 shows cut wide glyphs the walk-out misses.
+
+**Small landings.** `scripts/qa/s5_fixes.py` — a data-driven post-fixes QA page
+(one section per delete/merge/recrop from `data/{book}_fixes.json`, self-contained
+base64), replacing Era 10's ad hoc `books/book2/qa/fixes.html` generator; it
+surfaces the 毓塘→毓搪 mis-OCR on its own. And `s5_fixes` merge now moves the real
+node's sidecar `bot` to the phantom's, so the QA red edge no longer fans ~60px off
+the hang-line (114_120 毓援) — QA-overlay cosmetic only.
+
+Net for the era: five items landed (whitening, bbox speedup, adjacency guard, QA
+tool, cosmetic), two were stale (106_113, and the fixes-file pruning that follows),
+two were correctly *not* done (window widen = regression; Stage 4 shift carry-over =
+bridging already handles it). Nothing required a Book 2 re-run. Tests 66 green;
+commits on `main`, William pushes.
+
 ---
 
 ## Pipeline status (snapshot)

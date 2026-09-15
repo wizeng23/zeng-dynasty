@@ -110,10 +110,21 @@ is the verified ground truth used to check the algorithmic output.
 - `docs/future-features.md` — deferred FEATURE ideas (e.g. polyphonic-name support).
 - `docs/ocr-bakeoff.md` — why PP-OCRv5; `docs/overnight-worklog.md` — bridging blow-by-blow.
 
-## Current state (2026-09-14)
+## Current state (2026-09-15)
 
 **Handoff for the next session: `docs/handoff.md`** (rules, validation recipe,
 remaining work items in order, OCR review list, Book 3 plan, server ports).
+
+**Book-3-prep fixes landed (2026-09-15, `history.md` Era 11), no Book 2 re-run.**
+Stage 3 bottom whitening is now anchored to the *detected* inner border
+(`bottom_inner_border_row` + `WHITEN_BOTTOM_FROM_BORDER=180`), so the six …子 names
+no longer lose their last char (clearance 8px→57px over 134 pages). `find_lines`
+extracts each component from its cv2 bbox (identical output, ~60× faster:
+`parse_graph` 12.9s→4.1s). Stage 4 raises on a page-number gap instead of welding
+across missing bio pages. On a Book 2 re-run, `data/book2_fixes.json` reduces to
+**just `delete 8_10_9`** (the 106_113 merge is now auto-resolved by bridging).
+New QA tool `scripts/qa/s5_fixes.py`. `NAME_HALF_WIDTH` stays 120 (widening
+regressed). All in-memory-validated against `books/book2/frozen_2026-09-14`.
 
 **Book 1 is DONE through all 7 v1 stages** → `data/book1_stitched.jsonl` (150
 nodes, 1 root 点, 56 gens, OCR'd names), published to the website. Stitch seams are
@@ -127,8 +138,10 @@ roots whose OCR reading differs from their canonical leaf (贞烈/贞列, 贞熊
 贞杰/贞木, 贞斗/贞升, 贞亮/贞光, 克太, 贞富, 贞年). 0 orphans. **Post-fixes layer:**
 `data/book2_fixes.json` (William's QA review: delete/merge/recrop by provenance) is
 applied by `python -m src.s5_fixes --book book2 --ocr` after every Stage 5 run, then
-Stage 7. Book 2's 3_crops are from 2026-09-01 (pre whitening fix): six …子 names
-lost their last char — OCR override or a Stage 3+ re-run. Stage 4 now
+Stage 7. Book 2's *downstream* (4_graphs/5_names) is still from 2026-09-01 crops
+where six …子 names lost their last char — OCR override until a Stage 3→7 re-run
+(the Stage 3 whitening is fixed in code as of Era 11, so a re-run restores them).
+Stage 4 now
 rejects ADF smear specks as seam endpoints; Stage 5 has the stroke-end read for
 stepped bars and `bridge_orphans` (trace-right rule, follows seam steps, targeted
 gate; green `{stem}.imaginary.json`, cyan nicks `{stem}.nicks.json`); Stage 7

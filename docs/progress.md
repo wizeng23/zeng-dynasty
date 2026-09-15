@@ -1,8 +1,10 @@
 # Progress
 
 Status of each book through the v1 pipeline (7 whole-integer stages; **6 = OCR,
-7 = stitch**). See `pipeline.md` for what each stage does, and `history.md` Era 9
-Era 10 for the latest detail.
+7 = stitch**). See `pipeline.md` for what each stage does, and `history.md` Era 9–11
+for the latest detail (Era 11 = Book-3-prep fixes: inner-border whitening anchor,
+`find_lines` bbox speedup, Stage 4 gap guard — all validated in memory, no Book 2
+re-run).
 
 | Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 build_tree | 6 OCR | 7 stitch |
 |------|-----------|------------|--------|---------|--------------|-------|----------|
