@@ -26826,8 +26826,8 @@
   },
   "1432": {
     "name": "毓棋",
-    "confidence": 0.7859,
-    "low_conf": true,
+    "confidence": 0.9657,
+    "low_conf": false,
     "char_boxes": [
       [
         0,
@@ -26839,7 +26839,7 @@
         0,
         180,
         167,
-        381
+        342
       ]
     ]
   },
@@ -26863,15 +26863,21 @@
     ]
   },
   "1434": {
-    "name": "援",
-    "confidence": 0.9931,
-    "low_conf": false,
+    "name": "毓援",
+    "confidence": 0.638,
+    "low_conf": true,
     "char_boxes": [
       [
+        1,
         0,
-        84,
-        154,
-        370
+        153,
+        188
+      ],
+      [
+        0,
+        164,
+        151,
+        342
       ]
     ]
   },
