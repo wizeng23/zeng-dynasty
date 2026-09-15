@@ -48,34 +48,29 @@ merge / recrop by provenance, `--ocr`). QA: width cap 16k, per-fill crops, cyan
 nicks, only detected endpoints circled, `books/book2/qa/fixes.html` before/after
 page (ad hoc script, not yet a tool), OCR server `--books` filter.
 
-On the next Book 2 re-run, `data/book2_fixes.json` should reduce to: `delete 8_10_9`
-and `merge 106_113_5 -> 106_113_1` (everything else now happens automatically —
-verify, then prune the file).
+On the next Book 2 re-run, `data/book2_fixes.json` should reduce to **just `delete
+8_10_9`**. The `merge 106_113_5 -> 106_113_1` is now ALSO redundant — verified
+2026-09-14: `bridge_orphans` on the raw frozen 106_113 graph auto-resolves the sole
+orphan with a single nick (col 14705), giving 100 nodes that match the hand-fixed
+frozen parse node-for-node (0 unmatched, 0 child-set mismatches). The
+`find_lines` hairline-nick refill (commit 1a9917b) welds the broken bar before
+orphan detection, so the automatic gate now passes. Prune the merge on the next
+run.
 
 ## Remaining work items, in order
 
-1. **Stage 3 whitening anchored to the inner border** — test written and xfail-marked:
-   `tests/test_s3_whiten.py` (remove the xfail marker when implementing). Implement in
-   `src/s3_segment.py`: `bottom_inner_border_row(page)` = top row of the second
-   full-width (>=50% coverage) band from the bottom of the UNTRIMMED page (outer frame
-   is the lowest band; inner line ~40px above it; if only one band, use it);
-   `whiten_margins(a, bottom_anchor=None)` whitens rows >= `bottom_anchor -
-   WHITEN_BOTTOM_FROM_BORDER` when given (anchor in trimmed coords = border row −
-   `_top_border_cut(page)`), else the old fixed 200px; `WHITEN_BOTTOM_FROM_BORDER =
-   180` (lowest Book 2 glyph ends ~246px above the inner border on p96; today's
-   effective reach is ~234px → 12px clearance). Wire it in `segment()`. Validate with
-   the clearance scan over all 134 Book 2 pages (`trim_borders` → boundary − lowest
-   glyph row with >=25 inked px): min clearance should rise from 8px (p42) to ≥ ~60px
-   and NO page may have glyph ink inside the band. The Book 2 crops are already
-   regenerated with the current code (`books/book2/3_crops/`) but downstream is NOT.
-2. **106_113 gate refusal** — the orphan bar at (2091,15040) has nick candidates
-   (17145→17146, 21982→21985, 22001→22009) that DO connect it to 尚恕's hang-line
-   (尚恕 then has 6 children) but the re-parse also turns two other bars, at
-   (2074,5878) 3 kids and (2091,2612) 4 kids, into orphans, so `bridge_resolves`
-   refuses (correctly). Find out why those two lose their parent when the far-right
-   bar joins (suspect: the joined component's band read picks a different top /
-   the flush-bar collapse changes with the new min row). Until then it is the
-   `merge 106_113_5 -> 106_113_1` post-fix.
+1. ✅ **DONE (2026-09-14)** — **Stage 3 whitening anchored to the inner border.**
+   Implemented in `src/s3_segment.py`: `bottom_inner_border_row(page)` detects the
+   2-band bottom frame (inner line = 2nd band up), `whiten_margins(a,
+   bottom_anchor=)` whitens from `bottom_anchor - WHITEN_BOTTOM_FROM_BORDER` (=180)
+   down, wired into `segment()`. 134-page Book 2 in-memory scan: min clearance rose
+   from 8px to 57px (p42), NO page has glyph ink in the band, all 134 find a real
+   2-band frame (border sits 56–60px above the page bottom). Tests green
+   (`test_s3_whiten.py`, xfail removed). Book 2 downstream NOT re-run.
+2. ✅ **DONE (2026-09-14, was a stale diagnosis)** — **106_113 gate refusal.** No
+   longer refuses: `bridge_orphans` auto-resolves the sole orphan (see the pruning
+   note above). No code change needed; the `merge 106_113_5 -> 106_113_1` post-fix is
+   now redundant and should be dropped on the next Book 2 re-run.
 3. **Bridging speed** — the gate re-parses the whole graph per candidate (Book 2 Stage 5
    ~50 min; 36_52 alone ~25). Cache `find_lines` labelling and re-parse only the
    components touched by a fill, or restrict the re-parse to the orphan's page span.
