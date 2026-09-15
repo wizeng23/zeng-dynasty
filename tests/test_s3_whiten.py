@@ -11,11 +11,9 @@ pages whose border sits differently in the scan.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from src import s3_segment as seg
 
-pytestmark = pytest.mark.xfail(reason="inner-border whitening anchor not implemented yet (docs/handoff.md item 1)", strict=False)
 
 
 def _page() -> np.ndarray:

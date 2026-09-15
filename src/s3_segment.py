@@ -166,18 +166,68 @@ def trim_borders(a: np.ndarray) -> np.ndarray:
 WHITEN_TOP = 250     # px below the top inner border (graph starts here)
 WHITEN_BOTTOM = 200  # px above the bottom inner border (graph ends here)
 
+# The bottom whitening is BETTER anchored to the *detected* inner border than to
+# the trimmed edge: trim_borders cuts the bottom at a fixed rows-_s(30) inset,
+# which lands ~34px ABOVE the inner border, so the fixed WHITEN_BOTTOM only reaches
+# ~234px above the border -- 8-12px clearance from the lowest 3-char leaf names
+# (Book 2 p42/p96), which then lost their last char. Whitening from
+# WHITEN_BOTTOM_FROM_BORDER px above the DETECTED border instead is a fixed,
+# border-relative band that clears the page-number/smear strip while leaving the
+# names ~60px of air. Lowest Book 2 glyph ends ~246px above the border -> 66px.
+WHITEN_BOTTOM_FROM_BORDER = 180
 
-def whiten_margins(a: np.ndarray) -> np.ndarray:
-    """Blank the fixed graph-free margin inside each inner border (top & bottom).
 
-    ``a`` is a border-trimmed page, so its top edge is the top inner border and its
-    bottom edge the bottom inner border. The graph lives ``WHITEN_TOP`` px below the
-    top and ``WHITEN_BOTTOM`` px above the bottom; whitening those margins clears
-    smear/page-numbers there without touching a character.
+def bottom_inner_border_row(a: np.ndarray) -> int:
+    """Row (in the UNTRIMMED page) of the top of the bottom inner border line.
+
+    The printed frame at the page bottom is two full-width bands: a thick outer
+    line flush with the bottom edge, and a thinner inner line ~40px above it. We
+    want the inner one -- the graph's true bottom boundary. Scans the bottom
+    ``BORDER_SEARCH_ROWS`` for full-width bands (>=``BORDER_ROW_COVERAGE`` ink),
+    bottom-up, and returns the TOP row of the SECOND band found (the inner line).
+    Falls back to the single band's top if only one is found, or to
+    ``rows - _s(30)`` (the old trim inset) if none is.
+    """
+    rows, cols = a.shape
+    lo = max(0, rows - BORDER_SEARCH_ROWS)
+    cov = np.sum(1 - a[lo:], axis=1) / cols
+    black = cov >= BORDER_ROW_COVERAGE
+    band_tops: list[int] = []          # top row (absolute) of each band, bottom-up
+    r = len(black) - 1
+    while r >= 0:
+        if black[r]:
+            while r >= 0 and black[r]:
+                r -= 1
+            band_tops.append(lo + r + 1)   # r+1 is the first black row of the band
+        else:
+            r -= 1
+    if len(band_tops) >= 2:
+        return band_tops[1]            # the inner line (2nd band up from the bottom)
+    if band_tops:
+        return band_tops[0]
+    return rows - _s(30)
+
+
+def whiten_margins(a: np.ndarray, bottom_anchor: int | None = None) -> np.ndarray:
+    """Blank the graph-free margin inside each inner border (top & bottom).
+
+    ``a`` is a border-trimmed page, so its top edge is the top inner border. The
+    graph lives ``WHITEN_TOP`` px below the top; whitening that clears top smear.
+
+    For the bottom: when ``bottom_anchor`` is given (the inner-border row expressed
+    in ``a``'s trimmed coordinates, i.e. ``bottom_inner_border_row(page) -
+    _top_border_cut(page)``), whiten every row at/below ``bottom_anchor -
+    WHITEN_BOTTOM_FROM_BORDER`` -- a border-relative band that clears the
+    page-number strip without cutting into low-hanging names. When omitted, fall
+    back to the old fixed ``WHITEN_BOTTOM`` px from the trimmed bottom edge.
     """
     a = a.copy()
     a[:WHITEN_TOP, :] = 1
-    a[-WHITEN_BOTTOM:, :] = 1
+    if bottom_anchor is not None:
+        start = max(0, bottom_anchor - WHITEN_BOTTOM_FROM_BORDER)
+        a[start:, :] = 1
+    else:
+        a[-WHITEN_BOTTOM:, :] = 1
     return a
 
 
@@ -319,13 +369,14 @@ def segment(
             continue
         filepath = os.path.join(in_dir, f"{i}.png")
         a = get_image(filepath)
+        anchor = bottom_inner_border_row(a) - _top_border_cut(a)
         a = trim_borders(a)
         tree_start_x = is_tree_start_page(a, config)
         if tree_start_x != -1:
             logger.info("Page %d starts a subtree (label at x=%d)", i, tree_start_x)
             a = a[:, :tree_start_x]
         starts[str(i)] = tree_start_x != -1
-        a = whiten_margins(a)
+        a = whiten_margins(a, bottom_anchor=anchor)
         keep_left = CROP_KEEP_LEFT.get(book, {}).get(i)
         a = shrink_page(a, keep_left=keep_left)
         out_path = os.path.join(crops_dir, f"{i}.png")
