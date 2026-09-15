@@ -10,7 +10,8 @@
     "merge 114_120_43 -> 114_120_54: p118 phantom over 毓棋 took 传钰.",
     "merge 114_120_46 -> 114_120_47: p114 phantom over 毓揄 took one child.",
     "recrop 69_82_7 (尚澜, p82) and 69_82_20 (衍谟, p80): the child-top endpoint sat inside the glyph, clipping its top; boxes widened to the glyph's real top.",
-    "recrop 114_120_56 (毓援) and 114_120_54 (毓棋), p118: both were leaves in the parse, so their inferred bottom ran down the hang-line the phantom had taken (600-row boxes; OCR read only 援). Boxes cut at the glyph bottom like their sibling 毓塘."
+    "recrop 114_120_56 (毓援) and 114_120_54 (毓棋), p118: both were leaves in the parse, so their inferred bottom ran down the hang-line the phantom had taken (600-row boxes; OCR read only 援). Boxes cut at the glyph bottom like their sibling 毓塘.",
+    "recrop boxes = measured glyph ink extent + 30px pad on every side (the parse's boxes for these four were too narrow on the left as well as wrong vertically)."
   ],
   "delete": [
     "8_10_9"
@@ -25,26 +26,26 @@
   "recrop": {
     "69_82_7": [
       0,
-      1462,
-      184,
-      1770
+      1464,
+      183,
+      1775
     ],
     "69_82_20": [
-      3735,
-      2420,
-      3947,
-      2741
+      3736,
+      2419,
+      3946,
+      2739
     ],
     "114_120_56": [
-      6416,
-      4308,
-      6570,
-      4650
+      6358,
+      4311,
+      6569,
+      4654
     ],
     "114_120_54": [
-      6999,
-      4308,
-      7166,
+      6956,
+      4312,
+      7165,
       4650
     ]
   }
