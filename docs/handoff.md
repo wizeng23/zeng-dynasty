@@ -79,12 +79,24 @@ run.
    78s→23s — Book 2 Stage 5 ~50min→~15min, and it scales the same for Book 3's big
    graphs. No caching needed. (If more is wanted later, the re-parse-only-touched-
    region idea still stands, but the bottleneck was the array scan.)
-4. **Name window ±120 → ±160 + streak-tolerant column trim** — `_tight_ink_box`
-   `NAME_HALF_WIDTH`; the column trim is any-ink, so ADF smear streaks beside a glyph
-   add 10–34px (8_10 宏善/贞院, 58_62 传炘). Drop columns whose ink is only a thin
-   vertical streak (like the row-side `_line_only_rows`). Also 8_10 闻诣 needs a
-   book2 `ignore_regions` entry for grandpa's handwritten note flush against it (see
-   `docs/final_manual_steps.md`; the note text goes into 聞詣's `notes`).
+4. ⚠️ **INVESTIGATED, DEFERRED (2026-09-14) — do NOT widen the window.** The
+   handoff's ±120→±160 half-width is a **net regression**: an in-memory sweep of
+   all frozen Book 2 graphs shows 173 boxes grow ≥15px at 160, a large cluster to
+   exactly 320px (the full 2×160 window) — i.e. the any-ink trim starts pulling in
+   the neighbour ~300px away (8_10_8 → 430px, 8_10_9 → 540px). 160 doesn't even fix
+   the wide glyphs — 114_120_54 毓塘 just re-clamps at the wider edge. Meanwhile the
+   marquee cases (114_120_52/53/54 毓援/毓棋/毓塘, 8_10_3, 8_10_30, 58_62_68) are
+   ALREADY rescued by the walk-out (`_walk_out_of_ink`) — box escapes the window.
+   Only ~5 nodes stay clamped (0_3_1, 4_5_1/5, 58_62_6/17), all edge-column ink of a
+   continuing glyph, marginal. A streak-tolerant column trim (a column analog of
+   `_line_only_rows`) is the ONLY safe way to widen, and it's the high-risk part
+   (must not erase thin real strokes) for a small payoff on a frozen book. Verdict:
+   leave `NAME_HALF_WIDTH=120`; revisit ONLY if Book 3 actually shows cut wide
+   glyphs the walk-out misses. — Separately, 8_10 聞詣's grandpa note is a **manual
+   final-assembly step**, not a Stage 5 fix: it needs hand-measured pixel coords AND
+   the note text copied into 聞詣's `notes` (see `docs/final_manual_steps.md`);
+   `ignore_regions` only blanks pixels, so it can't do the notes half. Handle at
+   Book 2 final assembly.
 5. **Stage 4 shift carry-over** — a page whose seam has no matched line end is
    concatenated top-aligned (`_concat_top_aligned`), producing 7–60px bar steps that
    bridging then repairs (69_82 steps at 11 of 12 seams). Carry the neighbouring
