@@ -55,14 +55,13 @@ export interface LoadedTree {
   byId: Map<number, FamilyNode>;
 }
 
-export type DatasetName = "book1_stitched";
+export type DatasetName = "tree";
 
 export const DATASETS: { name: DatasetName; label: string; blurb: string }[] = [
   {
-    name: "book1_stitched",
-    label: "Book 1",
-    blurb:
-      "Book 1 parsed end-to-end: scans → segmented graphs → one connected lineage, with OCR'd Unicode names.",
+    name: "tree",
+    label: "Zeng Family Tree",
+    blurb: "The Zeng lineage from 曾点, generation by generation.",
   },
 ];
 
@@ -113,7 +112,13 @@ function buildData(nodes: FamilyNode[]): {
     return { node, children: childData };
   }
 
-  const roots = nodes.filter((n) => n.father === -1);
+  // Roots, ordered so a deeper-generation orphan root sits to the LEFT of the
+  // main lineage (d3 lays the virtual root's children left-to-right in array
+  // order). 贞年 (an unattached 贞-generation branch) thus renders left of 点's
+  // tree, at its true generation depth (its y comes from `generation`, below).
+  const roots = nodes
+    .filter((n) => n.father === -1)
+    .sort((a, b) => b.generation - a.generation);
   const rootData = roots.map((r) => wrap(r));
 
   if (rootData.length === 1) {

@@ -23,27 +23,30 @@ const REPO_ROOT = join(WEB_APP, "..");
 const PUBLIC_DATA = join(WEB_APP, "public", "data");
 const PUBLIC_NAMES = join(WEB_APP, "public", "names");
 
-// The single showcase dataset: Book 1, fully parsed -> OCR'd -> cross-graph
-// stitched into one connected lineage (src/s7_stitch.py). It carries real Unicode
-// names (Stage 6 OCR) AND the v1 name-crop images as a fallback. Its name_images
-// point at "books/book1/5_names/*.png", rewritten to "/names/book1/*.png".
-const BOOKS = [
-  { jsonl: "data/book1_stitched.jsonl", book: "book1" },
-] as const;
+// The combined genealogy: Books 1 and 2 spliced into one tree at the shared 存学
+// node, generations numbered to the official 字辈. Nodes carry Unicode names with
+// the name-crop images as a fallback. name_images point at
+// "books/book{1,2}/5_names/*.png", rewritten to "/names/book{1,2}/*.png" (the per-
+// node book is inferred from that path, so both books' crops are served).
+const DATASET = { jsonl: "data/tree_combined.jsonl" } as const;
+const NAME_BOOKS = ["book1", "book2"] as const;
 
-function copyJsonl(srcRel: string, book: string | null): number {
+function copyJsonl(srcRel: string, destName: string): number {
   const srcPath = join(REPO_ROOT, srcRel);
-  const fileName = srcRel.split("/").pop() as string;
-  const destPath = join(PUBLIC_DATA, fileName);
+  const destPath = join(PUBLIC_DATA, destName);
 
   const lines = readFileSync(srcPath, "utf8").split("\n").filter(Boolean);
 
   const rewritten = lines.map((line) => {
     const node = JSON.parse(line) as { name_images?: string[] };
-    // Rewrite "books/book1/names/1.png" -> "/names/book1/1.png" for parsed books.
-    if (book && Array.isArray(node.name_images)) {
+    // Rewrite "books/bookN/5_names/1.png" -> "/names/bookN/1.png". The book is
+    // taken from the source path so a combined tree's book1 + book2 crops both
+    // resolve correctly.
+    if (Array.isArray(node.name_images)) {
       node.name_images = node.name_images.map((p) => {
-        const base = p.split("/").pop() as string;
+        const parts = p.split("/");
+        const base = parts.pop() as string;
+        const book = parts.find((s) => /^book\d+$/.test(s)) ?? "book1";
         return `/names/${book}/${base}`;
       });
     }
@@ -71,15 +74,13 @@ function main() {
   mkdirSync(PUBLIC_NAMES, { recursive: true });
 
   console.log("Copying JSONL data -> public/data/");
-  for (const { jsonl, book } of BOOKS) {
-    const n = copyJsonl(jsonl, book);
-    console.log(`  ${jsonl}  (${n} nodes)${book ? "  [rewrote image paths]" : "  [golden]"}`);
-  }
+  const n = copyJsonl(DATASET.jsonl, "tree.jsonl");
+  console.log(`  ${DATASET.jsonl}  (${n} nodes)  [rewrote image paths]`);
 
   console.log("Copying name-crop images -> public/names/");
-  for (const book of ["book1"]) {
-    const n = copyNames(book);
-    console.log(`  ${book}: ${n} images`);
+  for (const book of NAME_BOOKS) {
+    const c = copyNames(book);
+    console.log(`  ${book}: ${c} images`);
   }
 
   console.log("Done.");

@@ -4,8 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Zeng Family Tree 曾氏族谱",
-  description:
-    "A digitized Zeng-family genealogy (族谱 / zupu), rendered from scanned books into a browsable tree.",
+  description: "An interactive genealogy of the Zeng lineage (曾氏族谱).",
 };
 
 export default function RootLayout({

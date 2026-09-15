@@ -13,8 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { DATASETS, type DatasetName, type LoadedTree, loadTree } from "@/lib/tree";
 
 export default function Home() {
-  // The single showcase dataset: Book 1, fully parsed + OCR'd + stitched.
-  const [dataset, setDataset] = useState<DatasetName>("book1_stitched");
+  const [dataset, setDataset] = useState<DatasetName>("tree");
   const [tree, setTree] = useState<LoadedTree | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,18 +108,9 @@ export default function Home() {
           {!error && tree && (
             <>
               <FamilyTree tree={tree} selectedId={selectedId} onSelect={setSelectedId} />
-              {/* When a forest was synthesized, say so — don't fake connectivity. */}
-              {tree.isForest && (
-                <p className="pointer-events-none absolute bottom-3 left-4 text-muted-foreground text-xs">
-                  {tree.rootCount} disconnected lineages — eldest sibling on the right · scroll to
-                  zoom, drag to pan, click to trace lineage
-                </p>
-              )}
-              {!tree.isForest && (
-                <p className="pointer-events-none absolute bottom-3 left-4 text-muted-foreground text-xs">
-                  Eldest sibling on the right · scroll to zoom, drag to pan, click to trace lineage
-                </p>
-              )}
+              <p className="pointer-events-none absolute bottom-3 left-4 text-muted-foreground text-xs">
+                Eldest sibling on the right · scroll to zoom, drag to pan, click to trace lineage
+              </p>
             </>
           )}
         </div>

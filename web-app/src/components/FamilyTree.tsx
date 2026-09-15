@@ -46,6 +46,10 @@ import { type FamilyDatum, isVirtualRoot, type LoadedTree, pathToRootIds } from 
 // horizontal room that single glyphs never collide.
 const NODE_DX = 46; // horizontal spacing between sibling nodes
 const NODE_DY = 92; // vertical spacing between generations (depth)
+// Clear horizontal gap inserted to the LEFT of the main lineage for each
+// unattached side-branch root (e.g. 贞年), so it reads as a separate branch
+// rather than colliding with the main tree at the same generation row.
+const ORPHAN_GAP = 260;
 const NODE_R = 16; // node circle radius
 const NAME_IMG = 30; // rendered size of a name-image crop
 
@@ -75,6 +79,41 @@ export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
 
     // hierarchy() was built in tree.ts; layout() decorates each node with x/y.
     const positioned = layout(tree.root as HierarchyNode<FamilyDatum>);
+
+    // Vertical position from the true GENERATION, not d3's tree depth. The two
+    // agree along the main lineage, but an unattached root (贞年, a 贞-generation
+    // branch with no father in our data) sits at d3-depth 1 while its real
+    // generation is 65 — so we pin every node's y to its generation. This drops
+    // 贞年's subtree down to the same rows as the rest of generation 65+, instead
+    // of floating it at the top beside 点. The virtual root (no person) keeps its
+    // computed y; it isn't drawn.
+    for (const n of positioned.descendants()) {
+      const gen = n.data.node?.generation;
+      if (gen !== undefined) n.y = gen * NODE_DY;
+    }
+
+    // Separate each unattached side-branch from the main lineage horizontally.
+    // d3 lays every root's subtree in its own x-band, but the bands abut, so a
+    // side root pinned to a deep generation (贞年 at gen 65) would butt right up
+    // against the main tree's people on that same row. The roots come from
+    // tree.ts sorted deepest-first, so the main lineage (点, gen 0) is LAST; the
+    // earlier roots are the side-branches. Shift each side-branch subtree left of
+    // the main tree's leftmost node, with a fixed gap.
+    const rootData = positioned.children ?? [];
+    if (rootData.length > 1) {
+      const main = rootData[rootData.length - 1]; // 点's tree (added last)
+      const mainMinX = Math.min(...main.descendants().map((n) => n.x));
+      let cursor = mainMinX; // left edge we pack side-branches up against
+      for (let i = rootData.length - 2; i >= 0; i--) {
+        const branch = rootData[i];
+        const desc = branch.descendants();
+        const bMax = Math.max(...desc.map((n) => n.x));
+        // Move the branch so its rightmost node sits ORPHAN_GAP left of `cursor`.
+        const shift = cursor - ORPHAN_GAP - bMax;
+        for (const n of desc) n.x += shift;
+        cursor = Math.min(...desc.map((n) => n.x)); // next branch goes further left
+      }
+    }
 
     // Real nodes only — drop the synthetic virtual root from what we DRAW.
     // (Its children keep their computed positions; we just don't paint it or
