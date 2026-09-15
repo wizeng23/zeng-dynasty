@@ -317,7 +317,32 @@ the v1 scans took four more fixes, each found by tracing a wrong bridge to its i
 Hairline nicks (<= 60px, no step) are recorded in `{stem}.nicks.json` (cyan in QA);
 green (`{stem}.imaginary.json`) is only for cross-page connectors, per William's rule.
 
-**Result (v1 Book 2, Stage 5→7):** 1592 nodes; empty phantom bars **37 -> 2** (both
+**QA review + post-fixes layer (evening).** William reviewed the parse QA and found
+six things; each was traced to its cause and fixed through a new hand-verified
+layer, `data/book2_fixes.json` applied by `src/s5_fixes.py` (delete / merge /
+recrop, by provenance, re-applied after any Stage 5 run):
+- p10: a vertical line fragment parsed as a nameless node → delete.
+- p80/p82: 衍谟 and 尚澜 crops clipped at the top. Cause: the band read reports every
+  child endpoint at the component's MAX row, so a shorter riser's endpoint lands
+  inside the glyph below it (尚澜's riser ends at 1442, its neighbour's at 1496) →
+  recrop; 尚澜 re-OCRs correctly (was 回澜).
+- p106–108 and p133: orphan bars whose children belong to 尚恕 / 贞杰 → merge. (The
+  106_113 bar's nick fills DO reach 尚恕's hang-line but also orphaned two other bars
+  in the re-parse, so the targeted gate rightly refused them — a bridging limit.)
+- p114/p118: hang-line pieces that don't line up produce a phantom holding the real
+  node's children (毓援 → '商科', 毓棋, 毓揄) → merge into the real node.
+- p96/p98 (+p110/p117/p118): six 3-char names lost their last char (…子). Cause: the
+  Book 2 crops were generated 2026-09-01 with the OLD ~300px bottom whitening; the
+  current `whiten_margins` (fixed 2026-09-13) leaves them 12px clear — but only 12px:
+  `trim_borders` cuts the bottom at page-bottom−90px, ~34px above the inner border, so
+  the 200px whitening actually reaches ~234px above the border. Fix in OCR review now;
+  re-run Stage 3+ (or lower `WHITEN_BOTTOM`) later.
+Result: 1586 nodes, stitched **1549 nodes, 9 roots** (main lineage + the 8
+OCR-mismatched section roots), **0 orphans**. QA: only detected endpoints are circled
+(a leaf's inferred `bot` is speck-prone); wide overlays capped at 16k px; full-res
+crops per fill.
+
+**Result (v1 Book 2, Stage 5→7, before post-fixes):** 1592 nodes; empty phantom bars **37 -> 2** (both
 cross-graph: their bar runs to the graph's right edge), roots **86 -> 50** (44
 sections + 6 cross-graph orphans), sus 28 -> 2, grid 85 -> 15. 16 green bridges,
 17 nick fills. Per graph vs `docs/bridge-ground-truth.md`: 11_17 4/4, 22_23 1/1,
@@ -341,7 +366,7 @@ rebuild (new ADF scans, `src/`) is redoing every stage from clean scans.
 | Book | 1 extract | 2 classify | 3 crop | 4 merge | 5 tree | 6 OCR | 7 stitch |
 |------|-----------|------------|--------|---------|--------|-------|----------|
 | 1 | done (17) | — all-tree | done (17) | done (14 graphs) | **done (163 nodes)** | **done (23 overrides, 2 flags)** | **done (150 nodes, 1 root, 56 gens)** |
-| 2 | done (134) | — all-tree | done (134) | done (44 graphs) | **done (1592 nodes; bridged, 2 cross-graph empties)** | **done (285 low-conf, review pending)** | **done (1555 nodes, 15 roots: main 1300 + 8 OCR-mismatched + 6 cross-graph)** |
+| 2 | done (134, crops from 09-01) | — all-tree | done (134) | done (44 graphs) | **done (1586 nodes; bridged + post-fixes, 0 orphans)** | **done (285 low-conf, review pending)** | **done (1549 nodes, 9 roots: main + 8 OCR-mismatched)** |
 | 3 | done (292) | done (51 graph / 241 bio) | done (51) | not started | — | — | — |
 | 4 | done (317) | done (147 graph / 170 bio) | done (147) | not started | — | — | — |
 

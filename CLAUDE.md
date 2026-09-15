@@ -119,10 +119,13 @@ provenances (which were v0-keyed and mis-connected 7/13 under the v1 renumber).
 All on `main`, pushed.
 
 **Book 2 runs through all 7 stages with orphan bridging** (2026-09-14) →
-`data/book2_stitched.jsonl`: 1555 nodes, **15 roots** = the main lineage (1300 nodes)
-+ 8 section roots whose OCR reading differs from their canonical leaf (贞烈/贞列,
-贞熊/贞能, 贞杰/贞木, 贞斗/贞升, 贞亮/贞光, 克太, 贞富, 贞年) + 6 cross-graph orphans
-(bar/hang-line runs to the graph edge; parent on an adjacent graph). Stage 4 now
+`data/book2_stitched.jsonl`: 1549 nodes, **9 roots** = the main lineage + 8 section
+roots whose OCR reading differs from their canonical leaf (贞烈/贞列, 贞熊/贞能,
+贞杰/贞木, 贞斗/贞升, 贞亮/贞光, 克太, 贞富, 贞年). 0 orphans. **Post-fixes layer:**
+`data/book2_fixes.json` (William's QA review: delete/merge/recrop by provenance) is
+applied by `python -m src.s5_fixes --book book2 --ocr` after every Stage 5 run, then
+Stage 7. Book 2's 3_crops are from 2026-09-01 (pre whitening fix): six …子 names
+lost their last char — OCR override or a Stage 3+ re-run. Stage 4 now
 rejects ADF smear specks as seam endpoints; Stage 5 has the stroke-end read for
 stepped bars and `bridge_orphans` (trace-right rule, follows seam steps, targeted
 gate; green `{stem}.imaginary.json`, cyan nicks `{stem}.nicks.json`); Stage 7

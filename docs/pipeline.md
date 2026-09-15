@@ -135,6 +135,17 @@ fills (<= 60px, no step) to `{stem}.nicks.json` (cyan). An orphan whose bar runs
 to the graph's right edge is cross-graph and is left alone. Tests:
 `tests/test_s5_bridge.py`; ground truth: `docs/bridge-ground-truth.md`.
 
+**Post-fixes (`src/s5_fixes.py`, `data/{book}_fixes.json`):** hand-verified corrections
+from the QA review, applied on top of the parse and re-applied after every Stage 5
+run (a ground-truth layer like the OCR overrides). Nodes are addressed by provenance.
+Ops: `delete` a childless phantom (a line fragment read as a node), `merge` a phantom
+into the real node for the same person (the real node adopts its children,
+eldest-first; typical cause: a hang-line whose upper and lower pieces do not line up,
+so one person parses as a name node plus a phantom holding their children), `recrop`
+a name with an explicit box (when the riser's ink touches the glyph and the endpoint
+lands inside it). `--ocr` re-reads re-cropped names. Run:
+`python -m src.s5_fixes --book bookN --ocr`, then Stage 7.
+
 ## Stage 6 — OCR (`src/s6_ocr.py`)
 
 **In:** `books/bookN/5_names/*.png` + `data/bookN.jsonl` (node ids)

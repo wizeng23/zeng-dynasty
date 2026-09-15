@@ -1,0 +1,26 @@
+{
+  "notes": [
+    "Hand-verified Stage 5 corrections (William's QA review, 2026-09-14). Applied by",
+    "python -m src.s5_fixes --book book2 --ocr  after every Stage 5 run. Nodes are",
+    "addressed by provenance {graph}_{local_index}, stable across re-runs.",
+    "delete 8_10_9: p10 phantom -- a vertical line fragment read as a nameless node.",
+    "merge 133_133_1 -> 133_133_0: p133 orphan bar (尚日/尚煦/尚旻) belongs to 贞杰.",
+    "merge 106_113_5 -> 106_113_1: p106-108 orphan bar (5 衍-generation children) belongs to 尚恕; its bar meets 尚恕's hang-line at the graph edge.",
+    "merge 114_120_44 -> 114_120_56: p118 phantom over 毓援 (misaligned hang-line pieces) took 毓援's 5 children.",
+    "merge 114_120_43 -> 114_120_54: p118 phantom over 毓棋 took 传钰.",
+    "merge 114_120_46 -> 114_120_47: p114 phantom over 毓揄 took one child.",
+    "recrop 69_82_7 (尚澜, p82) and 69_82_20 (衍谟, p80): the child-top endpoint sat inside the glyph, clipping its top; boxes widened to the glyph's real top."
+  ],
+  "delete": ["8_10_9"],
+  "merge": {
+    "133_133_1": "133_133_0",
+    "106_113_5": "106_113_1",
+    "114_120_44": "114_120_56",
+    "114_120_43": "114_120_54",
+    "114_120_46": "114_120_47"
+  },
+  "recrop": {
+    "69_82_7": [0, 1462, 184, 1770],
+    "69_82_20": [3735, 2420, 3947, 2741]
+  }
+}

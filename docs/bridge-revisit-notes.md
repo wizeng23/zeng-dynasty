@@ -118,3 +118,22 @@ sort or grid check — so this is cosmetic (the parse sidecar's `bot` and the QA
 node height). The QA no longer circles inferred ends. Fix later: apply the same
 `NAME_SPECK_WIN` smoothing / `SPECK_MIN_ROWS` floor in `infer_ends`; requires a
 Stage-5 re-run to update sidecars.
+
+## Stage 3 bottom whitening margin is thin (2026-09-14) — REVISIT
+`trim_borders` cuts the page bottom at page-bottom − 90px, which is ~34px ABOVE the
+bottom inner border (the inner line sits ~55px inside the outer edge on page 96). So
+`WHITEN_BOTTOM = 200`, anchored to the trimmed edge, reaches ~234px above the inner
+border. William measured the lowest 3-char names' bottoms at ~200px above the inner
+border → they clear the whitening by only ~12px (page 96). Book 2's current crops
+(2026-09-01, OLD ~300px slab) cut six …子 names outright (p96 ×2, p98, p110, p117,
+p118). Fix: anchor whitening to the detected inner-border line, or lower
+`WHITEN_BOTTOM` to ~150; then re-run Stage 3→7 for Book 2 and re-apply
+`data/book2_fixes.json`.
+
+## Band read reports child endpoints at the component MAX row (2026-09-14) — REVISIT
+`find_line_ends` returns every bottom endpoint as `(max_x, y)`, so a shorter riser's
+endpoint lands below its true end -- inside the glyph when a neighbour's riser is
+longer (69_82: 尚澜's riser ends at 1442, endpoint reported at 1496 → crop clipped
+the top of 尚 → OCR 回澜). The stroke read already knows each stroke's true end;
+switching to it changes coordinates for every child (Book 1 too), so it waits for a
+deliberate re-run. Post-fixed via `recrop` for 69_82_7 and 69_82_20.
