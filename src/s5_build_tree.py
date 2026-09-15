@@ -351,6 +351,17 @@ def find_line_ends(
             )
             top_points = [ups[0]]
 
+    # Each child endpoint sits at ITS OWN riser's bottom. The band read reports
+    # every bottom at the component's max row, so a shorter riser's endpoint lands
+    # below its true end -- inside the glyph beneath it when a neighbour's riser is
+    # longer (69_82 尚澜: riser ends at 1442, band said 1496, crop clipped the top of
+    # 尚 -> OCR 回澜). Where a downward stroke end matches a band point, take the
+    # stroke's row (the band's column is kept: same clustering as before).
+    precise: list[tuple[int, int]] = []
+    for b in bottom_points:
+        match = next((d for d in downs if same_end(d, b)), None)
+        precise.append((match[0], b[1]) if match is not None else b)
+    bottom_points = precise
     for d in downs:
         if not any(same_end(d, b) for b in bottom_points):
             logger.info("stroke read adds child end %s above the bottom band", d)

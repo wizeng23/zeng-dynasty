@@ -82,3 +82,26 @@ def test_stepped_bar_parent_is_the_hang_line_not_the_bar_corner() -> None:
     assert any(_near(b, 333 + LINE - 1, 0) for b in bots), bots       # 闻评
     assert any(_near(b, 333 + LINE - 1, 918) for b in bots), bots     # 闻瑛
     assert any(_near(b, 665 + LINE - 1, 1876) for b in bots), bots    # 闻诏
+
+
+def test_child_endpoints_sit_at_each_risers_own_bottom() -> None:
+    """69_82 尚澜: the band read reports every child at the component's MAX row, so
+    a shorter riser's endpoint lands inside the glyph below it. Each child endpoint
+    must be at its own riser's bottom."""
+    m = np.zeros((1000, 1500), dtype=bool)
+    _vline(m, 100, 400, 1200)            # parent hang-line
+    _hline(m, 400, 200, 1200)            # bar
+    _vline(m, 400, 700, 200)             # short riser (ends 700)
+    _vline(m, 400, 800, 700)             # medium riser (ends 800)
+    _vline(m, 400, 900, 1200)            # long riser (ends 900)
+
+    tops, bots = find_line_ends(_points(m), threshold=150)
+
+    assert len(tops) == 1 and len(bots) == 3
+
+    def row_at(col: int) -> int:
+        return next(b[0] for b in bots if abs(b[1] - col) <= 5)
+
+    assert abs(row_at(200) - 700) <= 2, bots      # its own bottom, not the component max (900)
+    assert abs(row_at(700) - 800) <= 2, bots
+    assert abs(row_at(1200) - 900) <= 2, bots
