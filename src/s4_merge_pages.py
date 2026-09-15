@@ -236,10 +236,32 @@ def merge_pages(
         start_i = page_indices[j]
         graph = pages[start_i]
         j += 1
+        # A subtree spans a run of *physically consecutive* pages: a continuation
+        # page must be its predecessor's page number + 1. We only ever merge such
+        # adjacent pages -- but we do NOT silently gate the attempt, because the
+        # loop even trying to cross a page-number gap means a latent bug upstream
+        # (a page that should have been flagged as a subtree start in starts.json
+        # was not), and hiding it would let bogus graphs pass unnoticed.
+        #
+        # This surfaces for Books 3 & 4, where biography pages are interleaved and
+        # absent from starts.json: if the next tree page after a gap (e.g. 17->64)
+        # is not marked as a start, the run reaches it and we raise here instead of
+        # welding across the gap into a bogus graph like 10_138 / 202_247.
+        prev = start_i
         while j < n and not is_start[page_indices[j]]:
             cont = page_indices[j]
+            if cont != prev + 1:
+                raise ValueError(
+                    f"{book}: page {cont} would merge into the subtree started at "
+                    f"{start_i} (via page {prev}), but {cont} is not adjacent to "
+                    f"{prev} -- a page-number gap. Pages {prev + 1}..{cont - 1} are "
+                    f"missing from starts.json; page {cont} should be flagged as a "
+                    f"subtree start (Stage 3). Merging across a gap is a bug, "
+                    f"not a wide subtree."
+                )
             logger.info("Merging page %d into subtree started at %d", cont, start_i)
             graph = merge_graphs(pages[cont], graph)
+            prev = cont
             j += 1
 
         end_i = page_indices[j - 1]

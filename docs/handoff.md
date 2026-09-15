@@ -111,9 +111,24 @@ book2` (seconds). Stitch today: 1549 nodes, 9 roots (main + the 8 above), 0 orph
 
 ## Book 3 plan
 
-Stages 1–2 done and human-verified (41 graph / 251 bio pages). Stage 3 crops and
-Stage 4 graphs (9 graphs) are from 2026-09-01 (old whitening, pre seam-speck fix):
-re-run Stage 3 (after item 1 above) and Stage 4, then Stage 5 detached (bridging is
+Stages 1–2 done and human-verified (41 graph / 251 bio pages). The stale
+2026-09-01 Stage 3 crops and Stage 4 graphs (old whitening, pre seam-speck fix)
+were DELETED (2026-09-14) — regenerate from scratch after item 1 below.
+
+**Stage 4 merges ADJACENT page numbers ONLY.** A subtree spans a run of
+physically consecutive pages; a continuation page must be its predecessor's
+number + 1. If `s4_merge_pages` ever tries to merge across a page-number gap,
+that is a BUG (not a wide subtree) — it means a page that should have been
+flagged as a subtree start in `starts.json` was not. We do NOT silently gate the
+attempt: `merge_pages` **raises** on a gap so the latent bug surfaces instead of
+being hidden. This bites Books 3 & 4 specifically: their biography pages are
+interleaved and absent from `starts.json`, so the old continuation loop silently
+welded the next tree page across the missing bio pages (page 17→64), producing
+bogus graphs like `10_138` / `202_247` that span huge number gaps. If a
+regenerated Book 3 run hits that `ValueError`, fix the upstream start-detection
+(Stage 3) — do not loosen the adjacency check.
+
+Re-run Stage 3 (after item 1 above) and Stage 4, then Stage 5 detached (bridging is
 slow on 202_247 / 10_138), then `s5_fixes` (create `data/book3_fixes.json`), OCR,
 stitch, QA (`scripts.qa.s5_parse --book book3`, serve `books/book3/qa` on 8785).
 `BOOK_CONFIGS['book3'].num_pages = 292`. Expect bio-interleaved page ranges in graph
