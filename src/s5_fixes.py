@@ -147,6 +147,16 @@ def apply_fixes(book: str, books_dir: str = "books", data_dir: str = "data") -> 
             by_id[cid]["father"] = real["id"]
         real["children"] = list(real["children"]) + list(phantom["children"])
         phantom["children"] = []
+        # The adopted children hang from where the PHANTOM's bar was, not the real
+        # node's own hang-line end, so move the real node's sidecar ``bot`` to the
+        # phantom's -- otherwise the QA red edge fans out ~60px off the hang-line
+        # (114_120 毓援). Cosmetic (QA overlay only); both share this graph stem.
+        stem = _stem_of(real_prov)
+        real_side = sidecars.node(stem, real["id"])
+        phantom_side = sidecars.node(stem, phantom["id"])
+        if real_side is not None and phantom_side is not None and phantom_side.get("bot"):
+            real_side["bot"] = phantom_side["bot"]
+            sidecars.touch(stem)
         sort_children_rtl(real)
         drop(phantom)
         result["merged"].append((phantom_prov, real_prov))
