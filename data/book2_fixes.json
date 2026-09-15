@@ -11,7 +11,8 @@
     "merge 114_120_46 -> 114_120_47: p114 phantom over 毓揄 took one child.",
     "recrop 69_82_7 (尚澜, p82) and 69_82_20 (衍谟, p80): the child-top endpoint sat inside the glyph, clipping its top; boxes widened to the glyph's real top.",
     "recrop 114_120_56 (毓援) and 114_120_54 (毓棋), p118: both were leaves in the parse, so their inferred bottom ran down the hang-line the phantom had taken (600-row boxes; OCR read only 援). Boxes cut at the glyph bottom like their sibling 毓塘.",
-    "recrop boxes = measured glyph ink extent + 30px pad on every side (the parse's boxes for these four were too narrow on the left as well as wrong vertically)."
+    "recrop boxes = measured glyph ink extent + 30px pad on every side (the parse's boxes for these four were too narrow on the left as well as wrong vertically).",
+    "recrop 114_120_55 (毓塘, p118): the +-120px crop window around the line column clipped 12px off 毓's left (glyph centred 50px left of its line)."
   ],
   "delete": [
     "8_10_9"
@@ -46,6 +47,12 @@
       6956,
       4312,
       7165,
+      4650
+    ],
+    "114_120_55": [
+      6658,
+      4311,
+      6870,
       4650
     ]
   }
