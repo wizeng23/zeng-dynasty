@@ -1657,12 +1657,6 @@ def bridge_orphans(
     return out, imaginary, nicks
 
 
-def _is_multipage(graph_stem: str) -> bool:
-    """``"67_68"`` -> True, ``"6_6"`` -> False. Only multi-page graphs have seams."""
-    start, end = graph_stem.split("_")
-    return start != end
-
-
 def _graph_files(graphs_dir: str) -> list[str]:
     """Return the graph PNG filenames sorted by their starting page index."""
     files = [f for f in os.listdir(graphs_dir) if f.endswith(".png")]
@@ -1775,16 +1769,17 @@ def build_tree(
         scrubbed = [list(r) for r in config.ignore_regions.get(filename, [])]
         logger.info("Parsing graph %s", filepath)
 
-        # Repair generation bars broken at page seams (multi-page graphs only --
-        # a single page has no seam, so Book 1 is untouched). The drawn bridges go
-        # to a sidecar the QA overlay renders green; a stale sidecar is removed.
+        # Repair generation bars broken at page seams or by scan nicks. Runs on
+        # every graph: a single-page graph has no seam, but its bars can still be
+        # nicked (133_133's was), and with nothing orphaned the pass is a no-op. The
+        # drawn fills go to sidecars the QA overlay renders (green bridges, cyan
+        # nicks); stale sidecars are removed.
         imaginary: list[list[int]] = []
         nicks: list[list[int]] = []
-        if _is_multipage(filename):
-            a, imaginary, nicks = bridge_orphans(a, config)
-            if imaginary or nicks:
-                logger.info("%s: bridged %d orphan bar(s), filled %d nick(s)",
-                            filepath, len(imaginary), len(nicks))
+        a, imaginary, nicks = bridge_orphans(a, config)
+        if imaginary or nicks:
+            logger.info("%s: bridged %d orphan bar(s), filled %d nick(s)",
+                        filepath, len(imaginary), len(nicks))
         for suffix, fills in (("imaginary", imaginary), ("nicks", nicks)):
             path = os.path.join(graphs_dir, f"{filename}.{suffix}.json")
             if fills:

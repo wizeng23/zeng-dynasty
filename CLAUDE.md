@@ -112,6 +112,9 @@ is the verified ground truth used to check the algorithmic output.
 
 ## Current state (2026-09-14)
 
+**Handoff for the next session: `docs/handoff.md`** (rules, validation recipe,
+remaining work items in order, OCR review list, Book 3 plan, server ports).
+
 **Book 1 is DONE through all 7 v1 stages** → `data/book1_stitched.jsonl` (150
 nodes, 1 root 点, 56 gens, OCR'd names), published to the website. Stitch seams are
 now matched **by name** (`find_merges` in `src/s7_stitch.py`), not the old hardcoded
