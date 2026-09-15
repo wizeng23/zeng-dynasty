@@ -91,7 +91,7 @@ class BookConfig:
     line_threshold: int = 200
     end_threshold: int = 150
     merge_max_drop: int = 600
-    merge_max_shift: int = 60
+    merge_max_shift: int = 90
     node_min_height: int = 150
     node_max_height: int = 750
     gen_row_min: int = 800
@@ -120,7 +120,10 @@ class BookConfig:
 # plus a childless name node) -- visible in QA as overlapping boxes in 114_120.
 # 25 admits those; Book 2's smallest genuine non-merge shift is 35 (the 8_10
 # stray-ink vertical), and Book 1 has no near-miss merges in [15,30), so the
-# looser bound is safe and scoped to Book 2 only.
+# looser bound is safe. (v1: the default is 90px -- a misprint offset the two
+# halves of 114_120 毓棋's hang-line by 61px and left a phantom holding its child;
+# merge_nodes takes the NEAREST column among candidates, and names sit ~300px
+# apart, so 90 is still unambiguous.)
 # Every v1 book uses the shared v1-native defaults (BookConfig()); the parse
 # geometry is structural across books. A book only needs an entry here if it
 # requires a genuine override (e.g. per-graph ``ignore_regions``); unlisted books
@@ -542,27 +545,30 @@ def merge_nodes(nodes: list[LineNode], config: BookConfig) -> list[LineNode]:
     while True:
         made_progress = False
         for i in range(len(nodes)):
+            parent = nodes[i]
+            if parent.bot or parent.top is None:
+                continue
+            tx, ty = parent.top
+            # Among the parent-side stubs below this name, take the NEAREST column
+            # (a misprint can offset the two halves of a hang-line by up to
+            # merge_max_shift; names sit ~300px apart, so nearest-wins is safe).
+            best_j = -1
+            best_shift = config.merge_max_shift
             for j in range(len(nodes)):
                 if i == j:
                     continue
-                parent = nodes[i]
                 child = nodes[j]
-                # Only fuse when parent lacks a bottom and child lacks a top.
-                if parent.bot or child.top:
+                if child.top or child.bot is None:
                     continue
-                assert parent.top is not None and child.bot is not None
-                tx, ty = parent.top
                 bx, by = child.bot
-                if (
-                    0 < bx - tx < config.merge_max_drop
-                    and abs(by - ty) < config.merge_max_shift
-                ):
-                    parent.bot = child.bot
-                    parent.children = child.children
-                    del nodes[j]
-                    made_progress = True
-                    break
-            if made_progress:
+                if 0 < bx - tx < config.merge_max_drop and abs(by - ty) < best_shift:
+                    best_j, best_shift = j, abs(by - ty)
+            if best_j >= 0:
+                child = nodes[best_j]
+                parent.bot = child.bot
+                parent.children = child.children
+                del nodes[best_j]
+                made_progress = True
                 break
         if not made_progress:
             break
