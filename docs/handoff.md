@@ -71,10 +71,14 @@ run.
    longer refuses: `bridge_orphans` auto-resolves the sole orphan (see the pruning
    note above). No code change needed; the `merge 106_113_5 -> 106_113_1` post-fix is
    now redundant and should be dropped on the next Book 2 re-run.
-3. **Bridging speed** — the gate re-parses the whole graph per candidate (Book 2 Stage 5
-   ~50 min; 36_52 alone ~25). Cache `find_lines` labelling and re-parse only the
-   components touched by a fill, or restrict the re-parse to the orphan's page span.
-   Matters for Book 3's 202_247 / 10_138 graphs.
+3. ✅ **DONE (2026-09-14)** — **Bridging speed.** Root cause was not the
+   re-parsing itself but `find_lines`' per-component `np.where(labels == label)`,
+   a full 100M+-element array scan repeated once per kept component (~9s x32 on
+   106_113). Now each component is extracted from its own cv2 bounding box (identical
+   pixel sets, ~60x faster): `parse_graph` 12.9s→4.1s, `bridge_orphans` (106_113)
+   78s→23s — Book 2 Stage 5 ~50min→~15min, and it scales the same for Book 3's big
+   graphs. No caching needed. (If more is wanted later, the re-parse-only-touched-
+   region idea still stands, but the bottleneck was the array scan.)
 4. **Name window ±120 → ±160 + streak-tolerant column trim** — `_tight_ink_box`
    `NAME_HALF_WIDTH`; the column trim is any-ink, so ADF smear streaks beside a glyph
    add 10–34px (8_10 宏善/贞院, 58_62 传炘). Drop columns whose ink is only a thin
