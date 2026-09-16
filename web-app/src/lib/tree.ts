@@ -116,9 +116,7 @@ function buildData(nodes: FamilyNode[]): {
   // main lineage (d3 lays the virtual root's children left-to-right in array
   // order). 贞年 (an unattached 贞-generation branch) thus renders left of 点's
   // tree, at its true generation depth (its y comes from `generation`, below).
-  const roots = nodes
-    .filter((n) => n.father === -1)
-    .sort((a, b) => b.generation - a.generation);
+  const roots = nodes.filter((n) => n.father === -1).sort((a, b) => b.generation - a.generation);
   const rootData = roots.map((r) => wrap(r));
 
   if (rootData.length === 1) {

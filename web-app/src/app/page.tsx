@@ -9,7 +9,10 @@
 import { useEffect, useState } from "react";
 import { DetailPanel } from "@/components/DetailPanel";
 import { FamilyTree } from "@/components/FamilyTree";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { SearchBox } from "@/components/SearchBox";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useLang } from "@/lib/i18n";
 import { DATASETS, type DatasetName, type LoadedTree, loadTree } from "@/lib/tree";
 
 export default function Home() {
@@ -41,29 +44,28 @@ export default function Home() {
     };
   }, [dataset]);
 
-  const active = DATASETS.find((d) => d.name === dataset);
+  const { lang, t } = useLang();
 
   return (
     <main className="flex h-screen flex-col">
-      {/* Header: title, dataset switcher, and live stats. */}
+      {/* Header: language toggle, title, search, stats, theme toggle. */}
       <header className="border-border border-b px-6 py-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Language toggle at the top-left, then the title. */}
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
             <h1 className="font-semibold text-xl tracking-tight">
-              Zeng Family Tree <span className="text-primary">曾氏族谱</span>
+              {lang === "en" ? "Zeng Family Tree " : ""}
+              <span className="text-primary">曾氏族谱</span>
             </h1>
-            {active && <p className="mt-1 text-muted-foreground text-sm">{active.blurb}</p>}
           </div>
 
-          {/* Stats + theme toggle. */}
+          {/* Search + stats + theme toggle. */}
           <div className="flex items-center gap-4">
+            {tree && <SearchBox tree={tree} onSelect={setSelectedId} />}
             {tree && (
               <div className="flex gap-4 text-sm">
-                <Stat label="people" value={tree.nodeCount.toLocaleString()} />
-                <Stat
-                  label={tree.rootCount === 1 ? "lineage" : "lineages"}
-                  value={tree.rootCount.toLocaleString()}
-                />
+                <Stat label={t("people")} value={tree.nodeCount.toLocaleString()} />
               </div>
             )}
             <ThemeToggle />
@@ -97,21 +99,16 @@ export default function Home() {
         <div className="relative min-h-0 flex-1 bg-background">
           {error && (
             <p className="absolute inset-0 flex items-center justify-center text-primary">
-              Failed to load: {error}
+              {t("failedToLoad")} {error}
             </p>
           )}
           {!error && !tree && (
             <p className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              Loading {active?.label}…
+              {t("loading")}
             </p>
           )}
           {!error && tree && (
-            <>
-              <FamilyTree tree={tree} selectedId={selectedId} onSelect={setSelectedId} />
-              <p className="pointer-events-none absolute bottom-3 left-4 text-muted-foreground text-xs">
-                Eldest sibling on the right · scroll to zoom, drag to pan, click to trace lineage
-              </p>
-            </>
+            <FamilyTree tree={tree} selectedId={selectedId} onSelect={setSelectedId} />
           )}
         </div>
 

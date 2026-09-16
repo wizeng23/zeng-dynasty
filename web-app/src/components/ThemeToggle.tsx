@@ -10,8 +10,10 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useLang } from "@/lib/i18n";
 
 export function ThemeToggle() {
+  const { t } = useLang();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -28,9 +30,7 @@ export function ThemeToggle() {
       // so the label must also stay theme-neutral — deriving it from `isDark`
       // before mount would make the server HTML ("Switch to dark mode") disagree
       // with the client after the theme resolves, a hydration mismatch.
-      aria-label={
-        !mounted ? "Toggle color theme" : isDark ? "Switch to light mode" : "Switch to dark mode"
-      }
+      aria-label={!mounted ? t("toggleTheme") : isDark ? t("switchToLight") : t("switchToDark")}
       className="rounded-md border border-border bg-card px-2.5 py-1.5 text-foreground text-sm transition-colors hover:bg-muted"
     >
       {/* Until mounted we don't know the theme; render a neutral glyph so the

@@ -36,8 +36,18 @@
 
 import { tree as d3tree, type HierarchyNode, type HierarchyPointNode } from "d3-hierarchy";
 import { select } from "d3-selection";
-import { zoom as d3zoom, type ZoomTransform, zoomIdentity } from "d3-zoom";
+// Imported for its side effect: augments d3 selections with .transition(), used
+// to smoothly animate the pan when a person is selected.
+import "d3-transition";
+import {
+  zoom as d3zoom,
+  type ZoomBehavior,
+  type ZoomTransform,
+  zoomIdentity,
+  zoomTransform,
+} from "d3-zoom";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLang } from "@/lib/i18n";
 import { type FamilyDatum, isVirtualRoot, type LoadedTree, pathToRootIds } from "@/lib/tree";
 
 // Layout constants. nodeSize is [horizontalGap, verticalGap] BETWEEN sibling
@@ -61,7 +71,12 @@ interface FamilyTreeProps {
 }
 
 export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
+  const { t } = useLang();
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // The d3-zoom behavior, kept in a ref so the auto-center effect can drive the
+  // transform programmatically (the same behavior that handles wheel/drag).
+  const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
 
   // The live pan/zoom transform, owned by React state but WRITTEN by d3-zoom.
   const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
@@ -72,7 +87,7 @@ export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
   // --- d3 owns the MATH: compute the layout once per dataset. -------------
   // useMemo so we only re-run d3.tree() when the underlying hierarchy changes,
   // not on every pan/zoom re-render.
-  const { nodes, links, centerX, minY } = useMemo(() => {
+  const { nodes, links, centerX, minY, posById } = useMemo(() => {
     // nodeSize gives fixed spacing (vs .size() which stretches to fit a box).
     // Fixed spacing is what keeps names from overlapping regardless of tree size.
     const layout = d3tree<FamilyDatum>().nodeSize([NODE_DX, NODE_DY]);
@@ -121,15 +136,27 @@ export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
     const drawNodes = positioned.descendants().filter((n) => !isVirtualRoot(n));
     const drawLinks = positioned.links().filter((l) => !isVirtualRoot(l.source)); // skip links from the virtual root
 
-    // Drawing bounds, so the initial view can be centered on the tree.
-    const xs = drawNodes.map((n) => n.x);
-    const ys = drawNodes.map((n) => n.y);
+    // Initial view target: the MAIN lineage root (点, generation 1), not the
+    // tree's bounding-box midpoint. In a wide forest with far-left side-branches
+    // the midpoint lands in empty space, so we center on the real root instead.
+    // rootData is sorted deepest-first (see above), so the main lineage is last;
+    // its top node is the root. Fall back to the shallowest drawn node.
+    const mainRoot = rootData.length ? rootData[rootData.length - 1] : undefined;
+    const rootNode = mainRoot ?? drawNodes.reduce((a, b) => (b.y < a.y ? b : a), drawNodes[0]);
+
+    // Per-person (x, y) lookup, so selecting someone can pan the view to them.
+    const positions = new Map<number, { x: number; y: number }>();
+    for (const n of drawNodes) {
+      const id = n.data.node?.id;
+      if (id !== undefined) positions.set(id, { x: n.x, y: n.y });
+    }
 
     return {
       nodes: drawNodes,
       links: drawLinks,
-      centerX: (Math.min(...xs) + Math.max(...xs)) / 2, // horizontal midpoint
-      minY: Math.min(...ys), // topmost row (the roots)
+      centerX: rootNode.x, // center horizontally on the root node
+      minY: rootNode.y, // and put the root's row near the top
+      posById: positions,
     };
   }, [tree]);
 
@@ -151,6 +178,7 @@ export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
       // it, React applied it.
       .on("zoom", (event) => setTransform(event.transform));
 
+    zoomRef.current = zoomBehavior;
     svg.call(zoomBehavior);
 
     // Center the tree on first mount. Translate so the tree's horizontal
@@ -167,6 +195,27 @@ export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
     // Re-center when the dataset (and thus centerX/minY) changes.
   }, [centerX, minY]);
 
+  // --- Auto-center on the selected person. --------------------------------
+  // When a selection is made (via search or a click on an off-screen relative
+  // in the panel), smoothly pan the view so that person sits in the middle of
+  // the viewport. Zoom level is preserved — we only translate. Deselecting
+  // (selectedId -> null) leaves the view where it is.
+  useEffect(() => {
+    if (selectedId === null) return;
+    const svgEl = svgRef.current;
+    const zoomBehavior = zoomRef.current;
+    const pos = posById.get(selectedId);
+    if (!svgEl || !zoomBehavior || !pos) return;
+
+    const width = svgEl.clientWidth;
+    const height = svgEl.clientHeight;
+    const k = zoomTransform(svgEl).k; // keep the current zoom scale
+    // Put the node at the viewport center at the current scale.
+    const target = zoomIdentity.translate(width / 2 - k * pos.x, height / 2 - k * pos.y).scale(k);
+
+    select(svgEl).transition().duration(500).call(zoomBehavior.transform, target);
+  }, [selectedId, posById]);
+
   return (
     // Clicking empty canvas clears the selection (a mouse convenience — the
     // detail panel's close button is the keyboard-accessible equivalent, so the
@@ -176,7 +225,7 @@ export function FamilyTree({ tree, selectedId, onSelect }: FamilyTreeProps) {
     <svg
       ref={svgRef}
       role="img"
-      aria-label="Family tree diagram — scroll to zoom, drag to pan, click a person to trace their lineage"
+      aria-label={t("treeAriaLabel")}
       className="h-full w-full cursor-grab touch-none select-none active:cursor-grabbing"
       onClick={() => onSelect(null)}
       // The outer <svg> is the fixed viewport; the inner <g> is what we pan/zoom.

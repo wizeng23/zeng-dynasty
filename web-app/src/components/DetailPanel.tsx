@@ -10,7 +10,25 @@
 // setter the tree uses, so clicking a relative here re-highlights the tree.
 // ---------------------------------------------------------------------------
 
+import { childrenTitle, genLabel, idLabel, notFoundLabel, useLang } from "@/lib/i18n";
+import { toDisplayPinyin } from "@/lib/pinyin";
 import { ancestryChain, type FamilyNode, type LoadedTree } from "@/lib/tree";
+
+// The shared surname, carried by everyone in the book but never stored per-person
+// (the data holds given names only). We show it before each name in a muted style
+// so it reads as "surname · given name" without being mistaken for the given name.
+const SURNAME_HANZI = "曾";
+const SURNAME_PINYIN = "Zēng";
+
+// The muted surname glyph shown just before a Hanzi given name.
+function SurnameHanzi() {
+  return <span className="mr-0.5 text-muted-foreground opacity-70">{SURNAME_HANZI}</span>;
+}
+
+// The muted surname reading shown just before a given-name pinyin reading.
+function SurnamePinyin() {
+  return <span className="mr-1 text-muted-foreground opacity-70">{SURNAME_PINYIN}</span>;
+}
 
 interface DetailPanelProps {
   tree: LoadedTree;
@@ -19,13 +37,13 @@ interface DetailPanelProps {
 }
 
 export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
+  const { lang, t } = useLang();
+
   // Empty state — nothing selected yet.
   if (selectedId === null) {
     return (
       <aside className="flex w-full flex-col border-border border-l bg-card p-5 text-sm sm:w-80">
-        <p className="text-muted-foreground">
-          Click a person in the tree to trace their lineage and see their details here.
-        </p>
+        <p className="text-muted-foreground">{t("emptyPanel")}</p>
       </aside>
     );
   }
@@ -34,7 +52,7 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
   if (!person) {
     return (
       <aside className="w-full border-border border-l bg-card p-5 text-sm sm:w-80">
-        <p className="text-muted-foreground">Person #{selectedId} not found.</p>
+        <p className="text-muted-foreground">{notFoundLabel(lang, selectedId)}</p>
       </aside>
     );
   }
@@ -53,26 +71,40 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
 
   return (
     <aside className="flex w-full flex-col gap-6 overflow-y-auto border-border border-l bg-card p-5 text-sm sm:w-80">
-      {/* Header: the selected person's name (or image), generation, close button. */}
+      {/* Header: the selected person's name, generation, close button. */}
       <div>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <PersonLabel person={person} size="lg" />
-            </div>
-            <div>
-              <div className="text-muted-foreground text-xs uppercase tracking-wide">
-                Generation {person.generation}
-                {isRoot && " · lineage root"}
+          <div className="min-w-0">
+            {person.name.trim() ? (
+              <>
+                {/* Hanzi name, surname muted before the given name. */}
+                <div className="font-medium text-2xl">
+                  <SurnameHanzi />
+                  {person.name}
+                </div>
+                {/* Pinyin reading, surname muted before the given name. */}
+                <div className="text-muted-foreground text-sm">
+                  <SurnamePinyin />
+                  {toDisplayPinyin(person.name)}
+                </div>
+              </>
+            ) : (
+              // No Unicode name yet — fall back to the scanned crop / id.
+              <div className="text-lg">
+                <PersonLabel person={person} size="lg" />
               </div>
-              <div className="font-medium">#{person.id}</div>
+            )}
+            <div className="mt-1 text-muted-foreground text-xs uppercase tracking-wide">
+              {genLabel(lang, person.generation)}
+              {isRoot && ` · ${t("lineageRoot")}`}
             </div>
+            <div className="text-muted-foreground text-xs">{idLabel(lang, person.id)}</div>
           </div>
           <button
             type="button"
             onClick={() => onSelect(null)}
-            aria-label="Clear selection"
-            className="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={t("clearSelection")}
+            className="shrink-0 rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             ✕
           </button>
@@ -80,16 +112,16 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
       </div>
 
       {/* Father. */}
-      <Section title="Father">
+      <Section title={t("father")}>
         {father ? (
           <RelativeButton person={father} onSelect={onSelect} />
         ) : (
-          <p className="text-muted-foreground">None recorded — this is a lineage root.</p>
+          <p className="text-muted-foreground">{t("noFather")}</p>
         )}
       </Section>
 
       {/* Children (eldest-first). */}
-      <Section title={`Children (${children.length})`}>
+      <Section title={childrenTitle(lang, children.length)}>
         {children.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {children.map((child, i) => (
@@ -103,32 +135,32 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground">No children recorded.</p>
+          <p className="text-muted-foreground">{t("noChildren")}</p>
         )}
       </Section>
 
       {/* Nearby ancestors: immediate father up to the lineage root. */}
-      <Section title="Ancestors to root">
+      <Section title={t("ancestorsToRoot")}>
         {ancestors.length > 0 ? (
           <ol className="flex flex-col gap-1.5">
             {ancestors.map((anc) => (
               <li key={anc.id} className="flex items-center gap-2">
-                <span className="w-8 shrink-0 text-muted-foreground text-xs">
-                  gen {anc.generation}
+                <span className="w-12 shrink-0 text-muted-foreground text-xs">
+                  {lang === "zh" ? `第${anc.generation}世` : `gen ${anc.generation}`}
                 </span>
                 <RelativeButton person={anc} onSelect={onSelect} />
               </li>
             ))}
           </ol>
         ) : (
-          <p className="text-muted-foreground">This person is already the root.</p>
+          <p className="text-muted-foreground">{t("alreadyRoot")}</p>
         )}
       </Section>
 
       {/* Biography / notes, only if present. In the golden data biography is
           sometimes a bare Wikipedia URL, so render those as a link. */}
       {person.biography.trim() && (
-        <Section title="Biography">
+        <Section title={t("biography")}>
           {isUrl(person.biography.trim()) ? (
             <a
               href={person.biography.trim()}
@@ -146,7 +178,7 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
         </Section>
       )}
       {person.notes.trim() && (
-        <Section title="Notes">
+        <Section title={t("notes")}>
           <p className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
             {person.notes}
           </p>
@@ -182,16 +214,25 @@ function RelativeButton({
   person: FamilyNode;
   onSelect: (id: number | null) => void;
 }) {
+  const { lang } = useLang();
   return (
     <button
       type="button"
       onClick={() => onSelect(person.id)}
       className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-left transition-colors hover:border-primary hover:bg-muted"
     >
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+      <span className="flex h-6 shrink-0 items-center whitespace-nowrap">
         <PersonLabel person={person} size="sm" />
       </span>
-      <span className="truncate text-muted-foreground text-xs">#{person.id}</span>
+      {person.name.trim() && (
+        <span className="truncate text-muted-foreground text-xs">
+          <SurnamePinyin />
+          {toDisplayPinyin(person.name)}
+        </span>
+      )}
+      <span className="ml-auto shrink-0 text-muted-foreground text-xs">
+        {idLabel(lang, person.id)}
+      </span>
     </button>
   );
 }
@@ -203,7 +244,14 @@ function PersonLabel({ person, size }: { person: FamilyNode; size: "sm" | "lg" }
   const px = size === "lg" ? 28 : 20;
 
   if (hasName) {
-    return <span className={size === "lg" ? "text-lg" : "text-base"}>{person.name}</span>;
+    // Relative cards (sm) get the muted surname prefix; the header avatar (lg) is
+    // a compact monogram, so it stays the given name only.
+    return (
+      <span className={size === "lg" ? "text-lg" : "text-base"}>
+        {size === "sm" && <SurnameHanzi />}
+        {person.name}
+      </span>
+    );
   }
   if (person.name_images[0]) {
     // The crops are dark ink on light paper; a subtle rounded frame keeps them
