@@ -329,7 +329,7 @@ recrop, by provenance, re-applied after any Stage 5 run):
 - p106–108 and p133: orphan bars whose children belong to 尚恕 / 贞杰 → merge. (The
   106_113 bar's nick fills DO reach 尚恕's hang-line but also orphaned two other bars
   in the re-parse, so the targeted gate rightly refused them — a bridging limit.)
-- p114/p118: hang-line pieces that don't line up produce a phantom holding the real
+- p114/p118: hang-line pieces that don't line up produce a phantom holding the realimage.png
   node's children (毓援 → '商科', 毓棋, 毓揄) → merge into the real node.
 - p96/p98 (+p110/p117/p118): six 3-char names lost their last char (…子). Cause: the
   Book 2 crops were generated 2026-09-01 with the OLD ~300px bottom whitening; the

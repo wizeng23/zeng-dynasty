@@ -129,6 +129,72 @@ def matched_shift(left: list[int], right: list[int]) -> int:
     return int((offsets[mid - 1] + offsets[mid]) / 2)
 
 
+# Adjacent pages are cropped from the same scan grid, so a true seam shift is
+# small: every healthy Book 3 seam aligns within ~50px. A larger apparent shift
+# means a spurious endpoint (an ADF smear band that passed seam_endpoints, or a
+# line with no partner) has poisoned the pairing -- so we bound the shift and, when
+# no consensus fits inside the bound, refuse to shift rather than drag a whole page
+# hundreds of px off its grid (the 0_1 / 10_17 429px-drop bug).
+MAX_SEAM_SHIFT = _s(35)  # ~100px at v1 native resolution
+# Two endpoints are "the same line" across the seam when within this many rows
+# after the candidate shift (real line ends land within a handful of px).
+SEAM_MATCH_TOL = _s(10)
+
+
+def consensus_shift(left: list[int], right: list[int]) -> tuple[int, list[tuple[int, int]]]:
+    """Shift for ``left`` that makes the MOST endpoints meet ``right``, and the pairs.
+
+    Robust to a spurious endpoint on either side (an ADF smear that ``seam_endpoints``
+    could not reject, or a real line with no partner across the seam). Rather than
+    pairing positionally and taking the median -- which a single unpaired endpoint
+    slides out of registration, dragging the median hundreds of px off (the 0_1
+    smear bug) -- try every candidate shift ``d = right_j - left_i`` within
+    ``MAX_SEAM_SHIFT``, count how many endpoints match within ``SEAM_MATCH_TOL``
+    after shifting, and keep the ``d`` with the most matches (ties broken toward the
+    smaller |shift|). Returns ``(shift, pairs)`` where ``pairs`` are the matched
+    ``(left, right)`` rows AFTER the shift is applied to ``left``; ``(0, [])`` when
+    no within-bound shift matches anything (caller then concatenates unshifted).
+    """
+    if not left or not right:
+        return 0, []
+    candidates = sorted(
+        {r - l for l in left for r in right if abs(r - l) <= MAX_SEAM_SHIFT}
+    )
+    if not candidates:
+        return 0, []
+
+    best_d = 0
+    best_pairs: list[tuple[int, int]] = []
+    best_spread: float | None = None
+    for d in candidates:
+        # Greedy nearest-match pairing of shifted-left to right within tolerance.
+        pairs: list[tuple[int, int]] = []
+        used_right: set[int] = set()
+        residuals: list[int] = []
+        for l in left:
+            sl = l + d
+            best_j, best_dist = -1, SEAM_MATCH_TOL + 1
+            for j, r in enumerate(right):
+                if j in used_right:
+                    continue
+                dist = abs(r - sl)
+                if dist < best_dist:
+                    best_j, best_dist = j, dist
+            if best_j >= 0:
+                used_right.add(best_j)
+                pairs.append((sl, right[best_j]))
+                residuals.append(right[best_j] - sl)
+        spread = (sum(abs(x) for x in residuals) + abs(d) * SHIFT_PENALTY_WEIGHT)
+        better = (
+            len(pairs) > len(best_pairs)
+            or (len(pairs) == len(best_pairs)
+                and best_spread is not None and spread < best_spread)
+        )
+        if better and pairs:
+            best_d, best_pairs, best_spread = d, pairs, spread
+    return best_d, best_pairs
+
+
 def _concat_top_aligned(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
     """Stack two graph slices side by side (``g1`` left) with no seam line."""
     if g1.shape[0] < g2.shape[0]:
@@ -159,24 +225,24 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
         )
         return _concat_top_aligned(g1, g2)
 
-    orphan_idxs, side = find_best_orphans(left_y, right_y)
-    if side == "left":
-        orphans = [left_y[i] for i in orphan_idxs]
-        left_y = [left_y[i] for i in range(len(left_y)) if i not in orphan_idxs]
-    else:
-        orphans = [right_y[i] for i in orphan_idxs]
-        right_y = [right_y[i] for i in range(len(right_y)) if i not in orphan_idxs]
-    if orphan_idxs:
-        logger.warning("orphan endpoints %s on %s side of seam", orphans, side)
-
-    best_alignment = matched_shift(left_y, right_y)
-    logger.debug("matched-pair shift: %d", best_alignment)
+    # Consensus alignment: the shift (bounded to MAX_SEAM_SHIFT) that makes the most
+    # endpoints meet, ignoring any that have no partner across the seam. This
+    # replaces the old find_best_orphans + median-of-positional-pairs, which a
+    # single spurious endpoint (an ADF smear passing seam_endpoints) slid out of
+    # registration -- dragging the whole page hundreds of px off its grid (0_1 /
+    # 10_17). ``pairs`` are (shifted_left_row, right_row) for the matched lines.
+    best_alignment, pairs = consensus_shift(left_y, right_y)
+    logger.debug("consensus shift: %d, %d pair(s)", best_alignment, len(pairs))
+    if not pairs:
+        logger.warning(
+            "no endpoint consensus within %dpx at seam (left=%s right=%s); "
+            "concatenating without a connecting line", MAX_SEAM_SHIFT, left_y, right_y,
+        )
+        return _concat_top_aligned(g1, g2)
     if best_alignment > 0:
         g1 = np.vstack([np.ones((best_alignment, g1.shape[1])).astype(np.uint8), g1])
-        left_y = [x + best_alignment for x in left_y]
     elif best_alignment < 0:
         g2 = np.vstack([np.ones((-best_alignment, g2.shape[1])).astype(np.uint8), g2])
-        right_y = [x - best_alignment for x in right_y]
 
     if g1.shape[0] < g2.shape[0]:
         padding = g2.shape[0] - g1.shape[0]
@@ -185,7 +251,7 @@ def merge_graphs(g1: np.ndarray, g2: np.ndarray) -> np.ndarray:
         padding = g1.shape[0] - g2.shape[0]
         g2 = np.vstack([g2, np.ones((padding, g2.shape[1])).astype(np.uint8)])
 
-    for left, right in zip(left_y, right_y):
+    for left, right in pairs:
         low, high = min(left, right), max(left, right)
         g1[low : high + 1, -1:] = 0
         g2[low : high + 1, :1] = 0

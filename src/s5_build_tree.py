@@ -243,13 +243,25 @@ class LineNode:
 # background run of <= GAP_FILL_H bounded on both sides, in the same row, by
 # BAR-PIECE ink (runs >= BAR_PIECE_MIN wide) is refilled. Only bar pieces may
 # bound a gap: specks and thin strokes (grandpa's cursive note in 8_10) are not
-# sources, so grain and handwriting are never linked onto a line. (v0 also filled
-# 3px VERTICAL gaps; at v1 resolution every variant tried either missed the real
-# pinch or welded a glyph's top tick to the riser above it -- a hang-line often
-# starts within a few rows of a glyph -- so a pinched hang-line is handled
-# structurally in merge_nodes instead: see the continuation-stub rule.)
+# sources, so grain and handwriting are never linked onto a line.
 GAP_FILL_H = int(round(9 * V1_SCALE))   # 27px
 _GAP_CHUNK = 512                         # rows per pass; keeps the index arrays small
+
+# The VERTICAL analog: a riser (the line dropping from a fan-out bar to a child)
+# can lose a few rows to the 1-bit threshold, splitting it from its bar so the
+# child orphans -- or, if the detached riser+name is small, drops out of the parse
+# entirely (Book 3 64_65's 广镐 fan-out; 78_84's 广镇/广鏸 lost 昭泽/昭溪). v0 filled
+# 3px vertical gaps but on ALL ink, which welded a glyph's top tick to the riser
+# above it. The fix that avoids that: fill a short vertical gap only when it is
+# bounded by RISER ink -- pixels in a vertical run >= RISER_PIECE_MIN, far taller
+# than a glyph's few-px top tick -- with a riser required on at least one side
+# (the anchor). A bar->riser T-break has the bar above and the riser below; the
+# riser side anchors it, the bar side (also a line) bounds it, and no glyph tick
+# (short run) ever qualifies as either. GAP_FILL_V is the "skip ahead" distance:
+# following a line, jump up to this many blank rows to the next riser ink.
+GAP_FILL_V = int(round(3 * V1_SCALE))   # ~10px
+RISER_PIECE_MIN = int(round(20 * V1_SCALE))  # ~60px vertical run = a riser, not a tick
+RISER_DRIFT = int(round(2 * V1_SCALE))       # ~5px: risers wobble a few px across cols
 def _fill_short_gaps(
     fg: np.ndarray, max_gap: int, axis: int,
     source: np.ndarray | None = None, anchor: np.ndarray | None = None,
@@ -319,6 +331,28 @@ def _bar_pixels(fg: np.ndarray) -> np.ndarray:
     return out
 
 
+def _riser_pixels(fg: np.ndarray) -> np.ndarray:
+    """Ink in vertical runs >= RISER_PIECE_MIN tall: riser (and bar-piece) ink.
+
+    The vertical analog of :func:`_bar_pixels`, computed by transposing so the
+    run-length pass measures columns. A riser is a tall vertical stroke; a glyph's
+    top tick is only a few px tall, so RISER_PIECE_MIN excludes glyph ink -- the
+    property that lets the vertical gap fill rejoin a broken riser without welding
+    a name to the riser above it. Dilated horizontally by RISER_DRIFT so a riser
+    that wobbles a few px across columns still bounds a gap in its neighbour column.
+    """
+    fgT = fg.T
+    outT = np.zeros_like(fgT)
+    for c0 in range(0, fgT.shape[0], _GAP_CHUNK):
+        block = fgT[c0:c0 + _GAP_CHUNK]
+        outT[c0:c0 + _GAP_CHUNK] = _run_lengths(block) >= RISER_PIECE_MIN
+    out = outT.T
+    if RISER_DRIFT > 0:
+        out = cv2.dilate(out.astype(np.uint8),
+                         np.ones((1, 2 * RISER_DRIFT + 1), np.uint8)).astype(bool)
+    return out
+
+
 def find_lines(
     image: np.ndarray, threshold: int = 70
 ) -> list[set[tuple[int, int]]]:
@@ -346,6 +380,13 @@ def find_lines(
     # cv2 labels the nonzero foreground; our ink is 0, so invert to make ink 1.
     fg = image == 0
     fg = _fill_short_gaps(fg, GAP_FILL_H, axis=1, source=_bar_pixels(fg))
+    # Then the vertical analog: heal a short break in a riser (a bar->child line)
+    # so the child stays connected to its fan-out bar. Bounded to riser ink, with a
+    # riser required on at least one side, so a glyph's top tick never welds to the
+    # riser above it (the failure that made v1 drop v0's vertical fill).
+    risers = _riser_pixels(fg)
+    fg = _fill_short_gaps(fg, GAP_FILL_V, axis=0,
+                          source=(risers | _bar_pixels(fg)), anchor=risers)
     foreground = fg.astype(np.uint8)
     num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(
         foreground, connectivity=4

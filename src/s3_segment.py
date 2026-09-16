@@ -88,13 +88,31 @@ class BookConfig:
     label_max_vend: int = _s(650)
     label_min_vspan: int = _s(200)
     label_max_vspan: int = _s(600)
+    # Whiten the top / bottom margin (clears smear above / the page-number strip
+    # below the graph). Both OFF for Book 3:
+    #  - bottom: Book 3's long leaf names (龙岗保幼殁, 庆荣幼殁, 庆连编继) hang to the
+    #    inner border, so any bottom band clips them (page 15 lost 91px, 80 lost 179px).
+    #  - top: the top band is full-width, so on a page whose tree starts high it wipes
+    #    the top generation-bar -- page 83's 纪培 fan-out bar sits at row 0, inside the
+    #    250px band; blanking it broke shrink_page's left-walk and CROPPED OUT the whole
+    #    广锦/广锽/昭油/宪柳/宪柽/庆发/庆亮/庆烙 subtree (never reached the merged graph).
+    whiten_top: bool = True
+    whiten_bottom: bool = True
+    # When > 0, shrink_page keeps the full span between the leftmost and rightmost
+    # column with >= this many ink px, instead of only the subtree contiguous with
+    # the densest column. Book 4 has pages with several subtrees split by wide
+    # whitespace (36/164/254) where the densest-column grow drops whole subtrees.
+    # 0 (off) for Books 1-3 keeps their crops unchanged.
+    shrink_full_span_ink: int = 0
 
 
 BOOK_CONFIGS: dict[str, BookConfig] = {
     "book1": BookConfig(num_pages=17),
     "book2": BookConfig(num_pages=134),
-    "book3": BookConfig(num_pages=292),
-    "book4": BookConfig(num_pages=316),
+    "book3": BookConfig(num_pages=292, whiten_top=False, whiten_bottom=False),
+    "book4": BookConfig(
+        num_pages=316, whiten_top=False, whiten_bottom=False, shrink_full_span_ink=_s(17),
+    ),
 }
 
 
@@ -208,7 +226,10 @@ def bottom_inner_border_row(a: np.ndarray) -> int:
     return rows - _s(30)
 
 
-def whiten_margins(a: np.ndarray, bottom_anchor: int | None = None) -> np.ndarray:
+def whiten_margins(
+    a: np.ndarray, bottom_anchor: int | None = None,
+    whiten_top: bool = True, whiten_bottom: bool = True,
+) -> np.ndarray:
     """Blank the graph-free margin inside each inner border (top & bottom).
 
     ``a`` is a border-trimmed page, so its top edge is the top inner border. The
@@ -220,9 +241,17 @@ def whiten_margins(a: np.ndarray, bottom_anchor: int | None = None) -> np.ndarra
     WHITEN_BOTTOM_FROM_BORDER`` -- a border-relative band that clears the
     page-number strip without cutting into low-hanging names. When omitted, fall
     back to the old fixed ``WHITEN_BOTTOM`` px from the trimmed bottom edge.
+
+    ``whiten_top=False`` skips the top band: the full-width band wipes the top
+    generation-bar on a page whose tree starts high (Book 3 page 83). ``whiten_bottom
+    =False`` skips the bottom band: for a book whose names hang to the inner border
+    (Book 3) any band clips them. With both off, the border trim alone bounds the graph.
     """
     a = a.copy()
-    a[:WHITEN_TOP, :] = 1
+    if whiten_top:
+        a[:WHITEN_TOP, :] = 1
+    if not whiten_bottom:
+        return a
     if bottom_anchor is not None:
         start = max(0, bottom_anchor - WHITEN_BOTTOM_FROM_BORDER)
         a[start:, :] = 1
@@ -231,23 +260,76 @@ def whiten_margins(a: np.ndarray, bottom_anchor: int | None = None) -> np.ndarra
     return a
 
 
-def shrink_page(a: np.ndarray, keep_left: int | None = None) -> np.ndarray:
+def _grow(present: np.ndarray, start: int, step: int, gap: int) -> int:
+    """Walk from ``start`` in ``step`` direction while ink is present, jumping a
+    blank run of <= ``gap`` columns when ink resumes just beyond it.
+
+    Returns the boundary column: with ``gap == 0`` this exactly reproduces the old
+    ``while 0 <= i and present[i]: i += step`` walk (it lands ON the bounding blank
+    column, or clamps at the array edge), so the caller's ``- pad`` behaves
+    identically. With ``gap > 0`` a break of up to ``gap`` blanks is stepped over.
+    """
+    n = len(present)
+    i = start
+    while 0 <= i < n and present[i]:
+        i += step
+    # i is now on the first blank (or off the end). Try to step over short gaps.
+    while 0 <= i < n:
+        j = i
+        blanks = 0
+        while 0 <= j < n and not present[j] and blanks < gap:
+            j += step
+            blanks += 1
+        if 0 <= j < n and present[j]:
+            i = j
+            while 0 <= i < n and present[i]:
+                i += step
+        else:
+            break
+    return i
+
+
+def shrink_page(
+    a: np.ndarray, keep_left: int | None = None, col_gap: int = 0,
+    full_span_ink: int = 0,
+) -> np.ndarray:
     """Shrink a trimmed page to the tightest box around its line-graph.
 
     Finds the densest ink column, grows left and right while ink is present, pads,
     then trims trailing blank rows off the bottom. Leaves the top intact so the
     graph's first generation-row stays aligned. Pad scaled from v0's 10px.
+
+    ``col_gap`` (default 0 = the strict walk, byte-identical to the old code) lets
+    the grow step over a blank run of up to that many columns -- for a hairline break
+    in a connecting bar. Left 0 in practice: a break that severs a real left subtree
+    (Book 3 page 80) is handled by a targeted ``CROP_KEEP_LEFT`` entry instead, so we
+    don't risk walking a low ``col_gap`` across ADF smear into margin (pages 65/280
+    have only faint smear to the left, no real subtree).
+
+    ``full_span_ink`` (default 0 = off): when > 0, keep the full horizontal span
+    from the leftmost to the rightmost column with at least this many ink px --
+    everything between real content is genuine tree. Needed for a page with several
+    subtrees separated by wide whitespace: the densest-column grow keeps only the
+    subtree it starts in and drops the rest (Book 4 pages 36/164/254 lost whole
+    right-side subtrees). The threshold excludes faint ADF smear (which is a few
+    px/col), so it never over-grows into margin. The right edge is already bounded
+    by the label strip. Off for Books 1-3 to keep their frozen crops unchanged.
     """
     rows, cols = a.shape
     pad = _s(10)
 
     col_present = np.sum(1 - a, axis=0)
-    min_col = int(np.argmax(col_present))
-    max_col = min_col
-    while min_col > 0 and col_present[min_col]:
-        min_col -= 1
-    while max_col < cols - 1 and col_present[max_col]:
-        max_col += 1
+    if full_span_ink > 0:
+        inked = np.flatnonzero(col_present >= full_span_ink)
+        if inked.size:
+            min_col, max_col = int(inked[0]), int(inked[-1])
+        else:  # no real ink -- fall back to the densest-column grow
+            min_col = max_col = int(np.argmax(col_present))
+    else:
+        min_col = int(np.argmax(col_present))
+        max_col = min_col
+        min_col = _grow(col_present, min_col, -1, col_gap)
+        max_col = _grow(col_present, max_col, +1, col_gap)
     min_col = max(min_col - pad, 0)
     max_col = min(max_col + pad, cols - 1)
     if keep_left is not None:
@@ -262,6 +344,30 @@ def shrink_page(a: np.ndarray, keep_left: int | None = None) -> np.ndarray:
     return a[:max_row, :]
 
 
+# Blank-row gap (px) that separates the label's contiguous character block from a
+# detached ADF ink smear below it. Real inter-character gaps within the label are
+# ~tens of px; a smear sits >1000px below, so this only ever splits label-vs-smear.
+LABEL_ROW_GAP = _s(40)
+
+
+def _largest_ink_run(row_inked: np.ndarray, gap: int) -> tuple[int, int]:
+    """(vstart, vend) of the inked-row run carrying the most ink.
+
+    Groups inked rows into runs, bridging blank gaps smaller than ``gap``, and
+    returns the run with the most inked rows -- the label body, isolated from a
+    detached smear far below it. Returns (0, 0) when no row is inked.
+    """
+    idx = np.flatnonzero(row_inked)
+    if idx.size == 0:
+        return 0, 0
+    # Split where consecutive inked rows are >= gap apart.
+    breaks = np.flatnonzero(np.diff(idx) >= gap)
+    starts = np.concatenate(([idx[0]], idx[breaks + 1]))
+    ends = np.concatenate((idx[breaks], [idx[-1]]))
+    best = max(range(len(starts)), key=lambda k: row_inked[starts[k] : ends[k] + 1].sum())
+    return int(starts[best]), int(ends[best])
+
+
 def is_tree_start_page(a: np.ndarray, config: BookConfig) -> int:
     """Return the label's left x if this page starts a subtree, else -1.
 
@@ -273,51 +379,83 @@ def is_tree_start_page(a: np.ndarray, config: BookConfig) -> int:
     width = col_sums.shape[0]
     inked = col_sums > COL_INK_MIN  # ignore speckle columns (no island removal in v1)
 
+    # Walk inked column-runs from the right edge leftward, testing each against the
+    # label shape. The label is the rightmost run that IS a label -- but it is not
+    # always the *outermost* inked run: an ADF speck or a leftover sliver of the
+    # right border frame can sit to the right of the true label (Book 4 pages
+    # 120/285/287/293: a 1px speck, or a border remnant with end_ratio=1.0 /
+    # right_margin=0). Latching onto that first run and returning -1 misclassifies a
+    # real start page as a continuation. Instead, skip a run that fails the
+    # horizontal label test and continue to the next run left of it, so a stray
+    # right-edge mark no longer masks the label behind it.
     end = width - 1
-    while end > 0 and not inked[end]:
-        end -= 1
-    start = end
-    while start > 0 and inked[start]:
-        start -= 1
-    logger.debug("label column candidate: start=%d end=%d width=%d", start, end, width)
+    while end > 0:
+        while end > 0 and not inked[end]:
+            end -= 1
+        if end <= 0:
+            break
+        start = end
+        while start > 0 and inked[start]:
+            start -= 1
+        logger.debug("label column candidate: start=%d end=%d width=%d", start, end, width)
 
-    span = end - start
-    end_ratio = end / width if width else 0.0
-    right_margin = width - 1 - end
-    if not (
-        config.label_min_span <= span <= config.label_max_span
-        and end_ratio >= config.label_min_end_ratio
-        and right_margin >= config.label_edge_margin
-    ):
-        return -1
-    start_x = start
+        span = end - start
+        end_ratio = end / width if width else 0.0
+        right_margin = width - 1 - end
+        if not (
+            config.label_min_span <= span <= config.label_max_span
+            and end_ratio >= config.label_min_end_ratio
+            and right_margin >= config.label_edge_margin
+        ):
+            end = start - 1  # this run isn't the label; try the next one to its left
+            continue
+        start_x = start
 
-    # Vertical extent of the label block, measured over its own columns. Ignore
-    # rows with only speckle ink (same reason as COL_INK_MIN): a stray speck far
-    # below the label would otherwise stretch vspan to nearly the page height.
-    row_sums = np.sum(1 - a[:, start:end], axis=1)
-    row_inked = row_sums > COL_INK_MIN
-    vend = row_sums.shape[0] - 1
-    while vend > 0 and not row_inked[vend]:
-        vend -= 1
-    vstart = 0
-    while vstart < vend and not row_inked[vstart]:
-        vstart += 1
-    logger.debug("label vertical extent: vstart=%d vend=%d", vstart, vend)
-    vspan = vend - vstart
-    if not (
-        config.label_min_vstart <= vstart < config.label_max_vstart
-        and config.label_min_vend < vend < config.label_max_vend
-        and config.label_min_vspan < vspan < config.label_max_vspan
-    ):
-        return -1
-    return start_x
+        # Vertical extent of the label block, measured over its own columns. The
+        # label is one *contiguous* vertical run of characters; take that block, not
+        # the outermost inked rows. An ADF ink smear can drop a few rows of
+        # >COL_INK_MIN ink far below the label (Book 3 pages 64/78/134/217/247/261:
+        # smear rows near y=2200-3200 with 20-60 ink px), which the plain
+        # outermost-row walk reads as the label bottom and inflates vend/vspan past
+        # label_max_vend. Splitting the inked rows into runs at blank gaps >=
+        # LABEL_ROW_GAP and keeping the run with the most ink isolates the label
+        # body from a detached smear (the gap is >1000px; inter-character gaps are
+        # ~tens of px).
+        row_sums = np.sum(1 - a[:, start:end], axis=1)
+        row_inked = row_sums > COL_INK_MIN
+        vstart, vend = _largest_ink_run(row_inked, LABEL_ROW_GAP)
+        logger.debug("label vertical extent: vstart=%d vend=%d", vstart, vend)
+        vspan = vend - vstart
+        if (
+            config.label_min_vstart <= vstart < config.label_max_vstart
+            and config.label_min_vend < vend < config.label_max_vend
+            and config.label_min_vspan < vspan < config.label_max_vspan
+        ):
+            return start_x
+        end = start - 1  # right shape ok but vertical extent wrong; keep looking left
+    return -1
 
 
-# Per-page left-crop overrides (scaled from v0 book2 geometry if reused later).
-# shrink_page normally crops to the ink contiguous with the densest column, which
-# drops a sparse node group sitting left of the main tree across a blank gap.
-CROP_KEEP_LEFT: dict[str, dict[int, int]] = {}
+# Per-page left-crop overrides: keep ink out to this column even if shrink_page's
+# grow would stop short. shrink_page crops to the ink contiguous with the densest
+# column, so a break in the top connecting bar drops the left subtree beyond it.
+# Book 3 page 80: a 4px bar break severs 广铨's whole left subtree (纪壎→广铨→昭溦/
+# 昭淮/昭汉→宪模→庆煊); its real ink (tall strokes, >100px/col) starts at col 285,
+# while faint ADF smear reaches col 1 -- so keep to 285, not further (pages 65/280
+# looked cut but their extra-left is only smear, max ~35px/col, correctly excluded).
+CROP_KEEP_LEFT: dict[str, dict[int, int]] = {
+    "book3": {80: 285},
+}
+
+
+# Per-page subtree-start overrides: {book: {page: label_left_x}}. is_tree_start_page
+# occasionally can't classify a real start page -- Book 4 page 287's label
+# (庆祺房系世系图) merges into one ~571px-wide run, past label_max_span, so the
+# detector rejects it. Forcing the start here (crop off the label + everything right
+# of ``label_left_x``) is cheaper and safer than loosening the detector for one page.
+FORCE_START: dict[str, dict[int, int]] = {
+    "book4": {287: 2522},
+}
 
 
 def segment(
@@ -371,14 +509,16 @@ def segment(
         a = get_image(filepath)
         anchor = bottom_inner_border_row(a) - _top_border_cut(a)
         a = trim_borders(a)
-        tree_start_x = is_tree_start_page(a, config)
+        tree_start_x = FORCE_START.get(book, {}).get(i, is_tree_start_page(a, config))
         if tree_start_x != -1:
             logger.info("Page %d starts a subtree (label at x=%d)", i, tree_start_x)
             a = a[:, :tree_start_x]
         starts[str(i)] = tree_start_x != -1
-        a = whiten_margins(a, bottom_anchor=anchor)
+        a = whiten_margins(a, bottom_anchor=anchor,
+                           whiten_top=config.whiten_top, whiten_bottom=config.whiten_bottom)
         keep_left = CROP_KEEP_LEFT.get(book, {}).get(i)
-        a = shrink_page(a, keep_left=keep_left)
+        a = shrink_page(a, keep_left=keep_left,
+                        full_span_ink=config.shrink_full_span_ink)
         out_path = os.path.join(crops_dir, f"{i}.png")
         save_image(a, out_path)
         written.append(out_path)

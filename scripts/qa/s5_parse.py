@@ -204,21 +204,25 @@ def stacked_compare(
     Pages run right-to-left (page numbers ascend right→left), matching the graph.
     """
     pages_dir = os.path.join(books_dir, book, "1_pages")
+    crops_dir = os.path.join(books_dir, book, "3_crops")
     order = list(range(start, end + 1))[::-1]  # left-to-right = end..start
 
     raw_cols: list[Image.Image] = []
     crop_cols: list[Image.Image] = []
     for i in order:
-        a = get_image(os.path.join(pages_dir, f"{i}.png"))
-        raw_cols.append(_to_rgb(a))
-        # Apply the SAME crop the pipeline does (trim, label-strip, shrink) --
-        # including any per-page CROP_KEEP_LEFT override, so row 2 matches the graph.
-        a = seg.trim_borders(a)
-        x = seg.is_tree_start_page(a, config)
-        if x != -1:
-            a = a[:, :x]
-        keep_left = seg.CROP_KEEP_LEFT.get(book, {}).get(i)
-        crop_cols.append(_to_rgb(seg.shrink_page(a, keep_left=keep_left)))
+        # Row ② shows the ACTUAL Stage-3 crop on disk (books/{book}/3_crops/{i}.png)
+        # -- what really feeds the merged graph -- NOT a re-crop. A re-crop that skips
+        # whiten_margins hid a real bug: page 83's crop dropped a whole subtree (the
+        # top whiten band wiped 纪培's fan-out bar -> shrink_page cut the left), but the
+        # re-crop showed it intact. Loading the crop makes the QA tell the truth: a
+        # cropped-out subtree shows as missing here, above its missing boxes below.
+        # A page with no crop (a biography page, Books 3&4) is skipped in both rows so
+        # the columns stay in step.
+        crop_path = os.path.join(crops_dir, f"{i}.png")
+        if not os.path.exists(crop_path):
+            continue
+        raw_cols.append(_to_rgb(get_image(os.path.join(pages_dir, f"{i}.png"))))
+        crop_cols.append(_to_rgb(get_image(crop_path)))
 
     raw_h = max(im.height for im in raw_cols)
     crop_h = max(im.height for im in crop_cols)
@@ -298,24 +302,21 @@ def _page_seams(
 ) -> list[tuple[int, int]]:
     """Page-seam left-x positions in graph coordinates: [(page, left_x), ...].
 
-    Mirrors :func:`src.s3_segment.segment`'s assembly (pages stacked left-to-right in
-    the order end..start; each page cropped + shrunk), so the cumulative widths give
-    the same seam x-positions the graph image uses.
+    Uses the ACTUAL Stage-3 crop widths on disk (books/{book}/3_crops/{p}.png), the
+    same crops :mod:`src.s4_merge_pages` stacks left-to-right (order end..start), so
+    the cumulative widths give the exact seam x-positions the merged graph uses. A
+    page with no crop (a biography page) is skipped, matching the merge.
     """
-    pages_dir = os.path.join(books_dir, book, "1_pages")
+    crops_dir = os.path.join(books_dir, book, "3_crops")
     order = list(range(start, end + 1))[::-1]
     seams: list[tuple[int, int]] = []
     acc = 0
     for p in order:
+        crop_path = os.path.join(crops_dir, f"{p}.png")
+        if not os.path.exists(crop_path):
+            continue
         seams.append((p, acc))
-        a = get_image(os.path.join(pages_dir, f"{p}.png"))
-        a = seg.trim_borders(a)
-        cut = seg.is_tree_start_page(a, config)
-        if cut != -1:
-            a = a[:, :cut]
-        keep_left = seg.CROP_KEEP_LEFT.get(book, {}).get(p)
-        a = seg.shrink_page(a, keep_left=keep_left)
-        acc += a.shape[1]
+        acc += get_image(crop_path).shape[1]
     return seams
 
 
