@@ -1,0 +1,72 @@
+{
+  "book": "book3",
+  "page": 35,
+  "follows_graph": 17,
+  "markdown": "一九三九年己卯\n\n六月初一日子时\n\n生子三名\n\n繁煊\n\n繁灯\n\n繁煌\n\n长二俱夭\n\n生女八\n\n二三四五夭\n\n长适青旷外屋孙\n\n进海\n\n六适青旷驼上何\n\n连生\n\n庆松编继一半胞\n\n弟宪波双桃承嗣",
+  "persons": [
+    {
+      "name": "繁煊",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁煊"
+    },
+    {
+      "name": "繁灯",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁灯"
+    },
+    {
+      "name": "繁煌",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁煌"
+    },
+    {
+      "name": "青旷",
+      "pai": "",
+      "shi": "",
+      "full_text": "青旷"
+    },
+    {
+      "name": "进海",
+      "pai": "",
+      "shi": "",
+      "full_text": "进海"
+    },
+    {
+      "name": "青旷",
+      "pai": "",
+      "shi": "",
+      "full_text": "青旷"
+    },
+    {
+      "name": "连生",
+      "pai": "",
+      "shi": "",
+      "full_text": "连生"
+    },
+    {
+      "name": "庆松",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆松"
+    },
+    {
+      "name": "编继",
+      "pai": "",
+      "shi": "",
+      "full_text": "编继"
+    },
+    {
+      "name": "宪波",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪波"
+    }
+  ],
+  "chars": 96,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 76295,
+  "ocr_ts": "2026-09-16T03:14:39.159438+00:00"
+}

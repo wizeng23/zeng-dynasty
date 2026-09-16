@@ -1,0 +1,84 @@
+{
+  "book": "book3",
+  "page": 197,
+  "follows_graph": 192,
+  "markdown": "子次坵\n\n纪\n垠\n\n生殁配氏俱失考\n\n夫妇合葬磨刀石\n\n房氏、\n\n生子四名\n\n长二三俱止\n\n广\n镒\n\n广\n镒\n\n子长垠\n\n广\n镒\n\n字德高行同治甲\n\n戌四月十日戌时\n\n殁葬失考\n宋氏\n\n子次垠\n\n广\n镒\n\n字安全生于光绪\n\n丙子十一月十三\n\n日午时殁失考\n\n配邹氏生于光绪\n\n丙午九月二十九\n\n日酉时殁葬失考\n\n生子二\n幼天",
+  "persons": [
+    {
+      "name": "子次坵",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次坵\n纪\n垠\n生殁配氏俱失考"
+    },
+    {
+      "name": "夫妇合葬磨刀石",
+      "pai": "",
+      "shi": "",
+      "full_text": "夫妇合葬磨刀石"
+    },
+    {
+      "name": "房氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "房氏、"
+    },
+    {
+      "name": "生子四名",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子四名"
+    },
+    {
+      "name": "长二三俱止",
+      "pai": "",
+      "shi": "",
+      "full_text": "长二三俱止"
+    },
+    {
+      "name": "子长垠",
+      "pai": "",
+      "shi": "",
+      "full_text": "广\n镒\n广\n镒\n子长垠"
+    },
+    {
+      "name": "字德高行同治甲",
+      "pai": "",
+      "shi": "",
+      "full_text": "广\n镒\n字德高行同治甲\n戌四月十日戌时\n殁葬失考"
+    },
+    {
+      "name": "宋氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "宋氏"
+    },
+    {
+      "name": "子次垠",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次垠\n广\n镒\n字安全生于光绪\n丙子十一月十三\n日午时殁失考"
+    },
+    {
+      "name": "配邹氏生于光绪",
+      "pai": "",
+      "shi": "",
+      "full_text": "配邹氏生于光绪\n丙午九月二十九\n日酉时殁葬失考"
+    },
+    {
+      "name": "生子二",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二"
+    },
+    {
+      "name": "幼天",
+      "pai": "",
+      "shi": "",
+      "full_text": "幼天"
+    }
+  ],
+  "chars": 162,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 106053,
+  "ocr_ts": "2026-09-16T03:51:04.237241+00:00"
+}

@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 148,
+  "follows_graph": 147,
+  "markdown": "芳培\n\n次适店山宋\n\n生子三名\n\n繁芳\n\n繁明\n\n繁亮\n\n子三材\n\n庆\n炘\n\n字未保生于公元\n\n一九五七年七月\n\n五日卯时\n\n配江口沙村林家\n\n旷邓承文之女邓\n\n招娣生于公元一\n\n九六三年二月二\n\n十九日酉时",
+  "persons": [
+    {
+      "name": "芳培",
+      "pai": "",
+      "shi": "",
+      "full_text": "芳培\n次适店山宋\n生子三名\n繁芳\n繁明\n繁亮\n子三材\n庆\n炘\n字未保生于公元\n一九五七年七月\n五日卯时\n配江口沙村林家\n旷邓承文之女邓\n招娣生于公元一\n九六三年二月二\n十九日酉时"
+    }
+  ],
+  "chars": 104,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 81325,
+  "ocr_ts": "2026-09-16T03:47:37.670511+00:00"
+}

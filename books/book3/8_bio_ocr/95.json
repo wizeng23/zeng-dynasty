@@ -1,0 +1,24 @@
+{
+  "book": "book3",
+  "page": 95,
+  "follows_graph": 89,
+  "markdown": "繁友\n\n子五模\n\n庆\n炉\n\n乳名解放元生于\n\n公元一九七一年\n\n十月一日\n\n配吴氏生于一九\n\n九〇年一月九日\n\n生子一名\n\n繁竣\n\n子六模\n\n庆\n炎\n\n乳名火长生于一",
+  "persons": [
+    {
+      "name": "解放",
+      "pai": "",
+      "shi": "五",
+      "full_text": "繁友\n子五模\n庆\n炉\n乳名解放元生于\n公元一九七一年\n十月一日\n配吴氏生于一九\n九〇年一月九日\n生子一名\n繁竣"
+    },
+    {
+      "name": "火",
+      "pai": "",
+      "shi": "六",
+      "full_text": "子六模\n庆\n炎\n乳名火长生于一"
+    }
+  ],
+  "chars": 83,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 111631,
+  "ocr_ts": "2026-09-16T03:44:08.145407+00:00"
+}

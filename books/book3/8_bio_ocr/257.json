@@ -1,0 +1,78 @@
+{
+  "book": "book3",
+  "page": 257,
+  "follows_graph": 250,
+  "markdown": "生女六\n\n兰茶魏生适\n\n廖宪\n\n水香 待适\n\n七香 待适\n\n丁秀 待适\n\n春 待适\n\n凤香 待适\n\n柯\n庆\n祈\n\n子\n\n字建昌生于一九\n\n七一年辛亥十二\n\n月二十八寅时\n\n生子一名\n\n文斌",
+  "persons": [
+    {
+      "name": "兰茶魏",
+      "pai": "",
+      "shi": "六",
+      "full_text": "生女六\n兰茶魏生适"
+    },
+    {
+      "name": "廖宪",
+      "pai": "",
+      "shi": "",
+      "full_text": "廖宪"
+    },
+    {
+      "name": "水香",
+      "pai": "",
+      "shi": "",
+      "full_text": "水香 待适"
+    },
+    {
+      "name": "七香",
+      "pai": "",
+      "shi": "",
+      "full_text": "七香 待适"
+    },
+    {
+      "name": "丁秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "丁秀 待适"
+    },
+    {
+      "name": "春",
+      "pai": "",
+      "shi": "",
+      "full_text": "春 待适"
+    },
+    {
+      "name": "凤香",
+      "pai": "",
+      "shi": "",
+      "full_text": "凤香 待适"
+    },
+    {
+      "name": "柯庆祈",
+      "pai": "",
+      "shi": "",
+      "full_text": "柯\n庆\n祈"
+    },
+    {
+      "name": "子",
+      "pai": "",
+      "shi": "",
+      "full_text": "子"
+    },
+    {
+      "name": "字建昌",
+      "pai": "",
+      "shi": "",
+      "full_text": "字建昌生于一九\n七一年辛亥十二\n月二十八寅时"
+    },
+    {
+      "name": "文斌",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n文斌"
+    }
+  ],
+  "chars": 94,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 72095,
+  "ocr_ts": "2026-09-16T04:00:06.929863+00:00"
+}

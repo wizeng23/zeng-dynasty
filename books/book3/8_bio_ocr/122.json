@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 122,
+  "follows_graph": 89,
+  "markdown": "森\n次\n朶\n炽\n\n字曾炜生于一九\n八〇年十月十七\n日亥时\n\n配黄岭廖氏生于\n一九八三年十一\n月初六\n\n生子二名\n\n繁坚\n\n繁臻\n\n森\n三\n朶\n荣\n\n字流良生于一九\n八四年三月二十",
+  "persons": [
+    {
+      "name": "曾炜",
+      "pai": "",
+      "shi": "次",
+      "full_text": "森\n次\n朶\n炽\n\n字曾炜生于一九\n八〇年十月十七\n日亥时"
+    },
+    {
+      "name": "黄岭廖氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配黄岭廖氏生于\n一九八三年十一\n月初六"
+    },
+    {
+      "name": "繁坚",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n\n繁坚"
+    },
+    {
+      "name": "繁臻",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁臻"
+    },
+    {
+      "name": "流良",
+      "pai": "三",
+      "shi": "",
+      "full_text": "森\n三\n朶\n荣\n\n字流良生于一九\n八四年三月二十"
+    }
+  ],
+  "chars": 89,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 75024,
+  "ocr_ts": "2026-09-16T03:45:56.864161+00:00"
+}

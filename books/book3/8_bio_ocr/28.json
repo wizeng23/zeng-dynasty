@@ -1,0 +1,36 @@
+{
+  "book": "book3",
+  "page": 28,
+  "follows_graph": 17,
+  "markdown": "甲申六月二十二\n\n日酉时殁于光绪\n\n己酉九月二十四\n\n字汉章生于道光\n\n子三菖\n\n广堂\n\n子长堂\n\n昭\n\n钫\n\n天\n\n二月十一日卯时\n\n九七四年甲寅十\n\n字水长生公元一\n\n子四潘\n\n庆柏\n\n九月十一日卯时\n\n一九七二年壬子",
+  "persons": [
+    {
+      "name": "汉章",
+      "pai": "",
+      "shi": "",
+      "full_text": "甲申六月二十二\n日酉时殁于光绪\n己酉九月二十四\n字汉章生于道光"
+    },
+    {
+      "name": "菖",
+      "pai": "三",
+      "shi": "",
+      "full_text": "子三菖\n广堂\n子长堂"
+    },
+    {
+      "name": "昭钫天",
+      "pai": "",
+      "shi": "",
+      "full_text": "昭\n钫\n天\n二月十一日卯时"
+    },
+    {
+      "name": "水长",
+      "pai": "一",
+      "shi": "九七四年甲寅十",
+      "full_text": "字水长生公元一\n子四潘\n庆柏\n九月十一日卯时\n一九七二年壬子"
+    }
+  ],
+  "chars": 111,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 79020,
+  "ocr_ts": "2026-09-16T03:14:04.942245+00:00"
+}

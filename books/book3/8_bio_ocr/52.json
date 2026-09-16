@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 52,
+  "follows_graph": 17,
+  "markdown": "子四伟\n\n庆湖\n\n生于公元一九七\n\n五年乙卯四月十\n\n五日寅时\n\n配范菊梅生公元\n\n一九七六年八月\n\n初四日\n\n生子一名\n\n繁盛\n\n生女一\n\n琴琴",
+  "persons": [
+    {
+      "name": "子四伟",
+      "pai": "",
+      "shi": "",
+      "full_text": "子四伟\n庆湖\n生于公元一九七五年乙卯四月十五日寅时\n配范菊梅生公元一九七六年八月初四日\n生子一名繁盛\n生女一琴琴"
+    }
+  ],
+  "chars": 73,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 70211,
+  "ocr_ts": "2026-09-16T03:15:55.002255+00:00"
+}

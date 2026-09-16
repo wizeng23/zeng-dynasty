@@ -1,0 +1,36 @@
+{
+  "book": "book3",
+  "page": 32,
+  "follows_graph": 17,
+  "markdown": "生子一名\n\n繁壞\n\n生女四\n\n子三概\n\n庆炉\n\n字中长保生于公\n\n元一九六一年辛\n\n丑正月十九日子\n\n时\n\n配长运江文连公\n\n之女江三秀生一\n\n九六二年壬寅十\n\n二月十九日寅时\n\n生子一名\n\n繁鑫",
+  "persons": [
+    {
+      "name": "繁壞",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n繁壞"
+    },
+    {
+      "name": "中长保",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆炉\n字中长保生于公\n元一九六一年辛\n丑正月十九日子\n时"
+    },
+    {
+      "name": "江三秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "配长运江文连公\n之女江三秀生一\n九六二年壬寅十\n二月十九日寅时"
+    },
+    {
+      "name": "繁鑫",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n繁鑫"
+    }
+  ],
+  "chars": 98,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 74395,
+  "ocr_ts": "2026-09-16T03:14:23.767629+00:00"
+}

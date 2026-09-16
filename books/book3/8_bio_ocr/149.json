@@ -1,0 +1,78 @@
+{
+  "book": "book3",
+  "page": 149,
+  "follows_graph": 147,
+  "markdown": "生子三名\n\n繁森\n\n繁盛\n\n繁財\n\n生女四\n\n冬华适三僚\n\n廖屋廖三保\n\n财秀适在脑\n\n天星乐太阳\n\n耒福适青圹\n\n孙屋何春林\n\n三秀适颊村\n\n高岑黄平发",
+  "persons": [
+    {
+      "name": "繁森",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三名\n繁森"
+    },
+    {
+      "name": "繁盛",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三名\n繁盛"
+    },
+    {
+      "name": "繁财",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三名\n繁财"
+    },
+    {
+      "name": "冬华",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n冬华适三僚"
+    },
+    {
+      "name": "廖屋廖三保",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n廖屋廖三保"
+    },
+    {
+      "name": "财秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n财秀适在脑"
+    },
+    {
+      "name": "天星乐太阳",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n天星乐太阳"
+    },
+    {
+      "name": "耒福",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n耒福适青圹"
+    },
+    {
+      "name": "孙屋何春林",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n孙屋何春林"
+    },
+    {
+      "name": "三秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n三秀适颊村"
+    },
+    {
+      "name": "高岑黄平发",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女四\n高岑黄平发"
+    }
+  ],
+  "chars": 77,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 77468,
+  "ocr_ts": "2026-09-16T03:47:41.815752+00:00"
+}

@@ -1,0 +1,36 @@
+{
+  "book": "book3",
+  "page": 9,
+  "follows_graph": 1,
+  "markdown": "柏\n\n完烘\n\n生于公元一九七\n\n三年十月十三日\n\n戌时\n\n配王小兰生于公\n\n元一九八〇年十\n\n一月二十九日亥\n\n时\n\n生子一名\n\n庆粮\n\n生女一\n\n曾福莲待适\n\n烘\n\n庆粮\n\n生于公元二〇〇\n\n八年十一月十九\n\n日午时",
+  "persons": [
+    {
+      "name": "柏完烘",
+      "pai": "",
+      "shi": "",
+      "full_text": "柏\n完烘"
+    },
+    {
+      "name": "王小兰",
+      "pai": "",
+      "shi": "",
+      "full_text": "王小兰"
+    },
+    {
+      "name": "庆粮",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆粮"
+    },
+    {
+      "name": "曾福莲",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾福莲"
+    }
+  ],
+  "chars": 109,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 80250,
+  "ocr_ts": "2026-09-16T03:13:06.143883+00:00"
+}

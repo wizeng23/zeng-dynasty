@@ -1,0 +1,102 @@
+{
+  "book": "book3",
+  "page": 282,
+  "follows_graph": 280,
+  "markdown": "广镐\n\n生子二名\n\n昭法\n\n昭暾\n\n长女昭法苏区当\n\n红军未回\n\n初七酉时葬片坵\n\n立卯向酉\n\n入继堂兄昭波之\n\n子宪柜一半承嗣\n\n生子一名\n\n宪仕\n\n生女四\n\n长二适黄宅\n\n三适刘宅\n\n四适葛新长\n\n庆灿\n\n庆耀\n\n柜\n\n庆\n耀\n\n字春明生于公元\n\n一九八一年辛酉\n\n二月十六日午时\n\n配肖海秀生于公\n\n元一九七八年八\n\n月十五\n\n生子二名\n\n根发\n\n国良\n\n生女二\n\n长伟庭\n\n次伟俱待适",
+  "persons": [
+    {
+      "name": "昭法",
+      "pai": "",
+      "shi": "",
+      "full_text": "昭法"
+    },
+    {
+      "name": "昭暾",
+      "pai": "",
+      "shi": "",
+      "full_text": "昭暾"
+    },
+    {
+      "name": "昭法苏区当",
+      "pai": "",
+      "shi": "",
+      "full_text": "长女昭法苏区当"
+    },
+    {
+      "name": "昭波",
+      "pai": "",
+      "shi": "",
+      "full_text": "立卯向酉\n入继堂兄昭波之"
+    },
+    {
+      "name": "宪柜",
+      "pai": "",
+      "shi": "",
+      "full_text": "子宪柜一半承嗣"
+    },
+    {
+      "name": "宪仕",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n宪仕"
+    },
+    {
+      "name": "庆灿",
+      "pai": "",
+      "shi": "",
+      "full_text": "长二适黄宅"
+    },
+    {
+      "name": "庆耀",
+      "pai": "",
+      "shi": "",
+      "full_text": "三适刘宅"
+    },
+    {
+      "name": "柜",
+      "pai": "",
+      "shi": "",
+      "full_text": "四适葛新长"
+    },
+    {
+      "name": "庆耀",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆耀\n字春明生于公元\n一九八一年辛酉\n二月十六日午时"
+    },
+    {
+      "name": "海秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "配肖海秀生于公元\n一九七八年八\n月十五"
+    },
+    {
+      "name": "根发",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n根发"
+    },
+    {
+      "name": "国良",
+      "pai": "",
+      "shi": "",
+      "full_text": "国良"
+    },
+    {
+      "name": "伟庭",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n长伟庭"
+    },
+    {
+      "name": "伟俱待",
+      "pai": "",
+      "shi": "",
+      "full_text": "次伟俱待适"
+    }
+  ],
+  "chars": 196,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 137175,
+  "ocr_ts": "2026-09-16T04:02:23.962157+00:00"
+}

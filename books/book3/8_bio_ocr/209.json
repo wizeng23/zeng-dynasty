@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 209,
+  "follows_graph": 208,
+  "markdown": "四月七日丑时\n\n配钟朱女生于公\n\n元一九六三年癸\n\n卯五月七日丑时\n\n生子一名\n\n水生\n\n生女三\n\n李秀适龙岗\n\n廖海波\n\n二李香\n\n三七秀待适\n\n福\n\n宪\n柏\n\n字三月生生于公\n\n元一九六六年丙\n\n子之柏\n\n庆\n才\n\n一九九九年己卯\n\n十二日",
+  "persons": [
+    {
+      "name": "朱女",
+      "pai": "",
+      "shi": "",
+      "full_text": "四月七日丑时\n配钟朱女生于公"
+    },
+    {
+      "name": "水生",
+      "pai": "",
+      "shi": "一",
+      "full_text": "元一九六三年癸\n卯五月七日丑时\n生子一名\n水生"
+    },
+    {
+      "name": "李香",
+      "pai": "二",
+      "shi": "",
+      "full_text": "生女三\n李秀适龙岗\n廖海波\n二李香"
+    },
+    {
+      "name": "七秀",
+      "pai": "三",
+      "shi": "",
+      "full_text": "三七秀待适\n福\n宪\n柏\n字三月生生于公"
+    },
+    {
+      "name": "柏",
+      "pai": "",
+      "shi": "子",
+      "full_text": "元一九六六年丙\n子之柏\n庆\n才\n一九九九年己卯\n十二日"
+    }
+  ],
+  "chars": 122,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 91583,
+  "ocr_ts": "2026-09-16T03:51:50.859080+00:00"
+}

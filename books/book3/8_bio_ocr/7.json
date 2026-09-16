@@ -1,0 +1,90 @@
+{
+  "book": "book3",
+  "page": 7,
+  "follows_graph": 1,
+  "markdown": "庆华\n\n七年八月八日子\n时\n\n棋\n宪\n焙\n\n子\n\n生于公元一九六\n\n六年七月二十日\n\n丑时\n\n配陈面花生于公\n\n元一九六六年七\n\n月十七日子时\n\n生子 名\n\n生女三\n\n长曾情\n\n二曾华\n\n三曾满秀待适",
+  "persons": [
+    {
+      "name": "庆华",
+      "pai": "",
+      "shi": "七",
+      "full_text": "庆华\n七年八月八日子\n时"
+    },
+    {
+      "name": "棋",
+      "pai": "",
+      "shi": "",
+      "full_text": "棋"
+    },
+    {
+      "name": "宪",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪"
+    },
+    {
+      "name": "焙",
+      "pai": "",
+      "shi": "",
+      "full_text": "焙"
+    },
+    {
+      "name": "子",
+      "pai": "",
+      "shi": "",
+      "full_text": "子"
+    },
+    {
+      "name": "生于公元一九六六年七月二十日丑时",
+      "pai": "",
+      "shi": "",
+      "full_text": "生于公元一九六六年七月二十日丑时"
+    },
+    {
+      "name": "配陈面花",
+      "pai": "",
+      "shi": "",
+      "full_text": "配陈面花生于公元一九六六年七月十七日子时"
+    },
+    {
+      "name": "生子",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子"
+    },
+    {
+      "name": "名",
+      "pai": "",
+      "shi": "",
+      "full_text": "名"
+    },
+    {
+      "name": "生女三",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女三"
+    },
+    {
+      "name": "长曾情",
+      "pai": "",
+      "shi": "",
+      "full_text": "长曾情"
+    },
+    {
+      "name": "二曾华",
+      "pai": "",
+      "shi": "",
+      "full_text": "二曾华"
+    },
+    {
+      "name": "三曾满秀待适",
+      "pai": "",
+      "shi": "",
+      "full_text": "三曾满秀待适"
+    }
+  ],
+  "chars": 100,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 77706,
+  "ocr_ts": "2026-09-16T03:12:31.720047+00:00"
+}

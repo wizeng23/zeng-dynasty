@@ -1,0 +1,72 @@
+{
+  "book": "book3",
+  "page": 274,
+  "follows_graph": 272,
+  "markdown": "生子二名\n\n昭瑀\n\n昭坮\n\n生子一名\n\n兖材\n\n生女一适何宅\n\n庆珍\n\n庆煜\n\n庆晥\n\n生女一适赖村\n\n亲手建山口十字\n\n厅一幢未山丑向\n\n三宝华\n\n四宝金\n\n五美春\n\n六美清\n\n子次材\n\n庆珍\n\n字润长生于公元\n\n一九六六年丙午\n\n五月一日酉时\n\n配廖玉秀生于一\n\n九六七年丁未十\n\n月二十一日巳时\n\n生子二名\n\n繁盛\n\n繁茂\n\n生女一 连秀",
+  "persons": [
+    {
+      "name": "昭瑀",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n昭瑀"
+    },
+    {
+      "name": "昭坮",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n昭坮"
+    },
+    {
+      "name": "兖材",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n兖材"
+    },
+    {
+      "name": "庆珍",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一适何宅\n庆珍"
+    },
+    {
+      "name": "庆煜",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一适何宅\n庆煜"
+    },
+    {
+      "name": "庆晥",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一适何宅\n庆晥"
+    },
+    {
+      "name": "连秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一适赖村\n连秀"
+    },
+    {
+      "name": "庆珍",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆珍\n字润长生于公元\n一九六六年丙午\n五月一日酉时\n配廖玉秀生于一\n九六七年丁未十\n月二十一日巳时"
+    },
+    {
+      "name": "繁盛",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n繁盛"
+    },
+    {
+      "name": "繁茂",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n繁茂"
+    }
+  ],
+  "chars": 172,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 102641,
+  "ocr_ts": "2026-09-16T04:01:45.097375+00:00"
+}

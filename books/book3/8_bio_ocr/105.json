@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 105,
+  "follows_graph": 89,
+  "markdown": "桃\n\n庆全\n\n字上峰生于一九\n\n八一年十二月十\n\n八日申时\n\n配吉安隧川邓尧\n\n叶之女邓舜梅生\n\n于一九八三年七\n\n月二十三日\n\n生子二\n\n繁原\n\n繁昌\n\n生女二",
+  "persons": [
+    {
+      "name": "庆全",
+      "pai": "",
+      "shi": "",
+      "full_text": "桃\n庆全\n字上峰生于一九\n八一年十二月十\n八日申时\n配吉安隧川邓尧\n叶之女邓舜梅生\n于一九八三年七\n月二十三日\n生子二\n繁原\n繁昌\n生女二"
+    }
+  ],
+  "chars": 81,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 87949,
+  "ocr_ts": "2026-09-16T03:44:48.827049+00:00"
+}

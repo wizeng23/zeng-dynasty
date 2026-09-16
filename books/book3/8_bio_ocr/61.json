@@ -1,0 +1,24 @@
+{
+  "book": "book3",
+  "page": 61,
+  "follows_graph": 17,
+  "markdown": "二十六日\n\n生女一\n\n燕勤\n\n三柴\n\n完华\n\n学之华\n\n庆\n\n乳名华生生于公\n\n元一九八〇年庚\n\n申十一月初八日\n\n午时\n\n配何根秀生于公\n\n元一九八三年十\n\n月初七日青旷\n\n生女一名\n\n美玲\n\n七日辰时\n\n字驰生于公元二\n\n〇一一年正月初",
+  "persons": [
+    {
+      "name": "华生",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一\n燕勤\n三柴\n完华\n学之华\n庆\n乳名华生生于公元一九八〇年庚申十一月初八日午时"
+    },
+    {
+      "name": "美玲",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一名\n美玲\n七日辰时\n字驰生于公元二〇一一年正月初"
+    }
+  ],
+  "chars": 120,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 132925,
+  "ocr_ts": "2026-09-16T03:16:31.356273+00:00"
+}

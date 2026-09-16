@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 193,
+  "follows_graph": 192,
+  "markdown": "海\n\n宪\n洪\n\n字观音生于一九\n\n七二年七月二十\n\n七日辰时\n\n配梅窖张九香\n\n生一九七八年九\n\n月二十五日成时\n\n生子二名\n\n庆標\n\n庆鑫\n\n生女一\n\n安娜\n\n洪\n\n庆\n標\n\n生二〇〇三年二\n\n月二十三日子时\n\n洪\n\n庆\n鑫\n\n生于二〇〇七年\n\n正月初八日子时",
+  "persons": [
+    {
+      "name": "洪宪",
+      "pai": "",
+      "shi": "",
+      "full_text": "海\n宪\n洪"
+    },
+    {
+      "name": "张九香",
+      "pai": "",
+      "shi": "",
+      "full_text": "配梅窖张九香"
+    },
+    {
+      "name": "洪庆標",
+      "pai": "",
+      "shi": "",
+      "full_text": "洪\n庆\n標"
+    },
+    {
+      "name": "洪庆鑫",
+      "pai": "",
+      "shi": "",
+      "full_text": "洪\n庆\n鑫"
+    },
+    {
+      "name": "安娜",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一\n安娜"
+    }
+  ],
+  "chars": 131,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 91276,
+  "ocr_ts": "2026-09-16T03:50:46.945195+00:00"
+}

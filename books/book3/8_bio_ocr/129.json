@@ -1,0 +1,96 @@
+{
+  "book": "book3",
+  "page": 129,
+  "follows_graph": 124,
+  "markdown": "岭巽山乾向\n\n生子二\n\n昭洲\n\n昭泽\n\n洲幼天泽编继胞\n\n兄锡双桃承嗣\n\n子五埠\n\n广\n锽\n\n生于光绪癸未年\n\n八月十七日殁光\n\n绪壬寅九月二十\n\n九日午时葬洋坑\n\n塘寓子丙山壬向\n\n配何氏生殁葬失\n\n考\n\n入继堂弟油三子\n通双桃承嗣",
+  "persons": [
+    {
+      "name": "岭巽山",
+      "pai": "",
+      "shi": "",
+      "full_text": "岭巽山乾向"
+    },
+    {
+      "name": "生子二",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二"
+    },
+    {
+      "name": "昭洲",
+      "pai": "",
+      "shi": "",
+      "full_text": "昭洲"
+    },
+    {
+      "name": "昭泽",
+      "pai": "",
+      "shi": "",
+      "full_text": "昭泽"
+    },
+    {
+      "name": "洲幼天泽",
+      "pai": "",
+      "shi": "",
+      "full_text": "洲幼天泽编继胞"
+    },
+    {
+      "name": "兄锡双桃",
+      "pai": "",
+      "shi": "",
+      "full_text": "兄锡双桃承嗣"
+    },
+    {
+      "name": "子五埠",
+      "pai": "",
+      "shi": "",
+      "full_text": "子五埠"
+    },
+    {
+      "name": "广",
+      "pai": "",
+      "shi": "",
+      "full_text": "广"
+    },
+    {
+      "name": "锽",
+      "pai": "",
+      "shi": "",
+      "full_text": "锽"
+    },
+    {
+      "name": "生于光绪癸未年",
+      "pai": "",
+      "shi": "",
+      "full_text": "生于光绪癸未年"
+    },
+    {
+      "name": "八月十七日殁光绪壬寅九月二十九日午时葬洋坑塘寓子丙山壬向",
+      "pai": "",
+      "shi": "",
+      "full_text": "八月十七日殁光绪壬寅九月二十九日午时葬洋坑塘寓子丙山壬向"
+    },
+    {
+      "name": "配何氏生殁葬失",
+      "pai": "",
+      "shi": "",
+      "full_text": "配何氏生殁葬失"
+    },
+    {
+      "name": "考",
+      "pai": "",
+      "shi": "",
+      "full_text": "考"
+    },
+    {
+      "name": "入继堂弟油三子通双桃",
+      "pai": "",
+      "shi": "",
+      "full_text": "入继堂弟油三子通双桃承嗣"
+    }
+  ],
+  "chars": 117,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 110829,
+  "ocr_ts": "2026-09-16T03:46:28.230077+00:00"
+}

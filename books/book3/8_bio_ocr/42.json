@@ -1,0 +1,54 @@
+{
+  "book": "book3",
+  "page": 42,
+  "follows_graph": 17,
+  "markdown": "|  子三河 完 彬 | 子五梓 庆 礼 | 子之彬 庆 耀 | 时  |\n| --- | --- | --- | --- |\n|  字城古佬生于民 国丙寅九月十 | 子之彬 庆 耀 | 子之彬 庆 耀 | 生子二名 繁倍 繁芳 生女一 小金  |",
+  "persons": [
+    {
+      "name": "彬",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三河 完 彬"
+    },
+    {
+      "name": "庆",
+      "pai": "五",
+      "shi": "",
+      "full_text": "子五梓 庆 礼"
+    },
+    {
+      "name": "耀",
+      "pai": "之",
+      "shi": "",
+      "full_text": "子之彬 庆 耀"
+    },
+    {
+      "name": "字城古佬",
+      "pai": "",
+      "shi": "",
+      "full_text": "字城古佬生于民 国丙寅九月十"
+    },
+    {
+      "name": "繁倍",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名 繁倍 繁芳"
+    },
+    {
+      "name": "繁芳",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名 繁倍 繁芳"
+    },
+    {
+      "name": "小金",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一 小金"
+    }
+  ],
+  "chars": 124,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 72387,
+  "ocr_ts": "2026-09-16T03:15:09.769259+00:00"
+}

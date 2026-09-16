@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 113,
+  "follows_graph": 89,
+  "markdown": "繁培\n\n繁堤\n\n生女一\n\n子五模\n\n庆灿\n\n字团生生于一九\n\n七三年八月十八\n\n日辰时\n\n配广西靖西覃氏\n\n生于一九八二年\n\n五月十二日\n\n生子二\n\n繁基\n\n繁圳\n\n生女二",
+  "persons": [
+    {
+      "name": "繁培",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁培\n繁堤\n生女一\n子五模\n庆灿\n字团生生于一九\n七三年八月十八\n日辰时\n配广西靖西覃氏\n生于一九八二年\n五月十二日\n生子二\n繁基\n繁圳\n生女二"
+    }
+  ],
+  "chars": 86,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 77966,
+  "ocr_ts": "2026-09-16T03:45:21.568466+00:00"
+}

@@ -1,0 +1,54 @@
+{
+  "book": "book3",
+  "page": 117,
+  "follows_graph": 89,
+  "markdown": "次女天\n\n子次柏\n\n庆炉\n\n字紧跟生于一九\n\n七五年正月十八\n\n日\n\n配甘路下张祖茂\n\n之女张氏生于一\n\n九七八年十一月\n\n十五日\n\n生子三\n\n繁盛\n\n繁根\n\n繁国",
+  "persons": [
+    {
+      "name": "天",
+      "pai": "",
+      "shi": "次女",
+      "full_text": "次女天"
+    },
+    {
+      "name": "柏",
+      "pai": "",
+      "shi": "子次",
+      "full_text": "子次柏"
+    },
+    {
+      "name": "庆炉",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆炉"
+    },
+    {
+      "name": "张氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配甘路下张祖茂之女张氏生于一九七八年十一月十五日"
+    },
+    {
+      "name": "繁盛",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁盛"
+    },
+    {
+      "name": "繁根",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁根"
+    },
+    {
+      "name": "繁国",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁国"
+    }
+  ],
+  "chars": 82,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 88192,
+  "ocr_ts": "2026-09-16T03:45:36.511407+00:00"
+}

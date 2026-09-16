@@ -1,0 +1,96 @@
+{
+  "book": "book3",
+  "page": 5,
+  "follows_graph": 1,
+  "markdown": "千三棋\n完 炜\n千三棋\n生子一名\n生子一名\n繁盛\n生女一\n曾燕待适\n配教六秀生子公\n元一九六〇年七\n月十九日子时\n生子一名\n庆海\n生女三\n生子一名\n生子一名\n繁盛\n生女一\n曾燕待适",
+  "persons": [
+    {
+      "name": "完炜",
+      "pai": "",
+      "shi": "",
+      "full_text": "千三棋\n完 炜"
+    },
+    {
+      "name": "生子一名",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名"
+    },
+    {
+      "name": "生子一名",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名"
+    },
+    {
+      "name": "繁盛",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁盛"
+    },
+    {
+      "name": "生女一",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一"
+    },
+    {
+      "name": "曾燕待适",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾燕待适"
+    },
+    {
+      "name": "配教六秀生子公",
+      "pai": "",
+      "shi": "",
+      "full_text": "配教六秀生子公"
+    },
+    {
+      "name": "庆海",
+      "pai": "",
+      "shi": "",
+      "full_text": "元一九六〇年七\n月十九日子时\n生子一名\n庆海"
+    },
+    {
+      "name": "生女三",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女三"
+    },
+    {
+      "name": "生子一名",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名"
+    },
+    {
+      "name": "生子一名",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名"
+    },
+    {
+      "name": "繁盛",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁盛"
+    },
+    {
+      "name": "生女一",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一"
+    },
+    {
+      "name": "曾燕待适",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾燕待适"
+    }
+  ],
+  "chars": 90,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 86683,
+  "ocr_ts": "2026-09-16T03:12:54.007996+00:00"
+}

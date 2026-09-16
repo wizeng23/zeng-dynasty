@@ -1,0 +1,54 @@
+{
+  "book": "book3",
+  "page": 59,
+  "follows_graph": 17,
+  "markdown": "听\n宪\n全\n子\n\n乳名长生生公元\n\n一九七二年壬子\n\n九月十三日巳时\n\n配江金花生于公\n\n元一九七四年十\n\n月十七日古龙岗\n\n江文增公\n\n生子二名\n\n庆华。\n\n庆青\n\n养女一\n\n銀香\n\n全\n子\n长\n庆\n华\n文\n\n生于公元一九九\n\n七年丁丑三月十\n\n七日戌时\n\n全\n次\n庆\n青\n子\n\n生于公元一九九\n\n八年戊寅七月初\n\n六日子时",
+  "persons": [
+    {
+      "name": "全子",
+      "pai": "",
+      "shi": "",
+      "full_text": "全\n子"
+    },
+    {
+      "name": "长生",
+      "pai": "",
+      "shi": "",
+      "full_text": "乳名长生生公元\n一九七二年壬子\n九月十三日巳时"
+    },
+    {
+      "name": "江金花",
+      "pai": "",
+      "shi": "",
+      "full_text": "配江金花生于公\n元一九七四年十\n月十七日古龙岗"
+    },
+    {
+      "name": "江文增",
+      "pai": "",
+      "shi": "",
+      "full_text": "江文增公"
+    },
+    {
+      "name": "庆华",
+      "pai": "",
+      "shi": "",
+      "full_text": "全\n子\n长\n庆\n华\n文"
+    },
+    {
+      "name": "庆青",
+      "pai": "",
+      "shi": "",
+      "full_text": "全\n次\n庆\n青\n子"
+    },
+    {
+      "name": "银香",
+      "pai": "",
+      "shi": "",
+      "full_text": "养女一\n銀香"
+    }
+  ],
+  "chars": 163,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 146852,
+  "ocr_ts": "2026-09-16T03:16:23.798509+00:00"
+}

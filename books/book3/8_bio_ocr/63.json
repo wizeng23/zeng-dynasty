@@ -1,0 +1,24 @@
+{
+  "book": "book3",
+  "page": 63,
+  "follows_graph": 17,
+  "markdown": "子五煦\n\n纪\n\n佳\n\n生殁葬未详止\n\n葬松岑宪贵屋背\n\n子之佳\n\n广\n\n柯\n\n定钰\n\n次适寨脑付\n\n重论\n\n止\n\n配刘氏殁葬未详\n\n丑时\n\n己酉八月十七日\n\n字作横生于咸丰\n\n长适寨脑朱",
+  "persons": [
+    {
+      "name": "子五煦",
+      "pai": "",
+      "shi": "纪",
+      "full_text": "子五煦\n纪\n佳\n生殁葬未详止\n葬松岑宪贵屋背\n子之佳"
+    },
+    {
+      "name": "广柯",
+      "pai": "",
+      "shi": "定钰",
+      "full_text": "广\n柯\n定钰\n次适寨脑付\n重论\n止\n配刘氏殁葬未详\n丑时\n己酉八月十七日\n字作横生于咸丰\n长适寨脑朱"
+    }
+  ],
+  "chars": 93,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 101094,
+  "ocr_ts": "2026-09-16T03:16:39.101079+00:00"
+}

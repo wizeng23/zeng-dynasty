@@ -1,0 +1,36 @@
+{
+  "book": "book3",
+  "page": 291,
+  "follows_graph": 284,
+  "markdown": "配黃雪英生于公\n元一九七四年二\n\n月三日\n\n生子一名\n\n炳官\n\n生女一 丽芳\n\n宪福編維一半昭\n\n貴名下双桃承嗣",
+  "persons": [
+    {
+      "name": "黃雪英",
+      "pai": "",
+      "shi": "",
+      "full_text": "配黃雪英生于公\n元一九七四年二\n月三日"
+    },
+    {
+      "name": "炳官",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n炳官"
+    },
+    {
+      "name": "丽芳",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一 丽芳"
+    },
+    {
+      "name": "宪福編維一半昭貴名下双桃承嗣",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪福編維一半昭\n貴名下双桃承嗣"
+    }
+  ],
+  "chars": 56,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 73594,
+  "ocr_ts": "2026-09-16T04:03:02.791888+00:00"
+}

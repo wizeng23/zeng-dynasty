@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 20,
+  "follows_graph": 17,
+  "markdown": "宪混\n\n生子一名\n\n配何氏别适\n\n月十三日戌时\n\n殁于宣统庚戌五\n\n月二十七日丑时\n\n生于光绪甲申九\n\n子次承\n\n昭\n\n银\n\n子长银\n\n宪\n\n混\n\n配何氏别适\n\n生殁葬失考止\n\n子长银\n\n生殁葬失考\n\n子六钧\n\n太阳子\n\n配黄氏别适",
+  "persons": [
+    {
+      "name": "宪混",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪混\n生子一名\n配何氏别适\n月十三日戌时\n殁于宣统庚戌五\n月二十七日丑时\n生于光绪甲申九\n子次承\n昭\n银\n子长银\n宪\n混\n配何氏别适\n生殁葬失考止\n子长银\n生殁葬失考\n子六钧\n太阳子\n配黄氏别适"
+    }
+  ],
+  "chars": 116,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 84965,
+  "ocr_ts": "2026-09-16T03:13:20.382973+00:00"
+}

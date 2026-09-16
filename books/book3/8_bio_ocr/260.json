@@ -1,0 +1,60 @@
+{
+  "book": "book3",
+  "page": 260,
+  "follows_graph": 250,
+  "markdown": "公元一九七九年\n\n己未二月十五\n\n配江氏生失考歿\n\n于公元一九八二\n\n年庚戌正月十五\n\n巳时入继广钶之\n\n生子一名\n\n昭洪\n\n双桃承嗣\n\n日歿于一九八七\n\n年十月十二巳时\n\n配肖氏生于民国\n\n丙子十一月初六\n\n子时\n\n生子二名\n\n宪培\n\n宪壤\n\n次子为广钝名下\n\n承嗣\n\n五月二十三申时\n\n配沄三秀生于公\n\n元一九八〇年十\n\n一月四日戌时\n\n生子一名\n\n粮粮\n\n生女一 丽萍",
+  "persons": [
+    {
+      "name": "江氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配江氏生失考歿"
+    },
+    {
+      "name": "昭洪",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n昭洪\n双桃承嗣"
+    },
+    {
+      "name": "肖氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配肖氏生于民国\n丙子十一月初六\n子时"
+    },
+    {
+      "name": "宪培",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n宪培\n宪壤"
+    },
+    {
+      "name": "宪壤",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n宪培\n宪壤"
+    },
+    {
+      "name": "沄三秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "配沄三秀生于公\n元一九八〇年十\n一月四日戌时"
+    },
+    {
+      "name": "粮粮",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n粮粮"
+    },
+    {
+      "name": "丽萍",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一 丽萍"
+    }
+  ],
+  "chars": 187,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 108421,
+  "ocr_ts": "2026-09-16T04:00:20.714601+00:00"
+}

@@ -1,0 +1,30 @@
+{
+  "book": "book3",
+  "page": 68,
+  "follows_graph": 65,
+  "markdown": "○九年五月吉日\n\n葬于排脑\n\n生子三名\n\n庆伟\n\n庆辉\n\n次子幼殁\n\n生女五\n\n一二四幼殁\n\n三适王宅\n\n五适廖宅\n\n子次梁\n\n庆 辉\n\n字小明生一九七\n\n○年十月初一日\n\n子时\n\n配何氏生一九七\n\n○年八月初十日\n\n午时\n\n生子二名\n\n繁旺\n\n长夭\n\n繁坊\n\n繁勋\n\n繁胜\n\n生女一 幼夭",
+  "persons": [
+    {
+      "name": "庆伟",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆伟"
+    },
+    {
+      "name": "庆辉",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆辉"
+    },
+    {
+      "name": "梁庆辉",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次梁\n庆 辉\n字小明生一九七○年十月初一日\n子时\n配何氏生一九七○年八月初十日\n午时\n生子二名\n繁旺\n长夭\n繁坊\n繁勋\n繁胜\n生女一 幼夭"
+    }
+  ],
+  "chars": 145,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 98275,
+  "ocr_ts": "2026-09-16T03:16:57.490811+00:00"
+}

@@ -1,0 +1,126 @@
+{
+  "book": "book3",
+  "page": 208,
+  "follows_graph": null,
+  "markdown": "|  九月一日寅时 生子四名 宪权 宪根編继一 半昭汉名下承嗣 宪枱天 入继本房罗带昭 明之子宪平承嗣 生女二 贱女适上谢 罗中元 牙牙适赖 | 定煤洞尔亡 配黄九秀生于一 九六二年壬寅 生子一名 庆有 生女三 金金适梅 窖红平 林林适梅 窖平平 连连待适 | 月二十五日时 生女二 青青待适 树树待适  |\n| --- | --- | --- |\n|  福 字连生生于公元 一九五九年己亥 | 子之根 庆生 字水生生于公元 一九九八年正月 |   |",
+  "persons": [
+    {
+      "name": "宪权",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪权"
+    },
+    {
+      "name": "宪根",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪根"
+    },
+    {
+      "name": "宪枱天",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪枱天"
+    },
+    {
+      "name": "宪平",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪平"
+    },
+    {
+      "name": "贱女",
+      "pai": "",
+      "shi": "",
+      "full_text": "贱女"
+    },
+    {
+      "name": "罗中元",
+      "pai": "",
+      "shi": "",
+      "full_text": "罗中元"
+    },
+    {
+      "name": "牙牙",
+      "pai": "",
+      "shi": "",
+      "full_text": "牙牙"
+    },
+    {
+      "name": "庆有",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆有"
+    },
+    {
+      "name": "金金",
+      "pai": "",
+      "shi": "",
+      "full_text": "金金"
+    },
+    {
+      "name": "窖红平",
+      "pai": "",
+      "shi": "",
+      "full_text": "窖红平"
+    },
+    {
+      "name": "林林",
+      "pai": "",
+      "shi": "",
+      "full_text": "林林"
+    },
+    {
+      "name": "窖平平",
+      "pai": "",
+      "shi": "",
+      "full_text": "窖平平"
+    },
+    {
+      "name": "连连",
+      "pai": "",
+      "shi": "",
+      "full_text": "连连"
+    },
+    {
+      "name": "青青",
+      "pai": "",
+      "shi": "",
+      "full_text": "青青"
+    },
+    {
+      "name": "树树",
+      "pai": "",
+      "shi": "",
+      "full_text": "树树"
+    },
+    {
+      "name": "福字连",
+      "pai": "",
+      "shi": "",
+      "full_text": "福字连"
+    },
+    {
+      "name": "子之根",
+      "pai": "",
+      "shi": "",
+      "full_text": "子之根"
+    },
+    {
+      "name": "庆生",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆生"
+    },
+    {
+      "name": "字水生",
+      "pai": "",
+      "shi": "",
+      "full_text": "字水生"
+    }
+  ],
+  "chars": 226,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 128441,
+  "ocr_ts": "2026-09-16T03:51:47.336895+00:00"
+}

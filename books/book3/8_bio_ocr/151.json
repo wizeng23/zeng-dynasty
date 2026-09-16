@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 151,
+  "follows_graph": 150,
+  "markdown": "# 子五材\n庆\n辉\n\n乳名生长生于公\n\n元一九六四年甲\n\n辰十月二十三日\n\n戊时\n\n配江口坳背村刘\n\n大扩之女刘连招\n\n生于公元一九六\n\n七年丁未十一月\n\n十九日子时\n\n生子三名\n\n繁强\n\n繁勇\n\n繁祺",
+  "persons": [
+    {
+      "name": "子五材",
+      "pai": "",
+      "shi": "",
+      "full_text": "子五材\n庆\n辉\n乳名生长生于公\n元一九六四年甲\n辰十月二十三日\n戊时\n配江口坳背村刘\n大扩之女刘连招\n生于公元一九六\n七年丁未十一月\n十九日子时\n生子三名\n繁强\n繁勇\n繁祺"
+    },
+    {
+      "name": "刘连招",
+      "pai": "",
+      "shi": "",
+      "full_text": "刘连招\n生于公元一九六\n七年丁未十一月\n十九日子时"
+    },
+    {
+      "name": "繁强",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁强"
+    },
+    {
+      "name": "繁勇",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁勇"
+    },
+    {
+      "name": "繁祺",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁祺"
+    }
+  ],
+  "chars": 101,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 80365,
+  "ocr_ts": "2026-09-16T03:47:48.243864+00:00"
+}

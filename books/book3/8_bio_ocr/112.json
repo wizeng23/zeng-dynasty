@@ -1,0 +1,24 @@
+{
+  "book": "book3",
+  "page": 112,
+  "follows_graph": 89,
+  "markdown": "子三模\n庆\n炉\n\n字来生生于一九\n六五年乙巳二月\n二十三日亥时\n\n子四模\n庆\n煽\n\n繁\n域\n\n生子三\n\n月十七日\n\n于一九七五年八\n\n配根塘圩李氏生\n\n三日卯时\n\n六八年正月二十\n\n字化解生于一九",
+  "persons": [
+    {
+      "name": "子三模",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三模\n庆\n炉\n字来生生于一九\n六五年乙巳二月\n二十三日亥时"
+    },
+    {
+      "name": "子四模",
+      "pai": "",
+      "shi": "",
+      "full_text": "子四模\n庆\n煽\n繁\n域\n生子三\n月十七日\n于一九七五年八\n配根塘圩李氏生\n三日卯时\n六八年正月二十\n字化解生于一九"
+    }
+  ],
+  "chars": 98,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 80769,
+  "ocr_ts": "2026-09-16T03:45:18.700985+00:00"
+}

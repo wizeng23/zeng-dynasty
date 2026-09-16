@@ -1,0 +1,102 @@
+{
+  "book": "book3",
+  "page": 205,
+  "follows_graph": 203,
+  "markdown": "生女五\n\n长四五俱幼殁\n\n三适未详\n\n子次庄\n\n广鉴\n\n字艳圹生于同治\n\n己巳十一月一日\n\n巳时葬殁失考\n\n三庄\n\n广镁\n\n字茂荣生于光绪\n\n乙亥二月九日子\n\n时殁葬失考\n\n子之镁\n\n昭\n\n沂\n\n天殁\n\n四\n\n纬\n\n纬",
+  "persons": [
+    {
+      "name": "女",
+      "pai": "",
+      "shi": "五",
+      "full_text": "生女五"
+    },
+    {
+      "name": "四",
+      "pai": "",
+      "shi": "",
+      "full_text": "长四五俱幼殁"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "三",
+      "full_text": "三适未详"
+    },
+    {
+      "name": "庄",
+      "pai": "",
+      "shi": "次",
+      "full_text": "子次庄"
+    },
+    {
+      "name": "广鉴",
+      "pai": "",
+      "shi": "",
+      "full_text": "广鉴"
+    },
+    {
+      "name": "艳圹",
+      "pai": "",
+      "shi": "",
+      "full_text": "字艳圹生于同治己巳十一月一日巳时葬殁失考"
+    },
+    {
+      "name": "庄",
+      "pai": "",
+      "shi": "三",
+      "full_text": "三庄"
+    },
+    {
+      "name": "广镁",
+      "pai": "",
+      "shi": "",
+      "full_text": "广镁"
+    },
+    {
+      "name": "茂荣",
+      "pai": "",
+      "shi": "",
+      "full_text": "字茂荣生于光绪乙亥二月九日子时殁葬失考"
+    },
+    {
+      "name": "镁",
+      "pai": "",
+      "shi": "",
+      "full_text": "子之镁"
+    },
+    {
+      "name": "昭",
+      "pai": "",
+      "shi": "",
+      "full_text": "昭"
+    },
+    {
+      "name": "沂",
+      "pai": "",
+      "shi": "",
+      "full_text": "沂"
+    },
+    {
+      "name": "天",
+      "pai": "",
+      "shi": "四",
+      "full_text": "天殁四"
+    },
+    {
+      "name": "纬",
+      "pai": "",
+      "shi": "",
+      "full_text": "纬"
+    },
+    {
+      "name": "纬",
+      "pai": "",
+      "shi": "",
+      "full_text": "纬"
+    }
+  ],
+  "chars": 109,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 94167,
+  "ocr_ts": "2026-09-16T03:51:31.697168+00:00"
+}

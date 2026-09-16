@@ -1,0 +1,132 @@
+{
+  "book": "book3",
+  "page": 111,
+  "follows_graph": 89,
+  "markdown": "己酉八月十六日\n\n酉时殁于一九六\n\n五年乙巳正月二\n\n十一日酉时葬雪\n\n竹凹\n\n生子四\n\n宪模\n\n宪樑\n\n宪柱\n\n四子夭\n\n次子梁出继堂兄\n\n浣名下承嗣\n\n生女二\n\n长适青塘\n\n次适九江\n\n配宁氏生于民国\n\n一九三四年三月\n\n二十七日亥时\n\n生子五名\n\n庆煊\n\n庆炯\n\n庆炘\n\n庆煊\n\n庆灿\n\n生女二\n\n长适乐团聂\n\n七保\n\n次适于都彭\n\n小青\n\n繁坊\n\n繁坤\n\n生女一\n\n子次模\n\n庆炯\n\n字连生生于一九\n\n六二年十月三十\n\n日酉时\n\n配古龙岗江湖周\n\n氏生于一九六六\n\n年六月三十日子\n\n时\n\n生子一\n\n繁森\n\n生女二",
+  "persons": [
+    {
+      "name": "宪模",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子四\n宪模"
+    },
+    {
+      "name": "宪樑",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子四\n宪樑"
+    },
+    {
+      "name": "宪柱",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子四\n宪柱"
+    },
+    {
+      "name": "梁",
+      "pai": "",
+      "shi": "",
+      "full_text": "次子梁出继堂兄\n浣名下承嗣"
+    },
+    {
+      "name": "长女",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n长适青塘"
+    },
+    {
+      "name": "次女",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n次适九江"
+    },
+    {
+      "name": "庆煊",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子五名\n庆煊"
+    },
+    {
+      "name": "庆炯",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子五名\n庆炯"
+    },
+    {
+      "name": "庆炘",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子五名\n庆炘"
+    },
+    {
+      "name": "庆煊",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子五名\n庆煊"
+    },
+    {
+      "name": "庆灿",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子五名\n庆灿"
+    },
+    {
+      "name": "长女",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n长适乐团聂七保"
+    },
+    {
+      "name": "次女",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n次适于都彭小青"
+    },
+    {
+      "name": "繁坊",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁坊"
+    },
+    {
+      "name": "繁坤",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁坤"
+    },
+    {
+      "name": "生女一",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一"
+    },
+    {
+      "name": "子次模",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次模"
+    },
+    {
+      "name": "庆炯",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆炯"
+    },
+    {
+      "name": "字连生",
+      "pai": "",
+      "shi": "",
+      "full_text": "字连生生于一九\n六二年十月三十\n日酉时"
+    },
+    {
+      "name": "繁森",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一\n繁森"
+    }
+  ],
+  "chars": 261,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 139288,
+  "ocr_ts": "2026-09-16T03:45:15.584004+00:00"
+}

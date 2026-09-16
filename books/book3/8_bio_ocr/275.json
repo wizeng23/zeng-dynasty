@@ -1,0 +1,60 @@
+{
+  "book": "book3",
+  "page": 275,
+  "follows_graph": 272,
+  "markdown": "曾庆珍河山背亲\n手建十字厅一幢\n三层立巽兼巳石\n下\n\n村\n三\n庆\n煜\n子\n\n字先保生于一九\n\n七二年壬子十二\n\n月二十五子时\n\n配廖桂秀生于一\n\n九七三年癸丑八\n\n月二十八日申时\n\n生子二名\n\n繁荣\n\n繁椿\n\n生女一\n梦金\n\n子四\n庆\n晥\n子\n\n字七保生于公元",
+  "persons": [
+    {
+      "name": "曾庆珍",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾庆珍河山背亲\n手建十字厅一幢\n三层立巽兼巳石\n下\n村\n三\n庆\n煜\n子"
+    },
+    {
+      "name": "字先保",
+      "pai": "",
+      "shi": "",
+      "full_text": "字先保生于一九\n七二年壬子十二\n月二十五子时"
+    },
+    {
+      "name": "廖桂秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "配廖桂秀生于一\n九七三年癸丑八\n月二十八日申时"
+    },
+    {
+      "name": "繁荣",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n繁荣"
+    },
+    {
+      "name": "繁椿",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁椿"
+    },
+    {
+      "name": "梦金",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一\n梦金"
+    },
+    {
+      "name": "庆晥子",
+      "pai": "",
+      "shi": "",
+      "full_text": "子四\n庆\n晥\n子"
+    },
+    {
+      "name": "字七保",
+      "pai": "",
+      "shi": "",
+      "full_text": "字七保生于公元"
+    }
+  ],
+  "chars": 130,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 87681,
+  "ocr_ts": "2026-09-16T04:01:49.795511+00:00"
+}

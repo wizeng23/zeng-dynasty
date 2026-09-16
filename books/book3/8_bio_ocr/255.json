@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 255,
+  "follows_graph": 250,
+  "markdown": "# 柯\n庆祺\n子\n\n字运长生于公元\n一九六〇年庚子\n润六月六日辰时\n配廖根秀生于公\n元一九六二年壬\n寅十月七日酉时\n生子一名\n\n繁泸\n\n生女一\n\n爱琴适赖村卫脚\n黄志生",
+  "persons": [
+    {
+      "name": "庆祺",
+      "pai": "",
+      "shi": "子",
+      "full_text": "柯\n庆祺\n子"
+    },
+    {
+      "name": "运长",
+      "pai": "",
+      "shi": "",
+      "full_text": "字运长生于公元\n一九六〇年庚子\n润六月六日辰时"
+    },
+    {
+      "name": "根秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "配廖根秀生于公\n元一九六二年壬\n寅十月七日酉时"
+    },
+    {
+      "name": "繁泸",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n繁泸"
+    },
+    {
+      "name": "爱琴",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一\n爱琴适赖村卫脚\n黄志生"
+    }
+  ],
+  "chars": 84,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 75718,
+  "ocr_ts": "2026-09-16T03:59:58.575398+00:00"
+}

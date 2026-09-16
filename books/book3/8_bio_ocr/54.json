@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 54,
+  "follows_graph": 17,
+  "markdown": "西村爱葬失考\n\n辛巳四月十九日\n\n配黄氏生于同治\n\n申时殁葬失考止\n\n丁卯三月二十日\n\n字玉辉生于同治\n\n# 子次万\n广\n模\n\n长适南坑周文富\n次适\n\n生女二\n\n俱幼殁\n\n庆华\n\n庆荣\n\n生子二名",
+  "persons": [
+    {
+      "name": "西村爱",
+      "pai": "",
+      "shi": "",
+      "full_text": "西村爱葬失考\n辛巳四月十九日\n配黄氏生于同治\n申时殁葬失考止\n丁卯三月二十日\n字玉辉生于同治"
+    },
+    {
+      "name": "子次万",
+      "pai": "",
+      "shi": "",
+      "full_text": "# 子次万\n广\n模"
+    },
+    {
+      "name": "庆华",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆华"
+    },
+    {
+      "name": "庆荣",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆荣"
+    },
+    {
+      "name": "生子二名",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名"
+    }
+  ],
+  "chars": 98,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 83189,
+  "ocr_ts": "2026-09-16T03:16:01.918625+00:00"
+}

@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 104,
+  "follows_graph": 89,
+  "markdown": "子次桃\n\n庆寿\n\n字国书生于一九\n\n七六年十二月四\n\n日卯时配刘氏生\n\n于一九七六年五\n\n月十二日\n\n继配章州郑丽华\n\n生于一九八三年\n\n八月二十日\n\n生子三\n\n繁方\n\n繁晟\n\n繁晨",
+  "persons": [
+    {
+      "name": "子次桃",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次桃\n庆寿\n字国书生于一九\n七六年十二月四\n日卯时配刘氏生\n于一九七六年五\n月十二日\n继配章州郑丽华\n生于一九八三年\n八月二十日\n生子三\n繁方\n繁晟\n繁晨"
+    }
+  ],
+  "chars": 91,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 74162,
+  "ocr_ts": "2026-09-16T03:44:46.013977+00:00"
+}

@@ -1,0 +1,72 @@
+{
+  "book": "book3",
+  "page": 4,
+  "follows_graph": 1,
+  "markdown": "月三十日申时\n\n生子二名\n\n庆鸿\n\n庆亮\n\n生女一\n\n雪英适潘阳\n\n王严松\n\n月六日 时\n\n生子一名\n\n繁旺\n\n生女二\n\n曾媛\n\n曾亿待适\n\n子次炳\n庆亮\n\n生于公元一九七\n\n六年八月十五日\n\n卯时\n\n配张建华生于公\n\n元一九八〇年二\n\n月二十四日戌时",
+  "persons": [
+    {
+      "name": "庆鸿",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆鸿"
+    },
+    {
+      "name": "庆亮",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆亮"
+    },
+    {
+      "name": "雪英",
+      "pai": "",
+      "shi": "",
+      "full_text": "雪英适潘阳"
+    },
+    {
+      "name": "王严松",
+      "pai": "",
+      "shi": "",
+      "full_text": "王严松"
+    },
+    {
+      "name": "繁旺",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁旺"
+    },
+    {
+      "name": "曾媛",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾媛"
+    },
+    {
+      "name": "曾亿",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾亿待适"
+    },
+    {
+      "name": "子次炳",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次炳"
+    },
+    {
+      "name": "庆亮",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆亮"
+    },
+    {
+      "name": "张建华",
+      "pai": "",
+      "shi": "",
+      "full_text": "配张建华"
+    }
+  ],
+  "chars": 126,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 85524,
+  "ocr_ts": "2026-09-16T03:12:49.258508+00:00"
+}

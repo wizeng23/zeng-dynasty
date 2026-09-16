@@ -1,0 +1,24 @@
+{
+  "book": "book3",
+  "page": 194,
+  "follows_graph": 192,
+  "markdown": "子五海\n\n宪\n财\n\n字细满生于公元\n\n一九七七年丁巳\n\n五月二十日巳时\n\n配朱招弟生于公\n\n元一九七五年三\n\n月初五\n\n生子二名\n\n庆輝\n\n庆有 为昭\n\n泠名下承嗣\n\n子之财\n\n庆\n輝\n\n二亥时\n\n生于公元二〇〇\n\n〇年庚辰二月初",
+  "persons": [
+    {
+      "name": "子五海",
+      "pai": "",
+      "shi": "",
+      "full_text": "子五海\n宪\n财\n字细满生于公元\n一九七七年丁巳\n五月二十日巳时\n配朱招弟生于公\n元一九七五年三\n月初五\n生子二名\n庆輝\n庆有 为昭\n泠名下承嗣\n子之财"
+    },
+    {
+      "name": "庆輝",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆\n輝\n二亥时\n生于公元二〇〇〇年庚辰二月初"
+    }
+  ],
+  "chars": 115,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 83512,
+  "ocr_ts": "2026-09-16T03:50:50.325453+00:00"
+}

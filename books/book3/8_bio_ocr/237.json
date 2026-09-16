@@ -1,0 +1,30 @@
+{
+  "book": "book3",
+  "page": 237,
+  "follows_graph": 230,
+  "markdown": "子三标\n庆德\n字福平生于公元\n一九九三年癸酉\n五月初二申时\n\n子四标\n庆恩\n字南平生于公元\n二〇〇〇年庚辰\n十月十六日 时\n\n子五标\n庆寿\n字建平生于公元",
+  "persons": [
+    {
+      "name": "子三标",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三标\n庆德\n字福平生于公元\n一九九三年癸酉\n五月初二申时"
+    },
+    {
+      "name": "子四标",
+      "pai": "",
+      "shi": "",
+      "full_text": "子四标\n庆恩\n字南平生于公元\n二〇〇〇年庚辰\n十月十六日 时"
+    },
+    {
+      "name": "子五标",
+      "pai": "",
+      "shi": "",
+      "full_text": "子五标\n庆寿\n字建平生于公元"
+    }
+  ],
+  "chars": 77,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 73367,
+  "ocr_ts": "2026-09-16T03:53:43.121763+00:00"
+}

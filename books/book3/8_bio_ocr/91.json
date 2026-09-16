@@ -1,0 +1,30 @@
+{
+  "book": "book3",
+  "page": 91,
+  "follows_graph": 89,
+  "markdown": "岭\n次\n次\n广\n鍊\n\n广\n鍊\n\n字精泉生于咸丰\n\n辛酉十一月初六\n\n日丑时殁葬失考\n\n配张氏生同治癸\n\n亥十二月十六日\n\n申时\n\n殁于咸丰壬寅十\n\n月二十八日戌时\n\n葬寨即下\n\n生子三名\n\n长\n天\n\n昭流\n\n昭漳\n\n鍊\n子\n昭\n流\n\n昭\n流\n\n字长远生于光绪\n\n癸卯正月十七午\n\n时殁葬失考\n\n次\n次\n昭\n漳\n\n昭\n漳\n\n字长达生于光绪\n\n丙申正月十七日\n\n巳时殁葬失考\n\n配江氏别适",
+  "persons": [
+    {
+      "name": "精泉",
+      "pai": "",
+      "shi": "",
+      "full_text": "广\n鍊\n\n字精泉生于咸丰\n\n辛酉十一月初六\n\n日丑时殁葬失考\n\n配张氏生同治癸\n\n亥十二月十六日\n\n申时\n\n殁于咸丰壬寅十\n\n月二十八日戌时\n\n葬寨即下\n\n生子三名"
+    },
+    {
+      "name": "昭流",
+      "pai": "长",
+      "shi": "",
+      "full_text": "鍊\n子\n昭\n流\n\n昭\n流\n\n字长远生于光绪\n\n癸卯正月十七午\n\n时殁葬失考"
+    },
+    {
+      "name": "昭漳",
+      "pai": "次",
+      "shi": "",
+      "full_text": "次\n次\n昭\n漳\n\n昭\n漳\n\n字长达生于光绪\n\n丙申正月十七日\n\n巳时殁葬失考\n\n配江氏别适"
+    }
+  ],
+  "chars": 192,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 195105,
+  "ocr_ts": "2026-09-16T03:43:50.903936+00:00"
+}

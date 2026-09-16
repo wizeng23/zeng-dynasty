@@ -1,0 +1,48 @@
+{
+  "book": "book3",
+  "page": 94,
+  "follows_graph": 89,
+  "markdown": "二十四日亥时\n\n生子二\n\n繁勇\n\n繁衍\n\n生女一\n\n子四模\n\n庆 周\n\n字木生生于公元\n\n一九六八年七月\n\n十七日卯时\n\n配黄氏生于一九\n\n七九年七月十二\n\n日未时\n\n生子二\n\n繁允",
+  "persons": [
+    {
+      "name": "繁勇",
+      "pai": "",
+      "shi": "",
+      "full_text": "二十四日亥时\n生子二\n繁勇"
+    },
+    {
+      "name": "繁衍",
+      "pai": "",
+      "shi": "",
+      "full_text": "二十四日亥时\n生子二\n繁衍"
+    },
+    {
+      "name": "子四模",
+      "pai": "",
+      "shi": "",
+      "full_text": "二十四日亥时\n生女一\n子四模"
+    },
+    {
+      "name": "庆 周",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆 周\n字木生生于公元\n一九六八年七月\n十七日卯时"
+    },
+    {
+      "name": "黄氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配黄氏生于一九\n七九年七月十二\n日未时"
+    },
+    {
+      "name": "繁允",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二\n繁允"
+    }
+  ],
+  "chars": 91,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 74931,
+  "ocr_ts": "2026-09-16T03:44:05.325902+00:00"
+}

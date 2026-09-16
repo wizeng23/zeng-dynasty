@@ -1,0 +1,48 @@
+{
+  "book": "book3",
+  "page": 180,
+  "follows_graph": 150,
+  "markdown": "月初六日子时\n配黄矿张和香生\n一九六一年丁未\n九月十三日未时\n生子二名\n庆辉\n庆炫\n长子辉归承继人\n名下为嗣\n生女二名\n葵华\n国华\n子乙巳\n乳名新生生于公\n乳名华婆生于公\n月十四日",
+  "persons": [
+    {
+      "name": "庆辉",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆辉"
+    },
+    {
+      "name": "庆炫",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆炫"
+    },
+    {
+      "name": "葵华",
+      "pai": "",
+      "shi": "",
+      "full_text": "葵华"
+    },
+    {
+      "name": "国华",
+      "pai": "",
+      "shi": "",
+      "full_text": "国华"
+    },
+    {
+      "name": "新生",
+      "pai": "",
+      "shi": "",
+      "full_text": "新生"
+    },
+    {
+      "name": "华婆",
+      "pai": "",
+      "shi": "",
+      "full_text": "华婆"
+    }
+  ],
+  "chars": 90,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 83994,
+  "ocr_ts": "2026-09-16T03:49:52.376961+00:00"
+}

@@ -1,0 +1,90 @@
+{
+  "book": "book3",
+  "page": 191,
+  "follows_graph": 187,
+  "markdown": "入继胞弟昭海长\n\n子林承嗣\n\n生女三\n\n次适何宅\n\n三适何宅\n\n子三熔\n\n昭海\n\n乳名翻背生民国\n\n辛未二月二十二\n\n日戍时殁葬未详\n\n配付氏生于民国\n\n庚申七月十七日\n\n卯时殁一九七六\n\n年七月二十二日\n\n午时葬岗栋子山\n\n次海\n\n宪洲\n\n字青龙生于一九\n\n六五年十一月十\n\n二日子时\n\n配廖氏生于一九\n\n六三年四月初九\n\n日辰时\n\n生子一名\n\n庆菲\n\n子之洲\n\n庆菲\n\n元\n\n养女\n\n江金连\n\n养女\n\n金财\n\n外\n\n外",
+  "persons": [
+    {
+      "name": "昭海",
+      "pai": "",
+      "shi": "",
+      "full_text": "入继胞弟昭海长\n子林承嗣\n生女三\n次适何宅\n三适何宅\n子三熔\n昭海\n乳名翻背生民国\n辛未二月二十二\n日戍时殁葬未详"
+    },
+    {
+      "name": "付氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配付氏生于民国\n庚申七月十七日\n卯时殁一九七六\n年七月二十二日\n午时葬岗栋子山"
+    },
+    {
+      "name": "次海",
+      "pai": "",
+      "shi": "",
+      "full_text": "次海"
+    },
+    {
+      "name": "宪洲",
+      "pai": "",
+      "shi": "",
+      "full_text": "宪洲\n字青龙生于一九\n六五年十一月十\n二日子时"
+    },
+    {
+      "name": "廖氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "配廖氏生于一九\n六三年四月初九\n日辰时"
+    },
+    {
+      "name": "庆菲",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n庆菲"
+    },
+    {
+      "name": "子之洲",
+      "pai": "",
+      "shi": "",
+      "full_text": "子之洲"
+    },
+    {
+      "name": "庆菲",
+      "pai": "",
+      "shi": "",
+      "full_text": "庆菲"
+    },
+    {
+      "name": "元",
+      "pai": "",
+      "shi": "",
+      "full_text": "元"
+    },
+    {
+      "name": "江金连",
+      "pai": "",
+      "shi": "",
+      "full_text": "养女\n江金连"
+    },
+    {
+      "name": "金财",
+      "pai": "",
+      "shi": "",
+      "full_text": "养女\n金财"
+    },
+    {
+      "name": "外",
+      "pai": "",
+      "shi": "",
+      "full_text": "外"
+    },
+    {
+      "name": "外",
+      "pai": "",
+      "shi": "",
+      "full_text": "外"
+    }
+  ],
+  "chars": 211,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 126189,
+  "ocr_ts": "2026-09-16T03:50:37.446701+00:00"
+}

@@ -1,0 +1,102 @@
+{
+  "book": "book3",
+  "page": 157,
+  "follows_graph": 150,
+  "markdown": "时何氏谢氏均葬\n\n枫树坪大路坎上\n\n坐东向西\n\n后来何氏迁葬大\n\n深坑半栋坐东向\n\n西\n\n生子三\n\n长二幼殁\n\n三桷\n\n生女二\n\n长适青圹何\n\n宅\n\n次夭\n\n女一财连适黄岭\n\n廖和平女二招娣\n\n适于都县上廖下\n\n廖金福",
+  "persons": [
+    {
+      "name": "何氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "何氏"
+    },
+    {
+      "name": "谢氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "谢氏"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "枫树坪大路坎上"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "坐东向西"
+    },
+    {
+      "name": "何氏",
+      "pai": "",
+      "shi": "",
+      "full_text": "何氏"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "大深坑半栋坐东向西"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "长二幼殁"
+    },
+    {
+      "name": "三桷",
+      "pai": "",
+      "shi": "",
+      "full_text": "三桷"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "长适青圹何宅"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "次夭"
+    },
+    {
+      "name": "女一财连",
+      "pai": "",
+      "shi": "",
+      "full_text": "女一财连"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "适黄岭廖和平女二招娣"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "适于都县上廖下廖金福"
+    }
+  ],
+  "chars": 109,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 90090,
+  "ocr_ts": "2026-09-16T03:48:12.333546+00:00"
+}

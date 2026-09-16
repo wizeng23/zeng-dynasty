@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 239,
+  "follows_graph": 230,
+  "markdown": "生女三\n\n长适李宅\n\n次适廖宅\n\n三适葛宅\n\n丽华待适\n\n子次樟\n\n庆灯\n\n字和平生于公元\n\n一九六六年丙午\n\n七月一日成时\n\n配梁秀萍生于公\n\n元一九七二年二\n\n月十九日 时\n\n生子奇\n\n子三樟\n\n庆煜\n\n字金长生于公元",
+  "persons": [
+    {
+      "name": "丽华",
+      "pai": "",
+      "shi": "",
+      "full_text": "丽华待适"
+    },
+    {
+      "name": "和平",
+      "pai": "",
+      "shi": "",
+      "full_text": "字和平生于公元\n一九六六年丙午\n七月一日成时"
+    },
+    {
+      "name": "秀萍",
+      "pai": "",
+      "shi": "",
+      "full_text": "配梁秀萍生于公\n元一九七二年二\n月十九日 时"
+    },
+    {
+      "name": "奇",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子奇"
+    },
+    {
+      "name": "金长",
+      "pai": "",
+      "shi": "",
+      "full_text": "字金长生于公元"
+    }
+  ],
+  "chars": 111,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 82737,
+  "ocr_ts": "2026-09-16T03:53:49.667315+00:00"
+}

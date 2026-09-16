@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 143,
+  "follows_graph": 138,
+  "markdown": "配稿金廖家齐\n之女廖瑞红生于\n公元一九六六年\n十月二十日师院\n毕业任赣州市赣\n区旅游局副局长\n生子一名\n繁强",
+  "persons": [
+    {
+      "name": "廖瑞红",
+      "pai": "",
+      "shi": "",
+      "full_text": "配稿金廖家齐\n之女廖瑞红生于\n公元一九六六年\n十月二十日师院\n毕业任赣州市赣\n区旅游局副局长\n生子一名\n繁强"
+    }
+  ],
+  "chars": 54,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 146460,
+  "ocr_ts": "2026-09-16T03:47:15.384090+00:00"
+}

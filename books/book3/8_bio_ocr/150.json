@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 150,
+  "follows_graph": null,
+  "markdown": "子四材\n\n庆斌\n\n乳名九长生于公\n\n元一九六一年十\n\n一月九日午时\n\n配本镇在脑熊家\n\n恂之女熊银秀生\n\n公元一九六四年\n\n十月四日丑时\n\n生子二名\n\n繁华\n\n繁伟\n\n生女三\n\n国艳\n\n国青\n\n国红",
+  "persons": [
+    {
+      "name": "子四材",
+      "pai": "",
+      "shi": "",
+      "full_text": "子四材\n庆斌\n乳名九长生于公\n元一九六一年十\n一月九日午时\n配本镇在脑熊家\n恂之女熊银秀生\n公元一九六四年\n十月四日丑时\n生子二名\n繁华\n繁伟\n生女三\n国艳\n国青\n国红"
+    }
+  ],
+  "chars": 99,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 77444,
+  "ocr_ts": "2026-09-16T03:47:44.560505+00:00"
+}

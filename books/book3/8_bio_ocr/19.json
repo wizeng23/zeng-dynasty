@@ -1,0 +1,18 @@
+{
+  "book": "book3",
+  "page": 19,
+  "follows_graph": 17,
+  "markdown": "广连\n\n生女三\n\n长女天\n\n次适黄才沛\n\n三适黄分法\n\n宪混\n\n天保子\n\n宪海\n\n太阳保\n\n三子编继胞弟昭\n\n银为嗣\n\n配廖氏别适\n\n三钧\n\n宪混\n\n出继胞弟银承嗣\n\n四钧\n\n天保子\n\n生殁葬失考止\n\n配何氏别适\n\n子五钧\n\n宪海\n\n生殁葬失考止",
+  "persons": [
+    {
+      "name": "广连",
+      "pai": "",
+      "shi": "",
+      "full_text": "广连\n生女三\n长女天\n次适黄才沛\n三适黄分法\n宪混\n天保子\n宪海\n太阳保\n三子编继胞弟昭\n银为嗣\n配廖氏别适\n三钧\n宪混\n出继胞弟银承嗣\n四钧\n天保子\n生殁葬失考止\n配何氏别适\n子五钧\n宪海\n生殁葬失考止"
+    }
+  ],
+  "chars": 123,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 97103,
+  "ocr_ts": "2026-09-16T03:13:17.235281+00:00"
+}

@@ -1,0 +1,42 @@
+{
+  "book": "book3",
+  "page": 181,
+  "follows_graph": 150,
+  "markdown": "次女新华\n\n国良村邓新文\n\n长爱华适兴\n\n生女二\n\n庆德\n\n生子一名\n\n高中教师\n\n十月十八日未时\n\n公元一九六四年\n\n田之女何迪青生\n\n配青扩端士何传\n\n长（高级）\n\n时中师学历任校\n\n卯正月初七日丑\n\n元一九六三年癸\n\n学历警察警官\n\n月八日酉时大专\n\n元一九八六年九",
+  "persons": [
+    {
+      "name": "新华",
+      "pai": "",
+      "shi": "",
+      "full_text": "次女新华"
+    },
+    {
+      "name": "邓新文",
+      "pai": "",
+      "shi": "",
+      "full_text": "国良村邓新文"
+    },
+    {
+      "name": "爱华",
+      "pai": "",
+      "shi": "",
+      "full_text": "长爱华适兴"
+    },
+    {
+      "name": "迪青",
+      "pai": "",
+      "shi": "",
+      "full_text": "田之女何迪青生"
+    },
+    {
+      "name": "传",
+      "pai": "",
+      "shi": "",
+      "full_text": "配青扩端士何传"
+    }
+  ],
+  "chars": 136,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 93218,
+  "ocr_ts": "2026-09-16T03:49:55.855524+00:00"
+}
