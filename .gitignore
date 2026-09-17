@@ -243,6 +243,8 @@ books/*/v0/crops/
 books/*/v0/graphs/
 books/*/v0/names/
 books/*/v0/original/
+# Bio sub-pipeline generated images (src/bio/); JSON sidecars stay tracked.
+books/*/bio/*/*.png
 !books/*/1_pages/corners.json
 !books/*/1_pages/corners_review.json
 !books/*/2_classify/page_types.json
