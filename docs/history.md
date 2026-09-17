@@ -453,6 +453,32 @@ page is missing from the parse (graph 210 is 庆炎-only, no 庆炆 graph 206–
 numbers contiguous → dropped upstream). Skipped via `SKIP_PAGES`; the missing graph is
 an upstream graph-pipeline gap to fix later.
 
+## Era 13 — Bio geometric parse, stage 2 (RTL section merge) for Books 3 & 4 (2026-09-17 → 2026-09-18)
+
+**Stage 2 (`s2_merge`)** joins each bio section's contiguous crop pages into one wide
+**right-to-left** image (section-first page rightmost → block order = the tree's
+RTL/eldest-first traversal), ready for the generation-band split. Pages are aligned on
+their **top** horizontal rule (padded above to a common y); the **bottom** rule is the
+check — after alignment every page's bottom rule must sit within `BOTTOM_RULE_TOL` of
+the section median or the merge hard-fails. `find_rules` reuses stage 1's run-length
+detection with `BIO_RULE_YFRAC` as a search hint (two passes: estimate the top-margin
+shift, then locate each rule tightly), recovering faded/sparse-page rules density
+missed and tightening the b3 0_1 aligned-bottom spread 32px→8px. Before joining,
+`trim_sides` removes up to 80px of whitespace per side (stop at >2× the page's
+whitespace baseline), keeping a 20px pad when it stops at content — so a bio split
+across a seam no longer faces a doubled ~200px gap — and strips any residual vertical
+border-rule sliver stage 1 left at an edge (detected by a run through the top
+whitespace band; the p5|p6 seam-stub fix).
+
+**Both books merge, 0 hard-fails: Book 3 = 15 sections, Book 4 = 132.** Book 4 is
+structurally different — it interleaves finely (`GBGBGBGBBBB…`), so most sections are a
+single bio page and it fills only the top 2 generation-bands (a 4-generation book).
+Running it surfaced one genuine per-page scale difference (207_209's p209 extracted
+~1.5% taller → 59px bottom-rule drift), so the alignment tolerance was set from the
+data to 70px (all b3+b4 sections drift ≤55px; a mis-extracted page would drift
+hundreds). Book 4 p214 is excluded from its section via s1's `SKIP_PAGES`. Output →
+`books/{3,4}/bio/2_merged/` for stage 3. 18 stage-2 tests.
+
 ---
 
 ## Pipeline status (snapshot)
