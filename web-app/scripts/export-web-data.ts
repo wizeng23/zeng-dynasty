@@ -23,13 +23,15 @@ const REPO_ROOT = join(WEB_APP, "..");
 const PUBLIC_DATA = join(WEB_APP, "public", "data");
 const PUBLIC_NAMES = join(WEB_APP, "public", "names");
 
-// The combined genealogy: Books 1 and 2 spliced into one tree at the shared 存学
-// node, generations numbered to the official 字辈. Nodes carry Unicode names with
-// the name-crop images as a fallback. name_images point at
-// "books/book{1,2}/5_names/*.png", rewritten to "/names/book{1,2}/*.png" (the per-
-// node book is inferred from that path, so both books' crops are served).
-const DATASET = { jsonl: "data/tree_combined.jsonl" } as const;
-const NAME_BOOKS = ["book1", "book2"] as const;
+// The combined genealogy: all four books cross-stitched into one tree (src/
+// s8_cross_stitch -> data/tree.jsonl), root 点 at generation 0, generations numbered
+// to the official 字辈. Nodes carry Unicode names with the name-crop images as a
+// fallback. name_images point at "books/book{1,2,3,4}/5_names/*.png", rewritten to
+// "/names/book{1,2,3,4}/*.png" (the per-node book is inferred from that path, so
+// every book's crops are served). Subtrees whose cross-book parent isn't resolved
+// yet float as extra roots placed at their 字辈 generation.
+const DATASET = { jsonl: "data/tree.jsonl" } as const;
+const NAME_BOOKS = ["book1", "book2", "book3", "book4"] as const;
 
 function copyJsonl(srcRel: string, destName: string): number {
   const srcPath = join(REPO_ROOT, srcRel);
