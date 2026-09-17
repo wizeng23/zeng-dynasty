@@ -28,6 +28,10 @@ website allowing updates. See [`docs/milestones.md`](docs/milestones.md).
 Scans → structured tree in four stages (spreads→pages→graph images→tree,
 then OCR). See [`docs/pipeline.md`](docs/pipeline.md).
 
+**Every runnable command** (pipeline stages, QA servers per book, OCR workflow,
+diagnostics) is in the [`docs/commands.md`](docs/commands.md) cheat-sheet, with the
+offline/no-wifi story called out for each.
+
 ## Viewing the tree
 
 Serve the repo root and open `web/index.html` (it fetches

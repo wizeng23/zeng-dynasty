@@ -340,13 +340,14 @@ PAGE = r"""<!doctype html><meta charset=utf-8>
  <button onclick="mode='connect'">Connect child→parent (c)</button>
  <button onclick="mode='add'">Add node (a)</button>
  <button onclick="delSel()">Delete (Del)</button>
+ <button onclick="cleanArtifacts()" title="delete boxes <100px tall &amp; orphaned, or ≥300px wide; flag isolated tall nodes">Clean artifacts (k)</button>
  <button onclick="reseed()">Re-seed</button>
  <button onclick="save()">Save (s)</button>
  <button onclick="fitView()">Fit (f)</button>
  <span class=hint id=modehint>mode: select</span>
  <span id=status></span>
 </div>
-<div class=hint style="padding:4px 10px">Check &amp; fix detected nodes + edges (pan: drag empty space · zoom: wheel · Fit (f)). Drag box to move, corner to resize. Select a node then press 'c' and click a parent to connect. 'a' then click to add a node.</div>
+<div class=hint style="padding:4px 10px">Check &amp; fix detected nodes + edges (pan: drag empty space · zoom: wheel · Fit (f)). Drag box to move, corner to resize. Select a node then 'c' + click a parent to connect. 'a' + click to add. 'k' = clean artifacts (delete tiny-orphan / super-wide boxes, flag isolated nodes).</div>
 <div id=view><div id=wrap><img id=g><svg id=ov></svg></div></div>
 <script>
 // --- state -----------------------------------------------------------------
@@ -363,11 +364,13 @@ const view=document.getElementById('view'), wrap=document.getElementById('wrap')
 
 function setMode(m){mode=m;modehint.textContent="mode: "+m}
 function applyView(){wrap.style.transform=`translate(${vx}px,${vy}px) scale(${vz})`;render();}
-function fitView(){
-  const vw=view.clientWidth;
-  vz = imgW ? vw/imgW : 1;
-  vx = 0; vy = 0;
-  applyView();
+const DEFAULT_ZOOM_FRAC = 0.3;  // graphs open at 30% of fit-to-width (less zoomed in)
+function fitWidthZoom(){ const vw=view.clientWidth; return imgW ? vw/imgW : 1; }
+function fitView(){         // the Fit button / 'f': fit the whole width to the viewport
+  vz = fitWidthZoom(); vx = 0; vy = 0; applyView();
+}
+function defaultView(){     // initial zoom when a graph loads: zoomed out to 30% of fit
+  vz = fitWidthZoom() * DEFAULT_ZOOM_FRAC; vx = 0; vy = 0; applyView();
 }
 async function loadList(){
   const r=await fetch('/list');const j=await r.json();
@@ -385,7 +388,7 @@ async function loadGraph(s){
   stem=s;stemSel.value=s;sel=null;setMode('select');
   const r=await fetch('/parse?stem='+s);data=await r.json();imgW=data.w;imgH=data.h;
   nextId=Math.max(0,...data.nodes.map(n=>n.id))+1;
-  gimg.onload=()=>{layout();fitView();};
+  gimg.onload=()=>{layout();defaultView();};
   gimg.src='/graph?stem='+s+'&t='+Date.now();
 }
 function byId(id){return data.nodes.find(n=>n.id===id)}
@@ -457,6 +460,27 @@ view.addEventListener('wheel',ev=>{ev.preventDefault();
 },{passive:false});
 function fixTree(){const col=n=>(n.box[0]+n.box[2])/2;
   for(const n of data.nodes)n.children.sort((a,b)=>col(byId(b))-col(byId(a)));}
+// Auto-clean this graph's artifact boxes. DELETE: a box <100px tall AND orphaned
+// (no father AND no children), OR a box >=300px wide. FLAG (kept, reported): a node
+// with no father AND no children that is >=100px tall (a real-sized isolated node
+// William should look at). Runs on the in-memory graph; save to persist.
+function cleanArtifacts(){
+  const H=n=>n.box[3]-n.box[1], W=n=>n.box[2]-n.box[0];
+  const orphan=n=>n.father===-1 && n.children.length===0;
+  const del=data.nodes.filter(n=> (H(n)<100 && orphan(n)) || W(n)>=300 );
+  const flag=data.nodes.filter(n=> orphan(n) && H(n)>=100 && !del.includes(n) );
+  if(!del.length && !flag.length){status.textContent='clean: no artifacts found';return;}
+  const ids=new Set(del.map(n=>n.id));
+  data.nodes=data.nodes.filter(n=>!ids.has(n.id));
+  for(const n of data.nodes){n.children=n.children.filter(c=>!ids.has(c));
+    if(ids.has(n.father))n.father=-1;}
+  if(sel && ids.has(sel.id)) sel=null;
+  render();
+  const flagMsg = flag.length ? ` · FLAG ${flag.length} isolated node(s) at cols [`+flag.map(n=>((n.box[0]+n.box[2])/2|0)).join(', ')+']' : '';
+  status.textContent=`cleaned: deleted ${del.length} artifact(s)${flagMsg} — press s to save`;
+  if(flag.length) console.log('Isolated (no father/children, >=100px) nodes to review:',
+    flag.map(n=>({id:n.id,box:n.box})));
+}
 function delSel(){if(!sel)return;const id=sel.id;
   data.nodes=data.nodes.filter(n=>n!==sel);
   for(const n of data.nodes){n.children=n.children.filter(c=>c!==id);if(n.father===id)n.father=-1;}
@@ -464,7 +488,18 @@ function delSel(){if(!sel)return;const id=sel.id;
 async function save(){fixTree();
   const r=await fetch('/save',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({stem,nodes:data.nodes})});
-  const j=await r.json();status.textContent=`saved: ${j.nodes} nodes, ${j.roots} root(s)`;loadList();}
+  const j=await r.json();
+  // Advance to the NEXT graph in the dropdown (don't jump back to the first). Mark
+  // this one edited (✓) in place, then load the next; wrap-around stays put at the end.
+  const opt=[...stemSel.options].find(o=>o.value===stem);
+  if(opt && !opt.text.includes('✓')) opt.text=stem+' ✓';
+  const idx=stemSel.selectedIndex;
+  if(idx < stemSel.options.length-1){
+    status.textContent=`saved ${stem}: ${j.nodes} nodes, ${j.roots} root(s) → next`;
+    loadGraph(stemSel.options[idx+1].value);
+  } else {
+    status.textContent=`saved ${stem}: ${j.nodes} nodes, ${j.roots} root(s) (last graph)`;
+  }}
 async function reseed(){if(!confirm('Re-seed from parser? discards manual edits for '+stem))return;
   await fetch('/reseed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stem})});
   loadGraph(stem);}
@@ -473,6 +508,7 @@ window.addEventListener('keydown',ev=>{
   if(ev.target.tagName==='SELECT')return;
   if(ev.key==='c')setMode('connect');else if(ev.key==='a')setMode('add');
   else if(ev.key==='f')fitView();
+  else if(ev.key==='k')cleanArtifacts();
   else if(ev.key==='s'){ev.preventDefault();save();}
   else if(ev.key==='Delete'||ev.key==='Backspace')delSel();
   else if(ev.key==='Escape'){sel=null;setMode('select');render();}

@@ -863,8 +863,10 @@ document.addEventListener("keydown", (e) => {
   // past a cell never counts it as reviewed.
   if (e.key === "Enter") { e.preventDefault(); const c = cells[idx];
     saveFocus().then(()=>{ markReviewed(c); step(1); }); }
-  else if (e.key === "ArrowRight") { e.preventDefault(); saveFocus().then(()=>step(1)); }
-  else if (e.key === "ArrowLeft") { e.preventDefault(); saveFocus().then(()=>step(-1)); }
+  // Shift + Arrow jumps 100 cells at once (clamped at the ends); plain arrow = 1.
+  // (Ctrl/Cmd+Arrow is a macOS system shortcut, so Shift is used instead.)
+  else if (e.key === "ArrowRight") { e.preventDefault(); const d=e.shiftKey?100:1; saveFocus().then(()=>step(d)); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); const d=e.shiftKey?100:1; saveFocus().then(()=>step(-d)); }
   else if (e.key === "Escape") {
     e.preventDefault();
     const el = $("focusInput"), c = cells[idx];
