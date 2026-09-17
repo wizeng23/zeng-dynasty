@@ -139,29 +139,55 @@ def link(book: str, books_dir: str = "books", data_dir: str = "data") -> dict:
         stem_entries[stem] = entries
         global_pool += entries
 
+    eligible = [n for n in nodes
+                if n.get("generation", 1) >= 2 and n.get("name")]
+    total = len(eligible)
     matched = 0
-    total = 0
-    unfilled: list[dict] = []
-    # Pass 1: match within the node's own subgraph (exact, then unique fuzzy).
+
+    # Pass 1 -- exact, within the node's own subgraph first (keeps entries with the
+    # right person when follows_graph grouping is good), then exact globally.
+    filled: set[int] = set()
     for stem, gnodes in nodes_for_stem.items():
         pool = stem_entries[stem]
         for n in gnodes:
-            if n.get("generation", 1) < 2 or not n.get("name"):
+            if n["id"] in filled or n.get("generation", 1) < 2 or not n.get("name"):
                 continue
-            total += 1
-            e = take_match(n["name"], pool)
-            if e:
+            for e in pool:
+                if not e.get("_used") and e["given"] == n["name"]:
+                    e["_used"] = True
+                    n["biography"] = e["text"]
+                    filled.add(n["id"])
+                    matched += 1
+                    break
+    for n in eligible:
+        if n["id"] in filled:
+            continue
+        for e in global_pool:
+            if not e.get("_used") and e["given"] == n["name"]:
+                e["_used"] = True
                 n["biography"] = e["text"]
+                filled.add(n["id"])
                 matched += 1
-            else:
-                unfilled.append(n)
-    # Pass 2: global fallback for still-unfilled nodes (subgraph grouping can strand
-    # entries when follows_graph is imperfect). Exact-then-unique-fuzzy over all
-    # remaining entries; the tree name keeps this from mis-assigning.
-    for n in unfilled:
-        e = take_match(n["name"], global_pool)
-        if e:
-            n["biography"] = e["text"]
+                break
+
+    # Pass 2 -- nearest ≤1-OCR-char match globally for still-unfilled nodes. The tree
+    # name is the oracle, so attaching the closest remaining entry is safe; a wrong
+    # OCR char in a name (e.g. 苜/菖) still lands on the right person.
+    for n in eligible:
+        if n["id"] in filled:
+            continue
+        best = None
+        best_d = 2
+        for e in global_pool:
+            if e.get("_used") or len(e["given"]) != len(n["name"]):
+                continue
+            d = sum(x != y for x, y in zip(e["given"], n["name"]))
+            if d < best_d:
+                best_d = d
+                best = e
+        if best is not None and best_d <= 1:
+            best["_used"] = True
+            n["biography"] = best["text"]
             matched += 1
 
     out = os.path.join(data_dir, f"{book}_linked.jsonl")
