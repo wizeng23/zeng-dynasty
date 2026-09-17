@@ -1,0 +1,42 @@
+{
+  "book": "book4",
+  "page": 185,
+  "follows_graph": 183,
+  "markdown": "梓\n生女一\n如意\n\n三坤\n梓\n富\n\n生于公元一九九\n九年七月三日\n\n四坤\n梓\n贵\n\n生于公元二〇〇\n二年五月八日",
+  "persons": [
+    {
+      "name": "梓",
+      "pai": "三",
+      "shi": "",
+      "full_text": "梓\n生女一\n如意"
+    },
+    {
+      "name": "梓",
+      "pai": "三",
+      "shi": "",
+      "full_text": "梓\n富"
+    },
+    {
+      "name": "梓",
+      "pai": "四",
+      "shi": "",
+      "full_text": "梓\n生于公元一九九九年七月三日"
+    },
+    {
+      "name": "梓",
+      "pai": "四",
+      "shi": "",
+      "full_text": "梓\n生于公元二〇〇二年五月八日"
+    },
+    {
+      "name": "梓",
+      "pai": "四",
+      "shi": "",
+      "full_text": "梓\n贵"
+    }
+  ],
+  "chars": 56,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 54700,
+  "ocr_ts": "2026-09-17T03:31:02.550851+00:00"
+}

@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 76,
+  "follows_graph": 74,
+  "markdown": "子次焕\n\n繁\n\n才\n\n财发\n\n财香\n\n字任长生于公元\n一九七八年闰八\n月二十日卯时殁\n天",
+  "persons": [
+    {
+      "name": "子次焕",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次焕\n繁\n才\n财发\n财香\n字任长生于公元\n一九七八年闰八\n月二十日卯时殁\n天"
+    }
+  ],
+  "chars": 44,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 53469,
+  "ocr_ts": "2026-09-17T03:27:30.150726+00:00"
+}

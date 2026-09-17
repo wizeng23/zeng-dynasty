@@ -1,0 +1,24 @@
+{
+  "book": "book4",
+  "page": 35,
+  "follows_graph": 34,
+  "markdown": "配邹素琴生于公\n元一九七四年五\n\n月十三日\n\n生子\n\n祥凤",
+  "persons": [
+    {
+      "name": "邹素琴",
+      "pai": "",
+      "shi": "",
+      "full_text": "配邹素琴生于公元一九七四年五月十三日"
+    },
+    {
+      "name": "祥凤",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子"
+    }
+  ],
+  "chars": 29,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 47104,
+  "ocr_ts": "2026-09-17T03:25:56.478360+00:00"
+}

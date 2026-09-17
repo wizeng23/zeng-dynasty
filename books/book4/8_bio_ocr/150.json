@@ -1,0 +1,48 @@
+{
+  "book": "book4",
+  "page": 150,
+  "follows_graph": 148,
+  "markdown": "子三炉\n\n繁\n\n国\n\n四日\n\n○九年四月二十\n\n字国民生于二○",
+  "persons": [
+    {
+      "name": "子三炉",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三炉"
+    },
+    {
+      "name": "繁",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁"
+    },
+    {
+      "name": "国",
+      "pai": "",
+      "shi": "",
+      "full_text": "国"
+    },
+    {
+      "name": "四日",
+      "pai": "",
+      "shi": "",
+      "full_text": "四日"
+    },
+    {
+      "name": "○九年四月二十",
+      "pai": "",
+      "shi": "",
+      "full_text": "○九年四月二十"
+    },
+    {
+      "name": "字国民生于二○",
+      "pai": "",
+      "shi": "",
+      "full_text": "字国民生于二○"
+    }
+  ],
+  "chars": 31,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 45994,
+  "ocr_ts": "2026-09-17T03:29:55.808922+00:00"
+}

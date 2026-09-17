@@ -1,0 +1,24 @@
+{
+  "book": "book4",
+  "page": 182,
+  "follows_graph": 181,
+  "markdown": "三三\n\n繁\n\n炉\n\n乳名太阳生于公\n\n元一九九三年八\n\n月十五日酉时\n\n三四\n\n繁\n\n样\n\n字国良生于公元\n\n二〇〇〇年五月\n\n十一日巳时",
+  "persons": [
+    {
+      "name": "太阳",
+      "pai": "三三",
+      "shi": "",
+      "full_text": "繁\n炉\n乳名太阳生于公元一九九三年八月十五日酉时"
+    },
+    {
+      "name": "国良",
+      "pai": "三四",
+      "shi": "",
+      "full_text": "繁\n样\n字国良生于公元二〇〇〇年五月十一日巳时"
+    }
+  ],
+  "chars": 69,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 59491,
+  "ocr_ts": "2026-09-17T03:30:55.213944+00:00"
+}

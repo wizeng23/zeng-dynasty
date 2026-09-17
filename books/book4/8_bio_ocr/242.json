@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 242,
+  "follows_graph": 240,
+  "markdown": "子次燐\n\n繁\n\n垣\n\n生于公元一九九\n\n四年八月初四日",
+  "persons": [
+    {
+      "name": "子次燐",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次燐\n繁\n垣\n生于公元一九九四年八月初四日"
+    }
+  ],
+  "chars": 27,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 49606,
+  "ocr_ts": "2026-09-17T03:33:04.388389+00:00"
+}

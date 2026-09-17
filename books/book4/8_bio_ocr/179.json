@@ -1,0 +1,11 @@
+{
+  "book": "book4",
+  "page": 179,
+  "follows_graph": 178,
+  "markdown": "|  正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正 正  |\n| --- |",
+  "persons": [],
+  "chars": 121,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 97778,
+  "ocr_ts": "2026-09-17T03:30:47.393828+00:00"
+}

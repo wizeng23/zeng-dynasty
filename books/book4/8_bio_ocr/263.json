@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 263,
+  "follows_graph": 261,
+  "markdown": "# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n# 交友\n\n字玉蓉生于公元\n一九八八年戊辰\n七月十九亥时",
+  "persons": [
+    {
+      "name": "字玉蓉",
+      "pai": "",
+      "shi": "",
+      "full_text": "交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n交友\n字玉蓉生于公元一九八八年戊辰七月十九亥时"
+    }
+  ],
+  "chars": 133,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 50229,
+  "ocr_ts": "2026-09-17T03:33:40.861454+00:00"
+}

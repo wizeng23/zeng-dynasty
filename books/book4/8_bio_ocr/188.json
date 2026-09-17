@@ -1,0 +1,54 @@
+{
+  "book": "book4",
+  "page": 188,
+  "follows_graph": 186,
+  "markdown": "生女一\n\n家美\n\n子次烟\n\n繁明\n\n字玉明生于公元\n\n一九八〇年七月\n\n二十一日午时\n\n配梅客岩旷下巫\n\n立之女巫青华生\n\n于公元一九八二\n\n年二月二十九日\n\n生女二\n\n王琴\n\n志强",
+  "persons": [
+    {
+      "name": "美",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一"
+    },
+    {
+      "name": "家",
+      "pai": "",
+      "shi": "",
+      "full_text": "家美"
+    },
+    {
+      "name": "次烟",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次烟"
+    },
+    {
+      "name": "玉明",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁明\n字玉明生于公元\n一九八〇年七月\n二十一日午时"
+    },
+    {
+      "name": "青华",
+      "pai": "",
+      "shi": "",
+      "full_text": "配梅客岩旷下巫\n立之女巫青华生\n于公元一九八二\n年二月二十九日"
+    },
+    {
+      "name": "琴",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n王琴"
+    },
+    {
+      "name": "志强",
+      "pai": "",
+      "shi": "",
+      "full_text": "志强"
+    }
+  ],
+  "chars": 91,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 65367,
+  "ocr_ts": "2026-09-17T03:31:10.838125+00:00"
+}

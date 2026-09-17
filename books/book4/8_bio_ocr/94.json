@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 94,
+  "follows_graph": null,
+  "markdown": "祥文",
+  "persons": [
+    {
+      "name": "祥文",
+      "pai": "",
+      "shi": "",
+      "full_text": "祥文"
+    }
+  ],
+  "chars": 2,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 38229,
+  "ocr_ts": "2026-09-17T03:28:14.957899+00:00"
+}

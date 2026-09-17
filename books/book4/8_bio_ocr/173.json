@@ -1,0 +1,24 @@
+{
+  "book": "book4",
+  "page": 173,
+  "follows_graph": 171,
+  "markdown": "语教师\n\n生女一名\n\n祥晨",
+  "persons": [
+    {
+      "name": "祥",
+      "pai": "",
+      "shi": "",
+      "full_text": "语教师\n生女一名\n祥晨"
+    },
+    {
+      "name": "晨",
+      "pai": "",
+      "shi": "",
+      "full_text": "语教师\n生女一名\n祥晨"
+    }
+  ],
+  "chars": 13,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 42258,
+  "ocr_ts": "2026-09-17T03:30:37.712055+00:00"
+}

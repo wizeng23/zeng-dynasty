@@ -1,0 +1,24 @@
+{
+  "book": "book4",
+  "page": 40,
+  "follows_graph": null,
+  "markdown": "祥垣宪洲名\n\n下\n\n祥勇宪波名\n\n下\n\n生女一\n\n仁云",
+  "persons": [
+    {
+      "name": "祥垣",
+      "pai": "第1派",
+      "shi": "第1世",
+      "full_text": "祥垣宪洲名"
+    },
+    {
+      "name": "祥勇",
+      "pai": "第1派",
+      "shi": "第2世",
+      "full_text": "祥勇宪波名\n下\n生女一\n仁云"
+    }
+  ],
+  "chars": 27,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 48280,
+  "ocr_ts": "2026-09-17T03:26:09.311434+00:00"
+}

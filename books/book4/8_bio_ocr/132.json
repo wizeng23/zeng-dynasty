@@ -1,0 +1,24 @@
+{
+  "book": "book4",
+  "page": 132,
+  "follows_graph": 130,
+  "markdown": "子三寿\n\n繁\n晨\n\n字瑞晨生于二〇\n\n〇八年十一月五\n\n日",
+  "persons": [
+    {
+      "name": "子三寿",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三寿\n繁\n晨\n字瑞晨生于二〇〇八年十一月五日"
+    },
+    {
+      "name": "瑞晨",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三寿\n繁\n晨\n字瑞晨生于二〇〇八年十一月五日"
+    }
+  ],
+  "chars": 29,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 48546,
+  "ocr_ts": "2026-09-17T03:29:23.722565+00:00"
+}

@@ -1,0 +1,96 @@
+{
+  "book": "book4",
+  "page": 86,
+  "follows_graph": 85,
+  "markdown": "相\n繁\n炜\n\n子\n炜\n\n字长生生于一九\n\n六五年七月二十\n\n九日丑时\n\n配赖村黄才勃之\n\n女黄福秀生于一\n\n九六四年三月十\n\n五日辰时\n\n生子二名\n\n祥兴\n\n祥斌\n\n养女 雪梅\n\n子\n炜\n\n祥\n兴\n\n字岁生生于一九\n\n八四年八月初二\n\n日酉时\n\n配云南蔡光洪之\n\n女蔡爱芬生于公\n\n元一九八四年八\n\n月二十日吉时\n\n子\n炜\n\n祥\n斌\n\n字龙华生于一九\n\n八七年四月初六\n\n日午时",
+  "persons": [
+    {
+      "name": "相",
+      "pai": "",
+      "shi": "",
+      "full_text": "相"
+    },
+    {
+      "name": "繁",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁"
+    },
+    {
+      "name": "炜",
+      "pai": "",
+      "shi": "",
+      "full_text": "炜"
+    },
+    {
+      "name": "子炜",
+      "pai": "",
+      "shi": "",
+      "full_text": "子\n炜"
+    },
+    {
+      "name": "长生",
+      "pai": "",
+      "shi": "第世",
+      "full_text": "字长生生于一九六五年七月二十九日丑时"
+    },
+    {
+      "name": "黄福秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "配赖村黄才勃之\n女黄福秀生于一九六四年三月十五日辰时"
+    },
+    {
+      "name": "祥兴",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名\n祥兴"
+    },
+    {
+      "name": "祥斌",
+      "pai": "",
+      "shi": "",
+      "full_text": "祥斌\n养女 雪梅"
+    },
+    {
+      "name": "雪梅",
+      "pai": "",
+      "shi": "",
+      "full_text": ""
+    },
+    {
+      "name": "子炜",
+      "pai": "",
+      "shi": "",
+      "full_text": "子\n炜"
+    },
+    {
+      "name": "岁生",
+      "pai": "第..派",
+      "shi": "第世",
+      "full_text": "祥兴\n字岁生生于一九八四年八月初二日酉时"
+    },
+    {
+      "name": "蔡爱芬",
+      "pai": "",
+      "shi": "",
+      "full_text": "配云南蔡光洪之\n女蔡爱芬生于公元一九八四年八月二十日吉时"
+    },
+    {
+      "name": "子炜",
+      "pai": "",
+      "shi": "",
+      "full_text": "子\n炜"
+    },
+    {
+      "name": "龙华",
+      "pai": "第..派",
+      "shi": "第世",
+      "full_text": "祥斌\n字龙华生于一九八七年四月初六日午时"
+    }
+  ],
+  "chars": 189,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 103420,
+  "ocr_ts": "2026-09-17T03:27:56.530062+00:00"
+}

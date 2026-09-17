@@ -1,0 +1,36 @@
+{
+  "book": "book4",
+  "page": 225,
+  "follows_graph": 223,
+  "markdown": "子三烃\n\n篆 意\n\n字茂林生于公元\n\n二〇〇八年十一\n\n月六日申时",
+  "persons": [
+    {
+      "name": "子三烃",
+      "pai": "第1派",
+      "shi": "第3世",
+      "full_text": "子三烃"
+    },
+    {
+      "name": "篆",
+      "pai": "",
+      "shi": "",
+      "full_text": "篆"
+    },
+    {
+      "name": "意",
+      "pai": "",
+      "shi": "",
+      "full_text": "意"
+    },
+    {
+      "name": "字茂林",
+      "pai": "",
+      "shi": "",
+      "full_text": "字茂林生于公元二〇〇八年十一月六日申时"
+    }
+  ],
+  "chars": 33,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 48249,
+  "ocr_ts": "2026-09-17T03:32:35.506589+00:00"
+}

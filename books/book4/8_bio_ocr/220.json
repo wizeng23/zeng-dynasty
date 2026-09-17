@@ -1,0 +1,48 @@
+{
+  "book": "book4",
+  "page": 220,
+  "follows_graph": 219,
+  "markdown": "配兴国曾祥有养\n女许欢欢生于公\n元一九八一年八\n月十五日",
+  "persons": [
+    {
+      "name": "配兴国",
+      "pai": "",
+      "shi": "",
+      "full_text": "配兴国"
+    },
+    {
+      "name": "曾祥有",
+      "pai": "",
+      "shi": "",
+      "full_text": "曾祥有"
+    },
+    {
+      "name": "养",
+      "pai": "",
+      "shi": "",
+      "full_text": "养"
+    },
+    {
+      "name": "女",
+      "pai": "",
+      "shi": "",
+      "full_text": "女"
+    },
+    {
+      "name": "许欢欢",
+      "pai": "",
+      "shi": "",
+      "full_text": "许欢欢"
+    },
+    {
+      "name": "",
+      "pai": "",
+      "shi": "",
+      "full_text": "生于公元一九八一年八月十五日"
+    }
+  ],
+  "chars": 28,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 48532,
+  "ocr_ts": "2026-09-17T03:32:26.169078+00:00"
+}

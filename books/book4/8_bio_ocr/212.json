@@ -1,0 +1,42 @@
+{
+  "book": "book4",
+  "page": 212,
+  "follows_graph": 210,
+  "markdown": "玉华\n\n# 灾\n# 繁\n# 志\n\n# 志\n# 祥\n# 长\n# 子\n\n字海长生于公元\n一九七六年九月\n十七日丑时\n\n配江口乡大岑钟\n\n声财之女钟雪连\n\n生于公元一九八\n\n三年十一月一日\n\n生子一名\n\n祥长\n\n生女二\n\n兴和\n\n愉连\n\n生于公元二〇〇\n\n二年十月一日酉\n\n时",
+  "persons": [
+    {
+      "name": "玉华",
+      "pai": "",
+      "shi": "",
+      "full_text": "玉华\n\n# 灾\n# 繁\n# 志\n\n# 志\n# 祥\n# 长\n# 子\n\n字海长生于公元\n一九七六年九月\n十七日丑时\n\n配江口乡大岑钟\n\n声财之女钟雪连\n\n生于公元一九八\n\n三年十一月一日\n\n生子一名\n\n祥长\n\n生女二\n\n兴和\n\n愉连\n\n生于公元二〇〇\n\n二年十月一日酉\n\n时"
+    },
+    {
+      "name": "钟雪连",
+      "pai": "",
+      "shi": "",
+      "full_text": "配江口乡大岑钟\n\n声财之女钟雪连\n\n生于公元一九八\n\n三年十一月一日"
+    },
+    {
+      "name": "祥长",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子一名\n\n祥长"
+    },
+    {
+      "name": "兴和",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n\n兴和"
+    },
+    {
+      "name": "愉连",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女二\n\n愉连\n\n生于公元二〇〇\n\n二年十月一日酉\n\n时"
+    }
+  ],
+  "chars": 135,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 76451,
+  "ocr_ts": "2026-09-17T03:32:04.521944+00:00"
+}

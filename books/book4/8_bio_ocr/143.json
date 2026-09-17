@@ -1,0 +1,11 @@
+{
+  "book": "book4",
+  "page": 143,
+  "follows_graph": 142,
+  "markdown": "",
+  "persons": [],
+  "chars": 0,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 108423,
+  "ocr_ts": "2026-09-17T03:29:42.738199+00:00"
+}

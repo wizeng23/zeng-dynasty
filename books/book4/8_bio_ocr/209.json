@@ -1,0 +1,90 @@
+{
+  "book": "book4",
+  "page": 209,
+  "follows_graph": null,
+  "markdown": "生秀\n\n子三熠\n\n繁均\n\n字风生生于公元\n\n一九七三年八月\n\n二十日午时\n\n配三僚廖平椿之\n\n女廖东青生于公\n\n元一九七三年十\n\n月初五日\n\n生子二名\n\n祥金\n\n祥豪\n\n生女一 林艳\n\n子长均\n\n祥鑫\n\n字星星生于公元\n\n二〇〇一年二月\n\n初一日\n\n子次均\n\n祥豪\n\n字豪金生于公元\n\n二〇〇七年三月\n\n初二日",
+  "persons": [
+    {
+      "name": "秀",
+      "pai": "",
+      "shi": "",
+      "full_text": "生秀"
+    },
+    {
+      "name": "三熠",
+      "pai": "",
+      "shi": "",
+      "full_text": "子三熠"
+    },
+    {
+      "name": "均",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁均"
+    },
+    {
+      "name": "风生",
+      "pai": "",
+      "shi": "",
+      "full_text": "字风生生于公元一九七三年八月二十日午时"
+    },
+    {
+      "name": "东青",
+      "pai": "",
+      "shi": "",
+      "full_text": "配三僚廖平椿之女廖东青生于公元一九七三年十月初五日"
+    },
+    {
+      "name": "祥金",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子二名祥金"
+    },
+    {
+      "name": "祥豪",
+      "pai": "",
+      "shi": "",
+      "full_text": "祥豪"
+    },
+    {
+      "name": "林艳",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女一 林艳"
+    },
+    {
+      "name": "长均",
+      "pai": "",
+      "shi": "",
+      "full_text": "子长均"
+    },
+    {
+      "name": "祥鑫",
+      "pai": "",
+      "shi": "",
+      "full_text": "祥鑫"
+    },
+    {
+      "name": "星星",
+      "pai": "",
+      "shi": "",
+      "full_text": "字星星生于公元二〇〇一年二月初一日"
+    },
+    {
+      "name": "次均",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次均"
+    },
+    {
+      "name": "豪金",
+      "pai": "",
+      "shi": "",
+      "full_text": "祥豪字豪金生于公元二〇〇七年三月初二日"
+    }
+  ],
+  "chars": 155,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 91547,
+  "ocr_ts": "2026-09-17T03:31:55.853797+00:00"
+}

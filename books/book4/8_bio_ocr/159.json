@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 159,
+  "follows_graph": null,
+  "markdown": "子三辉\n\n繁\n\n恒\n\n生于二〇〇四年\n\n三月十六日",
+  "persons": [
+    {
+      "name": "子三辉",
+      "pai": "第子派",
+      "shi": "第三世",
+      "full_text": "子三辉\n繁\n恒\n生于二〇〇四年\n三月十六日"
+    }
+  ],
+  "chars": 25,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 44320,
+  "ocr_ts": "2026-09-17T03:30:12.591359+00:00"
+}

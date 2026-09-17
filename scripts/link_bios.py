@@ -31,7 +31,10 @@ from collections import defaultdict
 logger = logging.getLogger(__name__)
 
 CJK = r"[㐀-鿿〇]"
-HDR_A = re.compile(rf"({CJK})之({CJK}{{1,2}})子")
+# Header form A: <father>之<given 1-2>, trailing 子 optional (Book 4 often omits it),
+# anchored by a following biography clause (生/配/殁) or end so a 之 inside prose is
+# not a false hit. Form B: 子<birth-order><father><given> (flat / continuation form).
+HDR_A = re.compile(rf"({CJK})之({CJK}{{1,2}})子?(?=生|配|殁|$)")
 HDR_B = re.compile(rf"子[之次三四五六七八九长幼]({CJK})({CJK}{{1,2}})")
 
 
@@ -100,27 +103,66 @@ def link(book: str, books_dir: str = "books", data_dir: str = "data") -> dict:
     for n in nodes:
         nodes_for_stem[_graph_stem(n)].append(n)
 
-    matched = 0
-    total = 0
-    for stem, gnodes in nodes_for_stem.items():
-        # collect this subgraph's bio entries (all its pages), index by given name
+    def one_off(a: str, b: str) -> bool:
+        """Same length, differ in at most one character (single OCR slip)."""
+        return len(a) == len(b) and sum(x != y for x, y in zip(a, b)) <= 1
+
+    def take_match(name: str, pool: list[dict]) -> dict | None:
+        """Pop the best entry for `name` from `pool`: an exact given-name match if
+        any, else the single closest unused entry within 1 OCR-char (the tree name
+        is the oracle, so a nearest ≤1-char match is safe within one subgraph)."""
+        best = None
+        best_d = 2
+        for e in pool:
+            if e.get("_used"):
+                continue
+            if e["given"] == name:
+                e["_used"] = True
+                return e
+            if one_off(e["given"], name):
+                d = sum(x != y for x, y in zip(e["given"], name))
+                if d < best_d:
+                    best_d = d
+                    best = e
+        if best is not None:
+            best["_used"] = True
+            return best
+        return None
+
+    # Build each subgraph's entry pool once; keep a global pool for a fallback pass.
+    stem_entries: dict[str, list[dict]] = {}
+    global_pool: list[dict] = []
+    for stem in nodes_for_stem:
         entries = []
         for pg in sorted(pages_for_stem.get(stem, [])):
             entries += extract_entries(book, pg, books_dir)
-        by_given: dict[str, list[dict]] = defaultdict(list)
-        for e in entries:
-            by_given[e["given"]].append(e)
+        stem_entries[stem] = entries
+        global_pool += entries
 
+    matched = 0
+    total = 0
+    unfilled: list[dict] = []
+    # Pass 1: match within the node's own subgraph (exact, then unique fuzzy).
+    for stem, gnodes in nodes_for_stem.items():
+        pool = stem_entries[stem]
         for n in gnodes:
             if n.get("generation", 1) < 2 or not n.get("name"):
                 continue
             total += 1
-            cands = by_given.get(n["name"])
-            if cands:
-                # take the first unused entry with this given name
-                e = cands.pop(0)
+            e = take_match(n["name"], pool)
+            if e:
                 n["biography"] = e["text"]
                 matched += 1
+            else:
+                unfilled.append(n)
+    # Pass 2: global fallback for still-unfilled nodes (subgraph grouping can strand
+    # entries when follows_graph is imperfect). Exact-then-unique-fuzzy over all
+    # remaining entries; the tree name keeps this from mis-assigning.
+    for n in unfilled:
+        e = take_match(n["name"], global_pool)
+        if e:
+            n["biography"] = e["text"]
+            matched += 1
 
     out = os.path.join(data_dir, f"{book}_linked.jsonl")
     with open(out, "w") as f:

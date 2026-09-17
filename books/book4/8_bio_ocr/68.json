@@ -1,0 +1,78 @@
+{
+  "book": "book4",
+  "page": 68,
+  "follows_graph": 64,
+  "markdown": "生子三名\n\n祥钊\n\n祥镐\n\n祥鑫\n\n生女三\n\n秀华适信丰\n\n张克银\n\n建华适赖村\n\n金华适梅客\n\n子三垓\n\n祥鑫\n\n次垓\n\n祥镐\n\n字燕明生于一九\n\n九二年九月二十\n\n八日寅时\n\n字太阳生于一九\n\n九七年政月二十\n\n四日亥时",
+  "persons": [
+    {
+      "name": "祥钊",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三名\n祥钊"
+    },
+    {
+      "name": "祥镐",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三名\n祥镐"
+    },
+    {
+      "name": "祥鑫",
+      "pai": "",
+      "shi": "",
+      "full_text": "生子三名\n祥鑫"
+    },
+    {
+      "name": "秀华",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女三\n秀华适信丰"
+    },
+    {
+      "name": "张克银",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女三\n张克银"
+    },
+    {
+      "name": "建华",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女三\n建华适赖村"
+    },
+    {
+      "name": "金华",
+      "pai": "",
+      "shi": "",
+      "full_text": "生女三\n金华适梅客"
+    },
+    {
+      "name": "祥鑫",
+      "pai": "子三垓",
+      "shi": "",
+      "full_text": "子三垓\n祥鑫"
+    },
+    {
+      "name": "祥镐",
+      "pai": "次垓",
+      "shi": "",
+      "full_text": "次垓\n祥镐"
+    },
+    {
+      "name": "燕明",
+      "pai": "",
+      "shi": "字",
+      "full_text": "字燕明生于一九九二年九月二十八日寅时"
+    },
+    {
+      "name": "太阳",
+      "pai": "",
+      "shi": "字",
+      "full_text": "字太阳生于一九九七年政月二十四日亥时"
+    }
+  ],
+  "chars": 112,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 82345,
+  "ocr_ts": "2026-09-17T03:27:14.078337+00:00"
+}

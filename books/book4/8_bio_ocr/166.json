@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 166,
+  "follows_graph": 164,
+  "markdown": "子三烨\n\n繁\n\n盛\n\n生于一九九七年\n十一月二十八日",
+  "persons": [
+    {
+      "name": "烨",
+      "pai": "",
+      "shi": "三",
+      "full_text": "子三烨\n繁\n盛\n生于一九九七年十一月二十八日"
+    }
+  ],
+  "chars": 26,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 44682,
+  "ocr_ts": "2026-09-17T03:30:25.193396+00:00"
+}

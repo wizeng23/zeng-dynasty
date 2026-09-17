@@ -1,0 +1,240 @@
+{
+  "book": "book4",
+  "page": 55,
+  "follows_graph": 54,
+  "markdown": "|  上接待晦房系 | 床 | 雇 | 房 | 系  |\n| --- | --- | --- | --- | --- |\n|  武城派系 | 第七十六派 | 第七十七派 | 第七十八派 | 第七十九派  |\n|  村世系 | 第四十世 | 第四十一世 | 第四十二世 | 第四十三世  |\n|  燿 | 營 | 均 |  | 第八十派  |\n|  之 | 繁 | 多 |  | 第四十四世  |\n|  字 | 真 | 发 | 生 | 子  |\n|  文 | 生 | 子 | 公 | 元  |\n|  一 | 九 | 九 | 〇 | 年  |\n|  一 | 九 | 月 | 二 | 十  |\n|  九 | 月 | 二 | 十 | 日  |\n|  子 | 日 | 子 | 时 |   |",
+  "persons": [
+    {
+      "name": "上接待晦房系",
+      "pai": "",
+      "shi": "",
+      "full_text": "上接待晦房系"
+    },
+    {
+      "name": "武城派系",
+      "pai": "第七十六派",
+      "shi": "第四十世",
+      "full_text": "武城派系第七十六派第四十世"
+    },
+    {
+      "name": "雇",
+      "pai": "第七十七派",
+      "shi": "第四十一世",
+      "full_text": "雇第七十七派第四十一世"
+    },
+    {
+      "name": "房",
+      "pai": "第七十八派",
+      "shi": "第四十二世",
+      "full_text": "房第七十八派第四十二世"
+    },
+    {
+      "name": "系",
+      "pai": "第七十九派",
+      "shi": "第四十三世",
+      "full_text": "系第七十九派第四十三世"
+    },
+    {
+      "name": "燿",
+      "pai": "",
+      "shi": "",
+      "full_text": "燿"
+    },
+    {
+      "name": "營",
+      "pai": "",
+      "shi": "",
+      "full_text": "營"
+    },
+    {
+      "name": "均",
+      "pai": "第八十派",
+      "shi": "第四十四世",
+      "full_text": "均第八十派第四十四世"
+    },
+    {
+      "name": "之",
+      "pai": "",
+      "shi": "",
+      "full_text": "之"
+    },
+    {
+      "name": "繁",
+      "pai": "",
+      "shi": "",
+      "full_text": "繁"
+    },
+    {
+      "name": "多",
+      "pai": "",
+      "shi": "",
+      "full_text": "多"
+    },
+    {
+      "name": "字",
+      "pai": "",
+      "shi": "",
+      "full_text": "字"
+    },
+    {
+      "name": "真",
+      "pai": "",
+      "shi": "",
+      "full_text": "真"
+    },
+    {
+      "name": "发",
+      "pai": "",
+      "shi": "",
+      "full_text": "发"
+    },
+    {
+      "name": "文",
+      "pai": "",
+      "shi": "",
+      "full_text": "文"
+    },
+    {
+      "name": "生",
+      "pai": "",
+      "shi": "",
+      "full_text": "生"
+    },
+    {
+      "name": "子",
+      "pai": "",
+      "shi": "",
+      "full_text": "子"
+    },
+    {
+      "name": "公",
+      "pai": "",
+      "shi": "",
+      "full_text": "公"
+    },
+    {
+      "name": "元",
+      "pai": "",
+      "shi": "",
+      "full_text": "元"
+    },
+    {
+      "name": "一",
+      "pai": "",
+      "shi": "",
+      "full_text": "一"
+    },
+    {
+      "name": "九",
+      "pai": "",
+      "shi": "",
+      "full_text": "九"
+    },
+    {
+      "name": "九",
+      "pai": "",
+      "shi": "",
+      "full_text": "九"
+    },
+    {
+      "name": "〇",
+      "pai": "",
+      "shi": "",
+      "full_text": "〇"
+    },
+    {
+      "name": "年",
+      "pai": "",
+      "shi": "",
+      "full_text": "年"
+    },
+    {
+      "name": "一",
+      "pai": "",
+      "shi": "",
+      "full_text": "一"
+    },
+    {
+      "name": "九",
+      "pai": "",
+      "shi": "",
+      "full_text": "九"
+    },
+    {
+      "name": "月",
+      "pai": "",
+      "shi": "",
+      "full_text": "月"
+    },
+    {
+      "name": "二",
+      "pai": "",
+      "shi": "",
+      "full_text": "二"
+    },
+    {
+      "name": "十",
+      "pai": "",
+      "shi": "",
+      "full_text": "十"
+    },
+    {
+      "name": "九",
+      "pai": "",
+      "shi": "",
+      "full_text": "九"
+    },
+    {
+      "name": "月",
+      "pai": "",
+      "shi": "",
+      "full_text": "月"
+    },
+    {
+      "name": "二",
+      "pai": "",
+      "shi": "",
+      "full_text": "二"
+    },
+    {
+      "name": "十",
+      "pai": "",
+      "shi": "",
+      "full_text": "十"
+    },
+    {
+      "name": "日",
+      "pai": "",
+      "shi": "",
+      "full_text": "日"
+    },
+    {
+      "name": "子",
+      "pai": "",
+      "shi": "",
+      "full_text": "子"
+    },
+    {
+      "name": "日",
+      "pai": "",
+      "shi": "",
+      "full_text": "日"
+    },
+    {
+      "name": "子",
+      "pai": "",
+      "shi": "",
+      "full_text": "子"
+    },
+    {
+      "name": "时",
+      "pai": "",
+      "shi": "",
+      "full_text": "时"
+    }
+  ],
+  "chars": 340,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 107563,
+  "ocr_ts": "2026-09-17T03:26:42.370117+00:00"
+}

@@ -1,0 +1,24 @@
+{
+  "book": "book4",
+  "page": 43,
+  "follows_graph": 42,
+  "markdown": "子次明\n\n繁\n棕\n\n生于公元一九八\n\n四年正月初十日\n\n卯时配招秀秀生\n\n于公元一九八七\n\n年二月十九日未\n\n时\n\n生子一\n\n祥毅\n\n子之棕\n\n祥\n毅\n\n字曾毅生公元二\n〇一〇年 四\n月二十八日申时",
+  "persons": [
+    {
+      "name": "子次明",
+      "pai": "",
+      "shi": "",
+      "full_text": "子次明\n繁\n棕\n\n生于公元一九八四年正月初十日卯时\n配招秀秀\n生于公元一九八七年二月十九日未时\n\n生子一\n祥毅\n\n子之棕"
+    },
+    {
+      "name": "祥毅",
+      "pai": "",
+      "shi": "",
+      "full_text": "祥毅\n\n字曾毅\n生于公元二〇一〇年四月二十八日申时"
+    }
+  ],
+  "chars": 99,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 73679,
+  "ocr_ts": "2026-09-17T03:26:15.735814+00:00"
+}

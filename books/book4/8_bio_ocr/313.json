@@ -1,0 +1,18 @@
+{
+  "book": "book4",
+  "page": 313,
+  "follows_graph": 311,
+  "markdown": "子三茂\n\n小\n\n辉\n\n十九日\n时\n\n二年壬午三月二\n\n生于公元二〇〇",
+  "persons": [
+    {
+      "name": "子三茂",
+      "pai": "子",
+      "shi": "三",
+      "full_text": "子三茂\n小\n辉\n十九日\n时\n二年壬午三月二\n生于公元二〇〇"
+    }
+  ],
+  "chars": 34,
+  "mistral_model": "mistral-ocr-latest",
+  "doc_size_bytes": 45281,
+  "ocr_ts": "2026-09-17T04:46:30.614586+00:00"
+}
