@@ -66,6 +66,26 @@ def test_find_rules_returns_four_rules_top_to_bottom() -> None:
         assert abs(got - f * 5580) <= 15
 
 
+def test_find_rules_detects_faded_low_density_rule_off_canonical() -> None:
+    # A faded top rule (density ~0.33, below the old 0.6 threshold) that sits 40px
+    # BELOW its canonical y. Density detection misses it, so the canonical fallback
+    # would place the top rule at frac*h -- 40px wrong, hiding real misalignment.
+    # Run-length detection (using canonical only as a search hint) must find the rule
+    # at its TRUE y, so the bottom-rule alignment check can see the drift.
+    h, w = 5580, 3400
+    a = np.ones((h, w), dtype=np.uint8)
+    for i, f in enumerate(BIO_RULE_YFRAC):
+        y = int(f * h) + (40 if i == 0 else 0)
+        if i == 0:
+            a[y:y + RULE, ::3] = 0  # faded: every 3rd column -> low density, long run
+        else:
+            a[y:y + RULE, :] = 0
+    rules = m.find_rules(a)
+    assert len(rules) == 4
+    true_top = int(BIO_RULE_YFRAC[0] * h) + 40
+    assert abs(rules[0] - true_top) <= 15  # found at its REAL y, not snapped to canon
+
+
 def test_find_rules_snaps_missing_faint_rules_to_canonical() -> None:
     # A sparse page where the top two rules are too faint to detect (like p6/p8 of
     # book3 0_1): only the bottom two exceed the coverage threshold. find_rules must
@@ -97,25 +117,33 @@ def _bio_page(h: int, w: int, text_left: int, text_right: int) -> np.ndarray:
 
 
 def test_trim_sides_removes_whitespace_up_to_the_cap() -> None:
-    # Text sits 200px in from each side; only the 80px cap of whitespace comes off.
+    # Text sits 200px in from each side; the full 80px cap of whitespace comes off
+    # (well beyond 80px is still whitespace, so no padding is withheld).
     h, w = 4000, 1000
     a = _bio_page(h, w, text_left=200, text_right=w - 200)
     trimmed = m.trim_sides(a)
     assert trimmed.shape[1] == w - 160  # 80 off each side
 
 
-def test_trim_sides_stops_at_content_within_the_cap() -> None:
-    # Text starts only 30px in on the left: the left trim must stop at the text, not
-    # cut 80px into it. Right side has 200px whitespace -> full 80px off.
+def test_trim_sides_keeps_20px_pad_when_stopping_at_content() -> None:
+    # Text starts 60px in on the left: reaching content trims 60, but we keep 20px of
+    # whitespace before the glyphs -> trim 60-20=40. Right has 200px whitespace -> 80.
     h, w = 4000, 1000
-    a = _bio_page(h, w, text_left=30, text_right=w - 200)
+    a = _bio_page(h, w, text_left=60, text_right=w - 200)
     trimmed = m.trim_sides(a)
-    # left trimmed ~30 (up to content), right trimmed 80.
-    assert w - trimmed.shape[1] <= 30 + 80
-    assert w - trimmed.shape[1] >= 25 + 80  # left cut is close to the 30px content
-    # The first text column must survive: leftmost surviving column is dense.
+    assert w - trimmed.shape[1] == 40 + 80
+    # 20px of whitespace precedes the first text column in the trimmed image.
     col_dens = (1 - trimmed).sum(axis=0) / trimmed.shape[0]
-    assert col_dens[0] > 0.02
+    text_start = next(i for i, d in enumerate(col_dens) if d > 0.02)
+    assert 18 <= text_start <= 22  # ~20px pad kept
+
+
+def test_trim_sides_trims_nothing_when_content_within_pad() -> None:
+    # Text starts only 10px in (< the 20px pad): trimming would leave <20px, so trim 0.
+    h, w = 4000, 1000
+    a = _bio_page(h, w, text_left=10, text_right=w - 200)
+    trimmed = m.trim_sides(a)
+    assert w - trimmed.shape[1] == 0 + 80  # left untouched, right full 80
 
 
 def test_trim_sides_keeps_horizontal_rules() -> None:

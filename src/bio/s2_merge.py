@@ -18,9 +18,10 @@ Two rules of the book drive the join:
   larger drift means the ruled region is inconsistent across pages (a skewed or
   mis-scaled scan), so the merge **hard-fails** rather than emit a misaligned image.
 
-Rules are located per page by full-width row ink-coverage, snapping any rule too faint
-to detect (near-empty pages under-detect the top rules) to the canonical
-:data:`~src.s2_classify_pages.BIO_RULE_YFRAC` position.
+Rules are located per page by run-length line detection (like stage 1) within a
+search window around each canonical :data:`~src.s2_classify_pages.BIO_RULE_YFRAC`
+y-fraction, so faded (low-density) rules are still found and a truly blank band falls
+back to the expected position.
 
 Output: ``books/{book}/bio/2_merged/{first}_{last}.png`` (binary ink grid, 0=ink),
 a sidecar ``{first}_{last}.json`` (rule y-positions, seam x-columns, per-page
@@ -40,7 +41,7 @@ import os
 import numpy as np
 from PIL import Image
 
-from src.bio.s1_crops import BIO_DIR, section_first_pages
+from src.bio.s1_crops import BIO_DIR, _longest_run, section_first_pages
 from src.imaging import get_image, save_image
 from src.s2_classify_pages import BIO_RULE_YFRAC, load_bio_pages
 
@@ -48,14 +49,19 @@ logger = logging.getLogger(__name__)
 
 MERGED_DIR = "2_merged"
 
-# A full-width horizontal rule inks at least this fraction of a row. Rules run
-# ~0.75-1.0 on clean crops; a page's own prose never fills a whole row.
-RULE_ROW_COVERAGE = 0.6
-# Adjacent inked rows within this many px are one rule (a rule is several px thick).
-RULE_CLUSTER_PX = 20
-# A detected rule is accepted for a canonical slot when within this many px of it;
-# otherwise that slot falls back to the canonical position (faint/empty page).
-RULE_SNAP_TOL = 120
+# Horizontal-rule detection mirrors stage 1's border detection: a rule is a
+# full-width straight LINE, found by its longest continuous ink run (bridging ADF
+# breaks via s1's _longest_run), NOT by row ink-density. An ADF-faded rule can be
+# ~30% dense yet keep one unbroken run spanning most of the width, while a page's
+# densest prose row tops out well below that -- so run length separates them where a
+# density threshold missed faded rules (stage 1 hit this on Book 4). A row is a rule
+# when its longest run is at least this fraction of the page width.
+RULE_MIN_RUN_FRAC = 0.5
+# The canonical BIO_RULE_YFRAC positions are a strong prior (stage 1 verified the 4
+# rules sit at fixed y-fractions). We use them as a HINT: search only a window this
+# many px around each expected slot for that slot's rule, so a long prose line
+# elsewhere can never be taken for a rule, and a faded rule near its slot is found.
+RULE_SEARCH_PX = 120
 
 # After top-rule alignment, each page's bottom rule must sit within this of the
 # median bottom rule. Real book3 0_1 pages drift <50px; more means an inconsistent
@@ -71,89 +77,78 @@ BOTTOM_RULE_TOL = 50
 # so a 2x stop halts right at the text ramp without clipping the outermost glyphs.
 SIDE_TRIM_CAP = 80
 SIDE_TRIM_FACTOR = 2.0
+# When a side stops at content BEFORE the cap, keep this much whitespace before the
+# glyphs so we never trim right up to the characters. (No pad is withheld when the
+# whole cap is whitespace -- there is still whitespace beyond it.)
+SIDE_TRIM_PAD = 20
 
 QA_DIR = "qa"
 QA_SUBDIR = "bio_s2"
 QA_SCALE = 6
 
 
-def _rule_clusters(a: np.ndarray) -> list[int]:
-    """Center rows of full-width horizontal rules in ``a`` (ascending).
+def _best_rule_row(a: np.ndarray, center: int, half: int) -> int | None:
+    """Row of the strongest horizontal rule within ``center +/- half``, or ``None``.
 
-    A rule is a run of rows each inking at least :data:`RULE_ROW_COVERAGE` of the
-    width; runs within :data:`RULE_CLUSTER_PX` are one rule, reduced to their center.
+    Scans rows in the window for the one whose longest continuous ink run (bridging
+    ADF breaks, via stage 1's :func:`~src.bio.s1_crops._longest_run`) is longest, and
+    returns it when that run spans at least :data:`RULE_MIN_RUN_FRAC` of the width.
     """
-    cov = (1 - a).sum(axis=1) / a.shape[1]
-    rows = np.where(cov >= RULE_ROW_COVERAGE)[0]
-    if len(rows) == 0:
-        return []
-    centers: list[int] = []
-    start = prev = rows[0]
-    for r in rows[1:]:
-        if r - prev > RULE_CLUSTER_PX:
-            centers.append((start + prev) // 2)
-            start = r
-        prev = r
-    centers.append((start + prev) // 2)
-    return centers
-
-
-def _expected_positions(h: int, detected: list[int]) -> list[float]:
-    """Where the 4 rules are expected on a page of height ``h``.
-
-    The canonical :data:`~src.s2_classify_pages.BIO_RULE_YFRAC` gives the rules'
-    relative pattern, but a page's absolute rule positions shift with its top margin
-    (crops leave a variable margin, which is exactly why we align on rules). So we do
-    not assume a rule sits at ``frac*h``: we estimate a single global vertical shift
-    ``d`` -- the median offset of detected rules from their nearest canonical slot --
-    and expect each rule at ``frac*h + d``. With no detections, ``d=0``.
-    """
-    canon = [f * h for f in BIO_RULE_YFRAC]
-    if not detected:
-        return canon
-    offsets = [y - min(canon, key=lambda c: abs(y - c)) for y in detected]
-    d = float(np.median(offsets))
-    return [c + d for c in canon]
+    rows, cols = a.shape
+    lo, hi = max(0, center - half), min(rows, center + half + 1)
+    min_run = int(RULE_MIN_RUN_FRAC * cols)
+    best_row, best_run = None, min_run - 1
+    for r in range(lo, hi):
+        run = _longest_run((1 - a[r, :]).astype(bool))
+        if run > best_run:
+            best_run, best_row = run, r
+    return best_row
 
 
 def find_rules(a: np.ndarray) -> list[int]:
     """The 4 horizontal-rule y-positions of a bio page, top to bottom.
 
-    Detects full-width rules and assigns each to its nearest *expected* slot (the
-    canonical pattern shifted to the page's estimated top margin -- see
-    :func:`_expected_positions`), within :data:`RULE_SNAP_TOL`. A slot that claimed a
-    detected rule keeps that rule's real position -- even if somewhat off -- so
-    genuine misalignment stays visible to the bottom-rule check in
-    :func:`merge_section`. A slot with no detected rule falls back to its expected
-    position (near-empty pages under-detect the fainter top rules). Always returns 4
-    positions in ascending order.
+    The canonical :data:`~src.s2_classify_pages.BIO_RULE_YFRAC` gives each rule's
+    expected y-fraction. Because a crop's top margin varies, we first estimate a single
+    global shift ``d`` from the rules found in a wide search, then locate each rule by
+    its longest ink run within :data:`RULE_SEARCH_PX` of its shifted expected position
+    (:func:`_best_rule_row`). A rule found keeps its REAL y -- even if off canonical --
+    so genuine misalignment stays visible to the bottom-rule check in
+    :func:`merge_section`; a slot with no rule (a truly blank band) falls back to the
+    expected position. Always returns 4 positions in ascending order.
     """
-    detected = _rule_clusters(a)
-    expected = _expected_positions(a.shape[0], detected)
-    slots: list[int | None] = [None] * len(expected)
-    for y in detected:
-        si = min(range(len(expected)), key=lambda i: abs(y - expected[i]))
-        if abs(y - expected[si]) > RULE_SNAP_TOL:
-            continue  # a stray full-width mark, not one of the 4 rules
-        prev = slots[si]
-        if prev is None or abs(y - expected[si]) < abs(prev - expected[si]):
-            slots[si] = int(y)
-    rules = [s if s is not None else int(round(e)) for s, e in zip(slots, expected)]
+    h = a.shape[0]
+    canon = [f * h for f in BIO_RULE_YFRAC]
+    # Pass 1: find whatever rules we can in a wide window to estimate the top-margin
+    # shift d (robust to a missing rule via the median).
+    found = [(c, _best_rule_row(a, int(c), RULE_SEARCH_PX)) for c in canon]
+    offsets = [row - c for c, row in found if row is not None]
+    d = float(np.median(offsets)) if offsets else 0.0
+    # Pass 2: locate each rule tightly around its shifted expected position.
+    rules = []
+    for c in canon:
+        expected = c + d
+        row = _best_rule_row(a, int(round(expected)), RULE_SEARCH_PX)
+        rules.append(row if row is not None else int(round(expected)))
     return sorted(rules)
 
 
 def _side_trim(col_dens: np.ndarray, baseline: float) -> int:
-    """How many leading columns of ``col_dens`` are whitespace, capped.
+    """How many leading columns of ``col_dens`` to trim, capped and padded.
 
     Scans inward from index 0, counting columns whose density is at most
-    :data:`SIDE_TRIM_FACTOR` x ``baseline``; stops at the first denser (content)
-    column or at :data:`SIDE_TRIM_CAP`, whichever comes first.
+    :data:`SIDE_TRIM_FACTOR` x ``baseline`` (whitespace). If it reaches
+    :data:`SIDE_TRIM_CAP` still in whitespace, trims the full cap. If it stops earlier
+    at a content column, trims that far minus :data:`SIDE_TRIM_PAD` (floored at 0) so
+    :data:`SIDE_TRIM_PAD` px of whitespace is kept before the glyphs.
     """
     limit = baseline * SIDE_TRIM_FACTOR
     n = 0
     while n < SIDE_TRIM_CAP and n < len(col_dens) and col_dens[n] <= limit:
         n += 1
-    return n
+    if n >= SIDE_TRIM_CAP:
+        return n
+    return max(0, n - SIDE_TRIM_PAD)
 
 
 def trim_sides(a: np.ndarray) -> np.ndarray:
