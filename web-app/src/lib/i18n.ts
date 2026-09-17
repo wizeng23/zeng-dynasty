@@ -24,8 +24,8 @@ export const translations = {
   people: ["people", "人"],
   loading: ["Loading…", "加载中…"],
   failedToLoad: ["Failed to load:", "加载失败："],
-  searchPlaceholder: ["Search name or pinyin…  ( / )", "搜索姓名或拼音…  ( / )"],
-  searchAriaLabel: ["Search people by name or pinyin", "按姓名或拼音搜索"],
+  searchPlaceholder: ["Search name, pinyin, or #id…  ( / )", "搜索姓名、拼音或 #编号…  ( / )"],
+  searchAriaLabel: ["Search people by name, pinyin, or id", "按姓名、拼音或编号搜索"],
   noMatches: ["No matches.", "无匹配结果。"],
   emptyPanel: [
     "Click a person in the tree to trace their lineage and see their details here.",

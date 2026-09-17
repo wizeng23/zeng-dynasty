@@ -28,6 +28,15 @@ export interface SearchResult {
 
 export const MAX_RESULTS = 20;
 
+// A query of only digits (optionally led by '#', e.g. "47" or "#47") is an ID
+// lookup, not a name search — the result rows show "#<id>", so people search by
+// it. Returns the numeric id, or null when the query isn't a bare id.
+const ID_QUERY = /^#?(\d+)$/;
+export function parseIdQuery(query: string): number | null {
+  const m = query.trim().match(ID_QUERY);
+  return m ? Number(m[1]) : null;
+}
+
 // Build the index once per loaded dataset. Nameless people (image-only crops)
 // are skipped: there is nothing to romanize or match on.
 export function buildSearchIndex(people: Iterable<FamilyNode>): SearchEntry[] {
@@ -108,6 +117,15 @@ function scoreEntry(entry: SearchEntry, q: string): number {
 // Search the index. Empty query -> no results. Returns at most MAX_RESULTS,
 // best match first.
 export function searchPeople(index: SearchEntry[], query: string): SearchResult[] {
+  // ID lookup: a bare number (or "#47") jumps straight to that person. Exact id
+  // is unique, so this returns the single match (or nothing) and skips name/pinyin
+  // scoring entirely.
+  const id = parseIdQuery(query);
+  if (id !== null) {
+    const hit = index.find((e) => e.node.id === id);
+    return hit ? [{ node: hit.node, display: hit.display }] : [];
+  }
+
   const q = stripSurname(normalize(query));
   if (!q) return [];
 

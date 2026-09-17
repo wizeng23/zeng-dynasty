@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchIndex, searchPeople } from "./search";
+import { buildSearchIndex, parseIdQuery, searchPeople } from "./search";
 import type { FamilyNode } from "./tree";
 
 // Minimal node factory — only the fields search cares about.
@@ -120,5 +120,32 @@ describe("searchPeople — ranking & limits", () => {
 
   it("returns nothing when there is no match", () => {
     expect(searchPeople(index, "zzz")).toEqual([]);
+  });
+});
+
+describe("searchPeople — ID lookup", () => {
+  it("finds a person by exact id", () => {
+    const r = searchPeople(index, "1707");
+    expect(r).toHaveLength(1);
+    expect(r[0].node.id).toBe(1707);
+  });
+
+  it("accepts a leading '#' (the format shown in result rows)", () => {
+    expect(searchPeople(index, "#1707")[0].node.id).toBe(1707);
+    expect(searchPeople(index, " #1 ")[0].node.id).toBe(1);
+  });
+
+  it("returns nothing for an id that doesn't exist", () => {
+    expect(searchPeople(index, "999999")).toEqual([]);
+    expect(searchPeople(index, "#999999")).toEqual([]);
+  });
+
+  it("does not treat a Hanzi/pinyin query as an id", () => {
+    // 点's id is 1, but querying its name must not fall through to id logic.
+    expect(searchPeople(index, "点")[0].node.id).toBe(1);
+    expect(parseIdQuery("兴思")).toBeNull();
+    expect(parseIdQuery("xing1")).toBeNull();
+    expect(parseIdQuery("47")).toBe(47);
+    expect(parseIdQuery("#47")).toBe(47);
   });
 });
