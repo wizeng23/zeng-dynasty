@@ -207,6 +207,7 @@ def main(argv: list[str] | None = None) -> None:
 
     _write("book2", recover_book1_book2(), args.force)
     _write("book3", match_by_name("book2", "book3"), args.force)
+    _write("book4", match_by_name("book3", "book4"), args.force)
 
 
 if __name__ == "__main__":

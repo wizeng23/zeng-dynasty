@@ -185,6 +185,19 @@ def stitch_nodes(nodes: list[Node], merges: list[tuple[str, str]]) -> list[Node]
     prov_of = {n.id: _provenance(n.notes) for n in nodes}
 
     dropped_ids: set[int] = set()
+    # Where a dropped node's identity moved to. When a node is folded away it may
+    # later be named as another merge's canonical (a re-printed ancestor chain
+    # spanning >2 graphs: A<-B and B<-C, so B is a target then a source). Following
+    # this map to the surviving node keeps such a chain from attaching children to a
+    # dead id (which BFS would later hit, absent from the renumber map).
+    folded_into: dict[int, int] = {}
+
+    def _survivor(node: Node) -> Node:
+        seen: set[int] = set()
+        while node.id in folded_into and node.id not in seen:
+            seen.add(node.id)
+            node = by_id[folded_into[node.id]]
+        return node
 
     def fold(canon: Node, dup: Node) -> None:
         """``canon`` absorbs ``dup`` (the same person printed twice).
@@ -220,6 +233,7 @@ def stitch_nodes(nodes: list[Node], merges: list[tuple[str, str]]) -> list[Node]
         trace = f"{prov_of[canon.id]}/{prov_of[dup.id]}"
         canon.notes = f"{trace} | {canon_tags}" if canon_tags else trace
         dropped_ids.add(dup.id)
+        folded_into[dup.id] = canon.id
 
     # 1. Merge: fold each duplicate root into its canonical node.
     for dup_prov, canon_prov in merges:
@@ -235,6 +249,12 @@ def stitch_nodes(nodes: list[Node], merges: list[tuple[str, str]]) -> list[Node]
                 f"duplicate {dup_prov!r} (id {dup.id}) is not a root "
                 f"(father={dup.father}); merge list is inconsistent"
             )
+        # If this canonical was itself folded away by an earlier merge (a chain
+        # A<-B, B<-C), redirect to the node it survives as, so children never
+        # attach to a dropped id.
+        canon = _survivor(canon)
+        if canon.id == dup.id:
+            continue  # a chain that folds a node into itself -- nothing to do
         # A valid seam joins the SAME person, so the two nodes' names must agree
         # (a subtree-start page reprints the parent's name). A mismatch means the
         # merge is wrong -- the failure mode that silently mis-connected 7 of Book

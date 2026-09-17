@@ -36,6 +36,7 @@ CLI::
 from __future__ import annotations
 
 import argparse
+import collections
 import dataclasses
 import json
 import logging
@@ -136,26 +137,27 @@ def _rebase_floaters(nodes: list[Node]) -> None:
         return seen
 
     main = component(main_root.id)
-    # 字辈 char -> its (unique) absolute generation in the main tree.
-    char_gen: dict[str, int] = {}
-    ambiguous: set[str] = set()
+    # 字辈 char -> the absolute generation its cohort sits at in the main tree. A
+    # generation-name can appear at a stray off-generation too (an OCR homograph, or
+    # a genuinely different person sharing the char), so we take the MODAL generation
+    # -- the one the overwhelming majority share -- not a unique value.
+    char_gen_counts: dict[str, collections.Counter] = collections.defaultdict(
+        collections.Counter)
     for nid in main:
         n = by_id[nid]
         if n.name:
-            c = n.name[0]
-            if c in char_gen and char_gen[c] != n.generation:
-                ambiguous.add(c)
-            char_gen[c] = n.generation
+            char_gen_counts[n.name[0]][n.generation] += 1
+    char_gen = {c: counts.most_common(1)[0][0] for c, counts in char_gen_counts.items()}
 
     for root in roots:
         if root.id == main_root.id:
             continue
         c = root.name[0] if root.name else ""
         target = char_gen.get(c)
-        if target is None or c in ambiguous:
+        if target is None:
             logger.warning(
-                "floater root id=%d name=%r: 字辈 %r not uniquely placed in main "
-                "tree; leaving generations as-is", root.id, root.name, c)
+                "floater root id=%d name=%r: 字辈 %r not found in main tree; "
+                "leaving generations as-is", root.id, root.name, c)
             continue
         shift = target - root.generation
         if shift:
