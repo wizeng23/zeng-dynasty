@@ -41,7 +41,7 @@ import os
 import numpy as np
 from PIL import Image
 
-from src.bio.s1_crops import BIO_DIR, _longest_run, section_first_pages
+from src.bio.s1_crops import BIO_DIR, SKIP_PAGES, _longest_run, section_first_pages
 from src.imaging import get_image, save_image
 from src.s2_classify_pages import BIO_RULE_YFRAC, load_bio_pages
 
@@ -225,14 +225,22 @@ def merge_section(pages: list[np.ndarray]) -> np.ndarray:
     return np.hstack(list(reversed(aligned)))
 
 
-def bio_sections_from(bio_pages: set[int], first_pages: set[int]) -> list[list[int]]:
+def bio_sections_from(bio_pages: set[int], first_pages: set[int],
+                      skip: set[int] | None = None) -> list[list[int]]:
     """Group bio pages into sections: contiguous runs starting at a first page.
 
     A section begins at each page in ``first_pages`` and runs through the following
     consecutive page numbers up to (but not including) the next section start. A
     non-contiguous jump *within* a section (a missing/misclassified page) raises --
     welding across a page-number gap is a bug, not a wide section.
+
+    ``skip`` pages are DELIBERATE exclusions (e.g. Book 4 p214, whose branch has no
+    tree graph -- see :data:`~src.bio.s1_crops.SKIP_PAGES`). Contiguity is checked on
+    the full run *including* a skipped page (it is present in ``bio_pages``, so it keeps
+    the run contiguous and a genuinely missing page still raises); the skipped page is
+    then dropped from the returned run, which may leave an intended gap.
     """
+    skip = skip or set()
     ordered = sorted(bio_pages)
     starts = sorted(first_pages)
     sections: list[list[int]] = []
@@ -246,7 +254,9 @@ def bio_sections_from(bio_pages: set[int], first_pages: set[int]) -> list[list[i
                     f"not contiguous (gap {a + 1}..{b - 1}); a page is missing or "
                     f"misclassified -- refusing to merge across the gap"
                 )
-        sections.append(run)
+        kept = [p for p in run if p not in skip]
+        if kept:
+            sections.append(kept)
     return sections
 
 
@@ -278,7 +288,7 @@ def merge_book(book: str, books_dir: str = "books", qa: bool = True) -> list[str
         logger.warning("no biography pages for %s", book)
         return []
     first_pages = section_first_pages(book, bio_pages, books_dir=books_dir)
-    sections = bio_sections_from(bio_pages, first_pages)
+    sections = bio_sections_from(bio_pages, first_pages, skip=SKIP_PAGES.get(book, set()))
 
     crops_dir = os.path.join(books_dir, book, BIO_DIR, "1_crops")
     out_dir = os.path.join(books_dir, book, BIO_DIR, MERGED_DIR)

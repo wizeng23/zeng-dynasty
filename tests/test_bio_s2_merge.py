@@ -232,3 +232,25 @@ def test_bio_sections_raises_on_gap_within_a_section() -> None:
     # means a page is missing or misclassified -- never weld across it.
     with pytest.raises(ValueError, match="gap"):
         m.bio_sections_from(bio_pages={2, 3, 5}, first_pages={2})
+
+
+def test_bio_sections_drops_skipped_page_from_its_section() -> None:
+    # Book 4 p214 is deliberately excluded (its branch has no tree graph). It must be
+    # dropped from its section run, leaving the rest.
+    sections = m.bio_sections_from(
+        bio_pages={211, 212, 213, 214},
+        first_pages={211},
+        skip={214},
+    )
+    assert sections == [[211, 212, 213]]
+
+
+def test_bio_sections_skip_in_middle_does_not_trigger_gap() -> None:
+    # A deliberate skip in the MIDDLE of a run is an exclusion, not a missing page:
+    # dropping it must not raise the contiguity gap error.
+    sections = m.bio_sections_from(
+        bio_pages={5, 6, 7, 8},
+        first_pages={5},
+        skip={7},
+    )
+    assert sections == [[5, 6, 8]]
