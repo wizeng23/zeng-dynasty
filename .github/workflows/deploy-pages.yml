@@ -6,11 +6,14 @@ name: Deploy website to GitHub Pages
 on:
   push:
     branches: [main]
+    # Redeploy only when the site or the data it actually publishes changes. The
+    # build runs `bun run export-data`, which reads exactly `data/tree.jsonl` (the
+    # cross-stitched 4-book tree), so that -- not all of data/ -- is the data
+    # trigger. Name-crop images live in books/*/5_names/ but are gitignored (never
+    # committed; the runner regenerates none), so there's no crop path to watch.
     paths:
       - "web-app/**"
-      - "data/**"
-      - "books/book1/names/**"
-      - "books/book2/names/**"
+      - "data/tree.jsonl"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
