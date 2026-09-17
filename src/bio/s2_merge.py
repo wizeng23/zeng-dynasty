@@ -62,6 +62,16 @@ RULE_SNAP_TOL = 120
 # ruled region (skew / scale mismatch) and the merge hard-fails.
 BOTTOM_RULE_TOL = 50
 
+# Side-margin trim before joining. Each page carries ~100px of edge whitespace and
+# ~60px inter-column gaps; a naive join doubles a seam-crossing gap to ~200px. Trim
+# up to SIDE_TRIM_CAP px of *whitespace* off each side -- scanning inward, stopping
+# at the first column denser than SIDE_TRIM_FACTOR x the page's whitespace baseline.
+# The baseline is a page's minimum column density (~0.004: the 4 horizontal rules
+# crossing an otherwise-blank column). Text columns run ~6-9x baseline (0.025-0.037),
+# so a 2x stop halts right at the text ramp without clipping the outermost glyphs.
+SIDE_TRIM_CAP = 80
+SIDE_TRIM_FACTOR = 2.0
+
 QA_DIR = "qa"
 QA_SUBDIR = "bio_s2"
 QA_SCALE = 6
@@ -130,6 +140,36 @@ def find_rules(a: np.ndarray) -> list[int]:
             slots[si] = int(y)
     rules = [s if s is not None else int(round(e)) for s, e in zip(slots, expected)]
     return sorted(rules)
+
+
+def _side_trim(col_dens: np.ndarray, baseline: float) -> int:
+    """How many leading columns of ``col_dens`` are whitespace, capped.
+
+    Scans inward from index 0, counting columns whose density is at most
+    :data:`SIDE_TRIM_FACTOR` x ``baseline``; stops at the first denser (content)
+    column or at :data:`SIDE_TRIM_CAP`, whichever comes first.
+    """
+    limit = baseline * SIDE_TRIM_FACTOR
+    n = 0
+    while n < SIDE_TRIM_CAP and n < len(col_dens) and col_dens[n] <= limit:
+        n += 1
+    return n
+
+
+def trim_sides(a: np.ndarray) -> np.ndarray:
+    """Trim whitespace side-margins off a page so a seam gap is not doubled.
+
+    Removes up to :data:`SIDE_TRIM_CAP` px of whitespace from the left and right
+    edges, stopping each side at its first content column (see :func:`_side_trim`).
+    The whitespace baseline is the page's minimum column density -- the 4 horizontal
+    rules crossing an otherwise-blank column -- so the rules themselves are preserved
+    (they span the full height; trimming columns only shortens them).
+    """
+    col_dens = (1 - a).sum(axis=0) / a.shape[0]
+    baseline = float(col_dens.min())
+    left = _side_trim(col_dens, baseline)
+    right = _side_trim(col_dens[::-1], baseline)
+    return a[:, left:a.shape[1] - right]
 
 
 def _pad_top(a: np.ndarray, n: int) -> np.ndarray:
@@ -250,7 +290,8 @@ def merge_book(book: str, books_dir: str = "books", qa: bool = True) -> list[str
     written: list[str] = []
     for run in sections:
         stem = f"{run[0]}_{run[-1]}"
-        pages = [get_image(os.path.join(crops_dir, f"{p}.png")) for p in run]
+        pages = [trim_sides(get_image(os.path.join(crops_dir, f"{p}.png")))
+                 for p in run]
         try:
             merged = merge_section(pages)
         except ValueError as exc:

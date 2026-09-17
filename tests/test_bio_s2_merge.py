@@ -78,6 +78,54 @@ def test_find_rules_snaps_missing_faint_rules_to_canonical() -> None:
         assert abs(got - f * h) <= 15
 
 
+# --- trim_sides ---------------------------------------------------------------
+
+def _bio_page(h: int, w: int, text_left: int, text_right: int) -> np.ndarray:
+    """A page with the 4 rules and a text block spanning [text_left, text_right).
+
+    Text columns ink far more than the rule-only whitespace columns, mimicking real
+    pages (whitespace ~0.004, text ~0.03).
+    """
+    a = np.ones((h, w), dtype=np.uint8)
+    for f in BIO_RULE_YFRAC:
+        y = int(f * h)
+        a[y:y + RULE, :] = 0                       # rules cross every column
+    a[:, text_left:text_right] = 1                 # clear, then draw dense text
+    for c in range(text_left, text_right):
+        a[100:100 + int(0.03 * h), c] = 0          # ~0.03 density text columns
+    return a
+
+
+def test_trim_sides_removes_whitespace_up_to_the_cap() -> None:
+    # Text sits 200px in from each side; only the 80px cap of whitespace comes off.
+    h, w = 4000, 1000
+    a = _bio_page(h, w, text_left=200, text_right=w - 200)
+    trimmed = m.trim_sides(a)
+    assert trimmed.shape[1] == w - 160  # 80 off each side
+
+
+def test_trim_sides_stops_at_content_within_the_cap() -> None:
+    # Text starts only 30px in on the left: the left trim must stop at the text, not
+    # cut 80px into it. Right side has 200px whitespace -> full 80px off.
+    h, w = 4000, 1000
+    a = _bio_page(h, w, text_left=30, text_right=w - 200)
+    trimmed = m.trim_sides(a)
+    # left trimmed ~30 (up to content), right trimmed 80.
+    assert w - trimmed.shape[1] <= 30 + 80
+    assert w - trimmed.shape[1] >= 25 + 80  # left cut is close to the 30px content
+    # The first text column must survive: leftmost surviving column is dense.
+    col_dens = (1 - trimmed).sum(axis=0) / trimmed.shape[0]
+    assert col_dens[0] > 0.02
+
+
+def test_trim_sides_keeps_horizontal_rules() -> None:
+    # Trimming columns must not remove the rules (they span full height); they just
+    # get shorter. find_rules still sees 4 rules after trimming.
+    a = _bio_page(4000, 1000, text_left=200, text_right=800)
+    trimmed = m.trim_sides(a)
+    assert len(m.find_rules(trimmed)) == 4
+
+
 # --- merge_section ------------------------------------------------------------
 
 def test_merge_section_places_first_page_on_the_right() -> None:
