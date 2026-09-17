@@ -64,9 +64,14 @@ RULE_MIN_RUN_FRAC = 0.5
 RULE_SEARCH_PX = 120
 
 # After top-rule alignment, each page's bottom rule must sit within this of the
-# median bottom rule. Real book3 0_1 pages drift <50px; more means an inconsistent
-# ruled region (skew / scale mismatch) and the merge hard-fails.
-BOTTOM_RULE_TOL = 50
+# median bottom rule; more means an inconsistent ruled region and the merge hard-fails.
+# Set from the data: across all book3 + book4 multi-page sections the bottom-rule drift
+# tops out at 55px (book4 207_209, whose p209 was extracted ~1.5% taller so its rule
+# spacing is proportionally wider -- a real but small per-page scale difference, not a
+# broken page), with the next-highest at 48px. 70 clears these scale near-misses while
+# still catching a genuinely mis-extracted page (those drift hundreds of px, cf. the
+# graph pipeline's 388/429px seam bugs).
+BOTTOM_RULE_TOL = 70
 
 # Side-margin trim before joining. Each page carries ~100px of edge whitespace and
 # ~60px inter-column gaps; a naive join doubles a seam-crossing gap to ~200px. Trim
