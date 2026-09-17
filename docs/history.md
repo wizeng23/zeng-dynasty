@@ -428,6 +428,33 @@ commits on `main`, William pushes.
 
 ---
 
+## Era 12 — Bio geometric parse, stage 1 (border crops) for Books 3 & 4 (2026-09-17)
+
+Started the geometric biography parser (design:
+`docs/specs/2026-09-17-bio-geometric-parse-design.md`), its own sub-pipeline
+(`src/bio/sN_*.py` → `books/N/bio/N_...`, renumbered from 1), superseding the
+text-first bio linker.
+
+**Stage 1 (`s1_crops`)** — crop the printed frame off every bio page. Verified the
+book alternates one graph run then its bio section 1:1 (Books 3 & 4 both strict
+`GBGB`); derive a section's first page from page *ordering*, not the unreliable
+`follows_graph`. Frame geometry is William's **x/y/z model**: ~40px thin rule (x) all
+sides, ~220px label band (y) on the thick side (left if even / right if odd), ~730px
+右 marker band (z) on a section's first page. Detect each rule by **longest continuous
+run** (not ink density — faded/broken rules keep a 2000px+ run while text tops ~200px;
+density missed b3 p30/p60 and b4 empty-cell marker bands), cut just inside the
+innermost rule, per-side search window capped to that side's max frame width.
+`check_frame` sanity-checks each trim vs x/y/z (100px tol) + a no-leftover-line edge
+invariant. QA = red kept-region box on the untouched page. **Book 3: 251 pages, Book
+4: 183, both 0 flags.**
+
+**Data gap found:** Book 4 p214 (庆炆房系 branch) has a marker band but its tree-graph
+page is missing from the parse (graph 210 is 庆炎-only, no 庆炆 graph 206–215; page
+numbers contiguous → dropped upstream). Skipped via `SKIP_PAGES`; the missing graph is
+an upstream graph-pipeline gap to fix later.
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1
