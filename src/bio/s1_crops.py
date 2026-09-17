@@ -1,24 +1,25 @@
-"""Bio stage 1: crop borders off every biography page.
+"""Bio stage 1: crop the printed frame off every biography page.
 
-Reads the classified biography pages (:func:`src.s2_classify_pages.load_bio_pages`),
-trims the outer printed frame with :func:`src.s3_segment.trim_borders`, and -- on
-the *first* bio page of each subgraph only -- trims the right-hand marker band (the
-big vertical ``传禄房系``-style branch label plus the ``派``/``世`` generation-marker
-columns). That band is printed only on a subgraph's opening page, so a blanket
-right-trim would eat real bio content on the following pages; here we detect its
-left boundary as the leftmost full-height vertical rule inside the right margin and
-cut there.
-
-The left title band (``武城曾氏重修族谱`` + page number) is not present on the pages
-measured for Book 3's ``0_1`` subgraph -- ``trim_borders`` already removes the frame
-and the left edge is bio content -- so no extra left trim is applied.
+For each classified biography page (:func:`src.s2_classify_pages.load_bio_pages`) we
+detect the page frame by run-length line detection and cut just inside the innermost
+rule on each side, then -- on a bio section's first page -- also trim the right marker
+band. See the module functions for the frame geometry (x/y/z model) and detection.
 
 Output: ``books/{book}/bio/1_crops/{page}.png`` (binary ink grid, 0=ink/1=bg).
-QA: ``books/{book}/qa/bio_s1/{page}.png`` -- a downscaled view of the frame-trimmed
-page with a red box around the kept (cropped) region.
+QA: ``books/{book}/qa/bio_s1/{page}.png`` -- the ORIGINAL page downscaled with a red
+box around the kept (cropped) region.
 
 Horizontal rule lines are intentionally left in place; the merge/band-split stage
 uses them to slice the 5 generation-bands.
+
+KNOWN DATA GAP -- Book 4 page 214 (printed pg 215): this page starts the 庆炆房系
+branch (庆炆 -> 繁炉 -> 祥亮/祥成) and carries its own right marker band, but that
+branch's TREE-GRAPH page is missing from the parsed graphs -- graph 210_210 is 庆炎's
+subtree only, and there is no 庆炆 graph between graphs 206/210/215. Printed page
+numbers are contiguous, so the 庆炆 graph was dropped/unparsed upstream (graph
+pipeline), not physically missing. Because it has no graph page, section_first_pages()
+does not treat p214 as a section start, so its marker band would be left in the crop.
+We SKIP p214 here (see ``SKIP_PAGES``); resolve the missing 庆炆 graph upstream later.
 
 Run:
     PYTHONPATH=. python -m src.bio.s1_crops --book book3
@@ -41,6 +42,13 @@ logger = logging.getLogger(__name__)
 
 BIO_DIR = "bio"
 CROPS_DIR = "1_crops"
+
+# Bio pages to skip entirely (not cropped) -- pages whose branch has no parsed tree
+# graph, so they cannot be section-classified or attached downstream. See the module
+# docstring's KNOWN DATA GAP note. Keyed by book.
+SKIP_PAGES: dict[str, set[int]] = {
+    "book4": {214},  # 庆炆房系 branch start; its tree-graph page is missing upstream
+}
 
 # The right marker band (vertical branch label + 派/世 columns) is printed on the
 # FIRST page of each bio section and nowhere else. The book alternates graph run
@@ -395,6 +403,7 @@ def crop_book(book: str, books_dir: str = "books", qa: bool = True) -> int:
         logger.warning("no biography pages for %s", book)
         return 0
     first_pages = section_first_pages(book, bio_pages, books_dir=books_dir)
+    skip = SKIP_PAGES.get(book, set())
 
     pages_dir = os.path.join(books_dir, book, "1_pages")
     out_dir = os.path.join(books_dir, book, BIO_DIR, CROPS_DIR)
@@ -406,6 +415,9 @@ def crop_book(book: str, books_dir: str = "books", qa: bool = True) -> int:
     n = 0
     flagged = 0
     for page in sorted(bio_pages):
+        if page in skip:
+            logger.info("page %d: SKIPPED (known data gap; see SKIP_PAGES)", page)
+            continue
         src_path = os.path.join(pages_dir, f"{page}.png")
         if not os.path.exists(src_path):
             logger.warning("missing page image %s", src_path)
