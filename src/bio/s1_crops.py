@@ -65,17 +65,24 @@ RULE_COL_COVERAGE = 0.25
 # thick side is the LEFT on even pages and the RIGHT on odd pages. A section-start
 # page also has a ~z-px marker band on the right (whitespace + two 派/世 columns).
 #
-# We do NOT hardcode these widths: on each side we find the frame rules (high-coverage
-# lines near the edge) and cut just past the INNERMOST one -- so content is never
-# clipped even as the exact widths drift. The reference values below are used only to
-# SANITY-CHECK the detected trim per side and flag any page that deviates.
+# We do NOT hardcode these widths: on each side we DETECT the frame rules and cut
+# just past the relevant one, so content is never clipped as widths drift. The
+# reference values below are used only to SANITY-CHECK the detected trim per side.
+#
+# A frame rule is a full-length straight line. We detect it by its LONGEST CONTINUOUS
+# INK RUN along the line, NOT by total ink density: an ADF-faded line (or one crossed
+# by the horizontal cell rules) can have only ~40% total coverage yet still contain a
+# single unbroken 2000px+ run, while the densest CONTENT column tops out ~200px. So a
+# run-length test separates lines from text with a ~10x margin, where a density
+# threshold missed faded lines (Book 3 p30/p60 label rules at 0.40 coverage). Small
+# gaps (breaks, crossing rules) are bridged by LINE_GAP.
 #
 # The graph pipeline's src.s3_segment.trim_borders (fixed ~87/348px insets) is left
 # untouched; it overshot by ~300px and clipped left-edge bio text (page 18's 广堂).
 BORDER_SEARCH_PX = 400   # frame rules sit within this margin of each edge
-BORDER_HI = 0.50         # a frame rule is a line >= this ink coverage
-BORDER_LO = 0.30         # ... continued inward while coverage stays >= this
-BORDER_MARGIN = 8        # px of air kept just inside the innermost rule
+LINE_MIN_FRAC = 0.20     # a line's longest run must span >= this fraction of the axis
+LINE_GAP = 40            # px of gap bridged within one run (ADF breaks, crossing rules)
+BORDER_MARGIN = 8        # px of air kept just inside the detected rule
 
 # Reference frame widths (px) for the sanity check, and tolerance.
 REF_X = 40    # thin border inset (all sides)
@@ -84,6 +91,14 @@ REF_Z = 730   # marker band, added on the right of a section-start page
 # A detected side trim must be within this of its expected width. Generous because
 # the upstream 1_pages extraction may itself over/under-trim a page's edges.
 FRAME_TOL = 100
+
+# Post-crop invariant: after a correct crop no FRAME LINE remains in the outer band.
+# We flag a leftover line, not mere ink -- legitimate bio text can run right up to a
+# correctly-cut frame (near-empty pages), so a plain ink-density test false-positives.
+# A leftover frame line is unmistakable by its continuous run (>= this fraction of the
+# perpendicular dimension); text in the band tops out far below that.
+EDGE_LINE_COLS = 40       # width of the outer band checked on each side
+EDGE_LINE_FRAC = 0.50     # a run this fraction of the axis in the band = leftover line
 
 QA_DIR = "qa"
 QA_SUBDIR = "bio_s1"
@@ -122,94 +137,140 @@ def section_first_pages(book: str, bio_pages: set[int],
     return firsts
 
 
-def _frame_lines(cov: np.ndarray) -> list[tuple[int, int]]:
-    """Frame rules near one edge, as ``(start, end)`` runs, innermost last.
-
-    ``cov`` is per-line ink coverage running inward FROM the edge. A rule is a run
-    starting at coverage >= :data:`BORDER_HI`, continued while >= :data:`BORDER_LO`
-    (hysteresis, so a thick line stays one run). Only the outer
-    :data:`BORDER_SEARCH_PX` are scanned.
-    """
-    runs: list[tuple[int, int]] = []
-    i = 0
-    while i < BORDER_SEARCH_PX:
-        if cov[i] >= BORDER_HI:
-            start = i
-            while i < len(cov) and cov[i] >= BORDER_LO:
-                i += 1
-            runs.append((start, i))
+def _longest_run(mask: np.ndarray, gap: int = LINE_GAP) -> int:
+    """Longest run of ``True`` in ``mask``, bridging gaps of up to ``gap`` False."""
+    best = cur = 0
+    misses = gap + 1
+    for v in mask:
+        if v:
+            if misses <= gap:
+                cur += misses  # count the bridged gap as part of the run
+            cur += 1
+            misses = 0
+            if cur > best:
+                best = cur
         else:
-            i += 1
-    return runs
+            misses += 1
+            if misses > gap:
+                cur = 0
+    return best
 
 
-def _thin_inset(cov: np.ndarray) -> int:
-    """Inset past a THIN side's single frame rule (the ~x line).
+def _line_positions(a: np.ndarray, axis: int) -> np.ndarray:
+    """Indices (along ``axis``) of full-length straight lines in ``a``.
 
-    Cuts just past the innermost detected rule within the search window. Falls back
-    to ``REF_X`` when no rule is found (a faded border on a near-empty page).
+    ``axis==1`` finds vertical lines (indexed by column, each spanning the height);
+    ``axis==0`` finds horizontal lines (indexed by row, each spanning the width). A
+    line is present when its longest continuous ink run spans at least
+    :data:`LINE_MIN_FRAC` of its length. Returns the sorted line indices.
     """
-    runs = _frame_lines(cov)
-    if not runs:
-        return REF_X
-    return runs[-1][1] + BORDER_MARGIN
+    n = a.shape[axis]                    # number of candidate lines
+    span = a.shape[1 - axis]             # length each line runs
+    min_run = int(LINE_MIN_FRAC * span)
+    hits = []
+    for i in range(n):
+        line = (1 - (a[:, i] if axis == 1 else a[i, :])).astype(bool)
+        if _longest_run(line) >= min_run:
+            hits.append(i)
+    return np.array(hits, dtype=int)
 
 
-def _thick_inset(cov: np.ndarray) -> int:
-    """Inset past a THICK side's label band -- just past the label's inner rule.
+def _line_groups(positions: np.ndarray, tol: int = 6) -> list[tuple[int, int]]:
+    """Collapse adjacent line indices into rule spans ``(start, end)`` (end inclusive)."""
+    if positions.size == 0:
+        return []
+    groups: list[list[int]] = [[int(positions[0])]]
+    for p in positions[1:]:
+        if int(p) - groups[-1][-1] <= tol:
+            groups[-1].append(int(p))
+        else:
+            groups.append([int(p)])
+    return [(g[0], g[-1]) for g in groups]
 
-    The thick side is: x-rule, then the ~y-px label band, then the label's inner
-    rule. We want to cut past that inner rule (at ~x+y). Detect it as the innermost
-    rule that sits beyond the x-rule (i.e. past ~REF_X), searching a window wide
-    enough to include x+y. The label's inner rule can fade below :data:`BORDER_HI`
-    on ADF-degraded pages, so when no rule is found near x+y, fall back to the
-    reference ``REF_X + REF_Y`` position (the sanity check will still flag a page
-    whose true geometry differs).
+
+def _side_rules(a: np.ndarray, side: str, win: int) -> list[tuple[int, int]]:
+    """Frame-rule spans within ``win`` px of one ``side``, in ABSOLUTE coordinates.
+
+    ``(start, end)`` runs ordered from the edge inward.
     """
-    runs = _frame_lines(cov)
-    # The label-inner rule sits near x+y; require it well past the x double-line
-    # (which can itself appear as a second run ~50-70px in). Anything closer is the
-    # frame's own thin lines, not the label edge.
-    label_min = REF_X + REF_Y // 2
-    inner = [r for r in runs if r[0] > label_min]
-    if inner:
-        return inner[-1][1] + BORDER_MARGIN
-    return REF_X + REF_Y
+    rows, cols = a.shape
+    if side == "left":
+        return _line_groups(_line_positions(a[:, :win], axis=1))
+    if side == "right":
+        base = cols - win
+        return [(base + s, base + e)
+                for s, e in _line_groups(_line_positions(a[:, -win:], axis=1))]
+    if side == "top":
+        return _line_groups(_line_positions(a[:win, :], axis=0))
+    base = rows - win
+    return [(base + s, base + e)
+            for s, e in _line_groups(_line_positions(a[-win:, :], axis=0))]
+
+
+def _cut(a: np.ndarray, side: str, fallback: int, win: int) -> int:
+    """Crop coordinate for ``side``: just inside its INNERMOST frame rule.
+
+    The correct crop line is the innermost detected rule span within ``win`` of the
+    edge -- the ~x thin rule on a thin side, the label's inner rule (~x+y) on a thick
+    side, or (on a near-empty page where the ADF smeared the border and x-rule into
+    one blob) that single span. ``win`` is capped per side by the caller so a marker-
+    band rule (only on the right of a section-start page, handled separately) is never
+    mistaken for the frame. We cut at that span's CONTENT-facing edge plus a small
+    margin, so no rule stays in the crop and text is never clipped. Falls back to a
+    thin ``fallback`` inset when no rule is detected at all.
+
+    Returns an absolute row/col: a low coord for left/top sides, high for right/bottom.
+    """
+    rows, cols = a.shape
+    spans = _side_rules(a, side, win)
+    if not spans:
+        if side in ("left", "top"):
+            return fallback
+        return (cols if side == "right" else rows) - fallback
+    if side in ("left", "top"):
+        return spans[-1][1] + BORDER_MARGIN            # inner edge of innermost span
+    return spans[0][0] - BORDER_MARGIN                 # right/bottom: innermost = first
 
 
 def _frame_box(a: np.ndarray, page: int) -> tuple[int, int, int, int]:
     """The outer-frame crop rectangle ``(top, bottom, left, right)`` for ``a``.
 
-    Top and bottom are thin sides (~x). The thick side (label band, ~x+y) is the
-    LEFT on even pages and the RIGHT on odd pages; the other horizontal side is thin
-    (~x). Cuts are made just past each side's innermost frame rule so text is never
-    clipped. Returned in ORIGINAL page coordinates; the crop is
-    ``a[top:bottom, left:right]``. The marker band (z) is handled separately.
+    Each side is cut just inside its innermost frame rule (:func:`_cut`), found by
+    run-length line detection -- so the label band on the thick side is removed and
+    text is never clipped. The per-side search window is capped to that side's maximum
+    frame width so a marker-band rule is never mistaken for the frame: a thin side
+    caps at x, a thick side at x+y. The marker side is the RIGHT of section-start
+    pages, where the band (z, further in) is trimmed separately in :func:`crop_box`;
+    its frame width is x (even) or x+y (odd). Parity feeds only these window caps
+    (and the sanity check), not the cut rule itself. Returned in ORIGINAL coordinates.
     """
-    rows, cols = a.shape
-    col_cov = np.sum(1 - a, axis=0) / rows   # per column (density down the page)
-    row_cov = np.sum(1 - a, axis=1) / cols   # per row (density across the page)
-    top = _thin_inset(row_cov)
-    bottom = rows - _thin_inset(row_cov[::-1])
-    if page % 2 == 0:  # even -> thick left, thin right
-        left = _thick_inset(col_cov)
-        right = cols - _thin_inset(col_cov[::-1])
-    else:              # odd -> thin left, thick right
-        left = _thin_inset(col_cov)
-        right = cols - _thick_inset(col_cov[::-1])
+    thin = REF_X + FRAME_TOL              # covers a thin (x) side
+    thick = REF_X + REF_Y + FRAME_TOL     # covers a thick (x+y) side
+    even = page % 2 == 0
+    left_win = thick if even else thin
+    right_win = thin if even else thick
+    top = _cut(a, "top", REF_X, thin)
+    bottom = _cut(a, "bottom", REF_X, thin)
+    left = _cut(a, "left", REF_X, left_win)
+    right = _cut(a, "right", REF_X, right_win)
     return top, bottom, left, right
 
 
-def check_frame(box: tuple[int, int, int, int], shape: tuple[int, int],
-                page: int, is_first: bool) -> list[str]:
-    """Sanity-check a page's per-side trim against the x/y/z frame model.
+def check_frame(box: tuple[int, int, int, int], cropped: np.ndarray,
+                orig_shape: tuple[int, int], page: int, is_first: bool) -> list[str]:
+    """Sanity-check a page's crop. Returns human-readable warnings (empty if clean).
 
-    Expected trim widths: x on top/bottom; x+y on the thick side (left if page even,
-    right if odd); x (+z if section-start) on the thin/right side. Returns a list of
-    human-readable warnings for sides that deviate by more than :data:`FRAME_TOL`.
+    Two independent checks:
+    1. Per-side trim vs the x/y/z frame model -- x on top/bottom; x+y on the thick
+       side (left if page even, right if odd); x (+z if section-start) on the right --
+       flagging any side off by more than :data:`FRAME_TOL`.
+    2. Post-crop invariant -- no FRAME LINE remains in the outer
+       :data:`EDGE_LINE_COLS` band of the CROPPED image (a continuous run >=
+       :data:`EDGE_LINE_FRAC` of the axis). Legitimate bio text may sit in that band,
+       so this checks for a leftover line, not mere ink.
     """
     top, bottom, left, right = box
-    rows, cols = shape
+    rows, cols = orig_shape
     even = page % 2 == 0
     exp = {
         "top": REF_X,
@@ -223,25 +284,48 @@ def check_frame(box: tuple[int, int, int, int], shape: tuple[int, int],
     for side, e in exp.items():
         if abs(got[side] - e) > FRAME_TOL:
             warns.append(f"{side} trim {got[side]}px, expected ~{e}px")
+
+    crows, ccols = cropped.shape
+    k = EDGE_LINE_COLS
+    for side in ("left", "right", "top", "bottom"):
+        if side in ("left", "right"):
+            band = cropped[:, :k] if side == "left" else cropped[:, -k:]
+            axis_len, line_axis = crows, 1
+        else:
+            band = cropped[:k, :] if side == "top" else cropped[-k:, :]
+            axis_len, line_axis = ccols, 0
+        pos = _line_positions_thresh(band, line_axis, int(EDGE_LINE_FRAC * axis_len))
+        if pos:
+            warns.append(f"{side} edge: frame line left in crop")
     return warns
+
+
+def _line_positions_thresh(a: np.ndarray, axis: int, min_run: int) -> bool:
+    """True if any line along ``axis`` in ``a`` has an ink run >= ``min_run``."""
+    n = a.shape[axis]
+    for i in range(n):
+        line = (1 - (a[:, i] if axis == 1 else a[i, :])).astype(bool)
+        if _longest_run(line) >= min_run:
+            return True
+    return False
 
 
 def right_band_cut(a: np.ndarray) -> int | None:
     """Column at which to cut off the right marker band, or ``None`` if absent.
 
-    ``a`` is the frame-trimmed page. Scans the rightmost :data:`RIGHT_BAND_SEARCH_PX`
-    columns for full-height vertical rules (>= :data:`RULE_COL_COVERAGE` ink). The
-    marker band lies to the right of the *leftmost* such rule, so that rule's column
-    is the cut point (the kept region is ``a[:, :cut]``). Returns ``None`` when no
-    rule is found.
+    ``a`` is the frame-trimmed page. The marker band's 派/世 columns are bounded by
+    full-height vertical rules; its LEFT boundary is the leftmost such rule within
+    :data:`RIGHT_BAND_SEARCH_PX` of the right edge, and that is the cut point (kept
+    region ``a[:, :cut]``). Rules are found by run-length (the band's outer rule can
+    fade / bound empty cells, so a density test missed it and cut the band short --
+    Book 4 p227/p229/p241); returns ``None`` when no rule is found.
     """
-    rows, cols = a.shape
+    cols = a.shape[1]
     lo = max(0, cols - RIGHT_BAND_SEARCH_PX)
-    cov = np.sum(1 - a[:, lo:], axis=0) / rows
-    rule_cols = np.nonzero(cov >= RULE_COL_COVERAGE)[0]
-    if rule_cols.size == 0:
+    spans = _line_groups(_line_positions(a[:, lo:], axis=1))
+    if not spans:
         return None
-    return lo + int(rule_cols.min())
+    return lo + spans[0][0]  # leftmost rule's left edge = band's left boundary
 
 
 def crop_box(a: np.ndarray, page: int, trim_right_band: bool
@@ -255,9 +339,17 @@ def crop_box(a: np.ndarray, page: int, trim_right_band: bool
     """
     top, bottom, left, right = _frame_box(a, page)
     if trim_right_band:
-        cut = right_band_cut(a[top:bottom, left:right])
-        if cut is not None:
-            right = left + cut
+        sub_w = right - left
+        detected = right_band_cut(a[top:bottom, left:right])
+        # The marker band's outer rule can be too broken to detect when its 派/世 cells
+        # are empty (Book 4 p229/p282). We KNOW a section-first page has the band, so
+        # if detection finds nothing or cuts it short of the reference z, fall back to
+        # z from the right edge (the sanity check's tolerance then confirms).
+        if detected is not None and sub_w - detected >= REF_Z - FRAME_TOL:
+            cut = detected
+        else:
+            cut = sub_w - REF_Z
+        right = left + cut
     return top, bottom, left, right
 
 
@@ -324,7 +416,7 @@ def crop_book(book: str, books_dir: str = "books", qa: bool = True) -> int:
         save_image(cropped, os.path.join(out_dir, f"{page}.png"))
         if qa:
             _save_qa(a, box, os.path.join(qa_dir, f"{page}.png"))
-        warns = check_frame(box, (a.shape[0], a.shape[1]), page, is_first)
+        warns = check_frame(box, cropped, (a.shape[0], a.shape[1]), page, is_first)
         if warns:
             flagged += 1
             logger.warning("page %d: frame sanity check failed: %s",
