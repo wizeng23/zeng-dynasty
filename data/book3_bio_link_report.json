@@ -1,0 +1,208 @@
+{
+  "book": "book3",
+  "sections": {
+    "2_9": {
+      "stem": "0_1",
+      "matched": 20,
+      "blocks": 20,
+      "how": {
+        "exact": 19,
+        "fuzzy": 1
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "18_63": {
+      "stem": "10_17",
+      "matched": 111,
+      "blocks": 114,
+      "how": {
+        "exact": 95,
+        "fuzzy": 15,
+        "positional": 1
+      },
+      "unmatched_blocks": [
+        "18_63_4_25",
+        "18_63_4_28",
+        "18_63_4_38"
+      ],
+      "unmatched_nodes": [
+        54,
+        426,
+        433,
+        436,
+        447
+      ]
+    },
+    "66_77": {
+      "stem": "64_65",
+      "matched": 33,
+      "blocks": 33,
+      "how": {
+        "exact": 25,
+        "fuzzy": 8
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "85_133": {
+      "stem": "78_84",
+      "matched": 113,
+      "blocks": 115,
+      "how": {
+        "positional": 5,
+        "exact": 100,
+        "fuzzy": 8
+      },
+      "unmatched_blocks": [
+        "85_133_1_9",
+        "85_133_2_12"
+      ],
+      "unmatched_nodes": []
+    },
+    "139_181": {
+      "stem": "134_138",
+      "matched": 79,
+      "blocks": 79,
+      "how": {
+        "exact": 68,
+        "fuzzy": 10,
+        "sons": 1
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": [
+        86,
+        332
+      ]
+    },
+    "183_185": {
+      "stem": "182_182",
+      "matched": 12,
+      "blocks": 12,
+      "how": {
+        "exact": 9,
+        "fuzzy": 3
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": [
+        95
+      ]
+    },
+    "188_201": {
+      "stem": "186_187",
+      "matched": 41,
+      "blocks": 41,
+      "how": {
+        "exact": 34,
+        "fuzzy": 7
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "204_216": {
+      "stem": "202_203",
+      "matched": 37,
+      "blocks": 37,
+      "how": {
+        "exact": 33,
+        "sons": 2,
+        "fuzzy": 2
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "221_246": {
+      "stem": "217_220",
+      "matched": 67,
+      "blocks": 67,
+      "how": {
+        "exact": 55,
+        "fuzzy": 10,
+        "sons": 1,
+        "positional": 1
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": [
+        559,
+        576
+      ]
+    },
+    "248_248": {
+      "stem": "247_247",
+      "matched": 2,
+      "blocks": 2,
+      "how": {
+        "exact": 2
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "251_260": {
+      "stem": "249_250",
+      "matched": 22,
+      "blocks": 22,
+      "how": {
+        "exact": 15,
+        "fuzzy": 5,
+        "sons": 2
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "263_271": {
+      "stem": "261_262",
+      "matched": 31,
+      "blocks": 31,
+      "how": {
+        "sons": 11,
+        "positional": 20
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "273_279": {
+      "stem": "272_272",
+      "matched": 19,
+      "blocks": 19,
+      "how": {
+        "fuzzy": 3,
+        "exact": 14,
+        "sons": 1,
+        "positional": 1
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "281_283": {
+      "stem": "280_280",
+      "matched": 9,
+      "blocks": 9,
+      "how": {
+        "exact": 7,
+        "fuzzy": 2
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    },
+    "285_291": {
+      "stem": "284_284",
+      "matched": 19,
+      "blocks": 19,
+      "how": {
+        "exact": 14,
+        "fuzzy": 4,
+        "positional": 1
+      },
+      "unmatched_blocks": [],
+      "unmatched_nodes": []
+    }
+  },
+  "totals": {
+    "exact": 490,
+    "fuzzy": 78,
+    "matched": 615,
+    "blocks": 620,
+    "positional": 29,
+    "sons": 18
+  }
+}
