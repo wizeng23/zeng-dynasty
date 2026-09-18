@@ -329,29 +329,53 @@ def _save_qa(
     small.save(out_path)
 
 
-# Crop tightening: a column/row is "text" if its ink exceeds this floor (kills the faint
-# ADF smear that otherwise defeats a plain any-ink bounding box), plus a little padding.
-TIGHTEN_INK_FLOOR = 12
-TIGHTEN_PAD = 40
+# Crop tightening. A block's box runs from its header (right) leftward to the next
+# person's label, so it's mostly blank on the left with ADF-smear specks scattered
+# through the blank. A plain ink-floor bounding box gets fooled by a far-left smear
+# speck and keeps the whole blank span. Instead we find the LEFT edge by scanning
+# right-to-left (reading order) and cutting at the first sustained blank run -- where
+# the text genuinely ends -- ignoring isolated smear columns past it.
+TIGHTEN_INK_FLOOR = 8      # a column/row with more ink px than this is "text"
+TIGHTEN_GAP_RUN = 250      # this many consecutive non-text columns = the text has ended
+TIGHTEN_PAD = 40           # whitespace kept around the text so glyphs don't ride the edge
+
+
+def _left_cut_rtl(col_ink: np.ndarray) -> int:
+    """Column index where text ends scanning right-to-left: the left end of the first
+    run of >= TIGHTEN_GAP_RUN consecutive non-text columns. 0 if text runs to the left."""
+    text = col_ink > TIGHTEN_INK_FLOOR
+    run = 0
+    for x in range(len(col_ink) - 1, -1, -1):
+        if text[x]:
+            run = 0
+        else:
+            run += 1
+            if run >= TIGHTEN_GAP_RUN:
+                return x + run  # left edge = where this blank run begins
+    return 0
 
 
 def tighten_box(ink: np.ndarray, box: list[int]) -> list[int]:
     """Shrink [l,t,r,b] to the block's real text extent within the merged ink grid.
 
-    ``ink`` is the full-section ink grid (1=ink). Columns/rows with ink above
-    TIGHTEN_INK_FLOOR are text; everything else (blank + smear) is trimmed, with a small
-    pad kept. Returns the original box if no text clears the floor.
+    ``ink`` is the full-section ink grid (1=ink). The LEFT edge is found by an RTL
+    scan for the first sustained blank run (smear-proof); right/top/bottom trim to the
+    text extent by an ink floor. A pad is kept on every side. Returns the original box
+    if no text clears the floor.
     """
     l, t, r, b = box
     sub = ink[t:b, l:r]
-    cols = np.where(sub.sum(axis=0) > TIGHTEN_INK_FLOOR)[0]
-    rows = np.where(sub.sum(axis=1) > TIGHTEN_INK_FLOOR)[0]
-    if len(cols) == 0 or len(rows) == 0:
+    col, row = sub.sum(axis=0), sub.sum(axis=1)
+    text_cols = np.where(col > TIGHTEN_INK_FLOOR)[0]
+    text_rows = np.where(row > TIGHTEN_INK_FLOOR)[0]
+    if len(text_cols) == 0 or len(text_rows) == 0:
         return box
-    nl = l + max(0, int(cols.min()) - TIGHTEN_PAD)
-    nr = l + min(sub.shape[1], int(cols.max()) + 1 + TIGHTEN_PAD)
-    nt = t + max(0, int(rows.min()) - TIGHTEN_PAD)
-    nb = t + min(sub.shape[0], int(rows.max()) + 1 + TIGHTEN_PAD)
+    left = _left_cut_rtl(col)
+    right = int(text_cols.max())
+    nl = l + max(0, left - TIGHTEN_PAD)
+    nr = l + min(sub.shape[1], right + 1 + TIGHTEN_PAD)
+    nt = t + max(0, int(text_rows.min()) - TIGHTEN_PAD)
+    nb = t + min(sub.shape[0], int(text_rows.max()) + 1 + TIGHTEN_PAD)
     return [nl, nt, nr, nb]
 
 
