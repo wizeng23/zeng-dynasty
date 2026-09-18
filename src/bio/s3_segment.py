@@ -212,43 +212,6 @@ def tree_counts_by_stem(jsonl_path: str) -> dict[str, Counter]:
     return by
 
 
-def tree_nodes_by_stem_gen(jsonl_path: str) -> dict[str, dict[int, list[dict]]]:
-    """Map stem -> generation -> nodes in DFS eldest-first (RTL) order.
-
-    Bio entries within a generation-band are laid out in the tree's depth-first,
-    eldest-first (right-to-left) order (children arrays are already eldest-first). A DFS
-    that recurses children in order therefore yields the bio reading order, so block d
-    (0 = rightmost/eldest) maps to the d-th node of its generation here. Used by the
-    post step to assign a tree node to each bio, once QA has completed the section.
-    """
-    rows = [json.loads(l) for l in open(jsonl_path) if l.strip()]
-    by_id = {n["id"]: n for n in rows}
-    roots_by_stem: dict[str, list[dict]] = defaultdict(list)
-    for n in rows:
-        if n.get("generation") == 1 or n.get("father", -1) in (-1, None):
-            stem = _stem_of_notes(n.get("notes", ""))
-            if stem:
-                roots_by_stem[stem].append(n)
-    out: dict[str, dict[int, list[dict]]] = {}
-    for stem, roots in roots_by_stem.items():
-        per_gen: dict[int, list[dict]] = defaultdict(list)
-        seen: set[int] = set()
-
-        def dfs(nid: int) -> None:
-            if nid in seen or nid not in by_id:
-                return
-            seen.add(nid)
-            n = by_id[nid]
-            per_gen[n["generation"]].append(n)
-            for c in n["children"]:
-                dfs(c)
-
-        for r in sorted(roots, key=lambda n: n["id"]):
-            dfs(r["id"])
-        out[stem] = per_gen
-    return out
-
-
 def map_sections_to_stems(section_stems: list[str], tree_stems: list[str]) -> dict[str, str]:
     """Positional map: the i-th bio section (by start page) <-> the i-th tree subgraph.
 

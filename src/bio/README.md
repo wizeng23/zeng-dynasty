@@ -58,12 +58,14 @@ block simply renumbers cleanly.
 ```
 PYTHONPATH=. python -m src.bio.s3_post --book book3
 ```
-For each section with an approved `{a}_{b}.jsonl`, cuts the crop images and assigns each
-bio its **tree node** (block `d` ↔ the d-th tree node of its generation in DFS
-eldest-first order — valid because QA confirmed the 1-1 count). Writes:
+For each section with an approved `{a}_{b}.jsonl`, cuts the crop images. Writes:
 - `books/{book}/bio/3_segment/{a}_{b}_{c}_{d}.png` — one crop per person.
-- `books/{book}/bio/3_segment/blocks.jsonl` — the final combined index stage 4 consumes;
-  each row is a pre-QA row plus `node_id` / `node_name`.
+- `books/{book}/bio/3_segment/blocks.jsonl` — the final combined index stage 4 consumes.
+
+No tree-node association is done: even after QA, a section's bio count is not guaranteed
+to equal the subgraph's node count (missing/extra bios), so a positional block→node
+mapping is unreliable. Linking a bio to its tree node is left to a later, evidence-based
+step (e.g. matching by children names).
 
 ## Output layout (`books/{book}/bio/3_segment/`)
 

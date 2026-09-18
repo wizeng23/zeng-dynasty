@@ -9,6 +9,10 @@ section image, and writes:
 - ``books/{book}/bio/3_segment/blocks.jsonl`` -- the final combined index (every block of
   every section, one row each, in section/band/d order) that stage 4 consumes.
 
+No tree-node association is done here: even after QA the number of bios in a section is
+not guaranteed to equal the subgraph's node count, so a positional block->node mapping is
+unreliable. Linking a bio to its tree node is left to a later, evidence-based step.
+
 Provenance ``{a}_{b}_{c}_{d}``: ``a_b`` = section pages, ``c`` = band index (0 = top = gen
 2 ... 4 = bottom = gen 6), ``d`` = index in row (0 = rightmost/eldest, increasing left).
 
@@ -40,18 +44,16 @@ def _read_section_jsonl(path: str) -> list[dict]:
         return [json.loads(l) for l in fh if l.strip()]
 
 
-def post_book(book: str, sections: list[str] | None = None, books_dir: str = "books",
-              data_dir: str = "data") -> int:
-    """Cut crops + assign a tree node to each bio + write the combined final JSONL.
+def post_book(book: str, sections: list[str] | None = None, books_dir: str = "books") -> int:
+    """Cut the final crops from QA-approved boxes + write the combined final JSONL.
 
-    For a section whose count gate passes, block d maps 1-1 to the d-th tree node of its
-    generation in DFS eldest-first order (the alignment is only valid once QA has found
-    every block, which is why node assignment lives here, not in s3_segment).
+    No tree-node association: even after QA the bio count in a section is not guaranteed
+    to equal the graph's node count for that subgraph (missing/extra bios), so a
+    positional block->node mapping is not reliable. We just emit the crops + boxes; any
+    bio<->node linking is left to a later, evidence-based step (e.g. children names).
     """
     seg_dir = _segment_dir(books_dir, book)
     merged_dir = os.path.join(books_dir, book, seg.BIO_DIR, seg.MERGED_DIR)
-    nodes_by_stem_gen = seg.tree_nodes_by_stem_gen(
-        os.path.join(data_dir, f"{book}_stitched.jsonl"))
 
     approved = sorted(
         (f[:-6] for f in os.listdir(seg_dir) if f.endswith(".jsonl") and f != "blocks.jsonl"),
@@ -63,28 +65,16 @@ def post_book(book: str, sections: list[str] | None = None, books_dir: str = "bo
     for sec in todo:
         rows = _read_section_jsonl(os.path.join(seg_dir, f"{sec}.jsonl"))
         rows.sort(key=lambda r: (r["band"], int(r["id"].rsplit("_", 1)[1])))
-        stem = rows[0]["stem"] if rows else ""
-        gate = all(r.get("gate_passed") for r in rows)
-        per_gen = nodes_by_stem_gen.get(stem, {}) if gate else {}
-
         a = get_image(os.path.join(merged_dir, f"{sec}.png"))
         ink = 1 - a
-        # d-index within each band -> the d-th DFS node of that generation
-        band_d: dict[int, int] = {}
         for row in rows:
             # re-tighten to text (catches QA-added/moved boxes) and store the tight box
             row["box"] = seg.tighten_box(ink, row["box"])
             l, t, r_, b = row["box"]
             save_image(a[t:b, l:r_], os.path.join(seg_dir, f"{row['id']}.png"))
             n_crops += 1
-            d = band_d.get(row["band"], 0)
-            band_d[row["band"]] = d + 1
-            gen_nodes = per_gen.get(row["generation"], [])
-            node = gen_nodes[d] if gate and d < len(gen_nodes) else None
-            row["node_id"] = node["id"] if node else None
-            row["node_name"] = node.get("name") if node else None
             combined.append(row)
-        logger.info("%s: %d crops, node-mapped=%s", sec, len(rows), gate)
+        logger.info("%s: %d crops", sec, len(rows))
 
     with open(os.path.join(seg_dir, "blocks.jsonl"), "w") as fh:
         for row in combined:
@@ -99,12 +89,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--book", required=True)
     parser.add_argument("--sections", nargs="+", default=None)
     parser.add_argument("--books-dir", default="books")
-    parser.add_argument("--data-dir", default="data")
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
     logging.basicConfig(level=args.log_level,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    post_book(args.book, sections=args.sections, books_dir=args.books_dir, data_dir=args.data_dir)
+    post_book(args.book, sections=args.sections, books_dir=args.books_dir)
 
 
 if __name__ == "__main__":
