@@ -335,7 +335,10 @@ def _save_qa(
 # speck and keeps the whole blank span. Instead we find the LEFT edge by scanning
 # right-to-left (reading order) and cutting at the first sustained blank run -- where
 # the text genuinely ends -- ignoring isolated smear columns past it.
-TIGHTEN_INK_FLOOR = 8      # a column/row with more ink px than this is "text"
+# A thin horizontal ADF-smear line past the text touches most columns but only a few px
+# tall, so a low floor mistakes it for text and the RTL scan never finds a gap. Real text
+# columns carry ~45+ ink px over a ~1100px band; the smear line ~8. Floor between them.
+TIGHTEN_INK_FLOOR = 25     # a column/row with more ink px than this is "text"
 TIGHTEN_GAP_RUN = 250      # this many consecutive non-text columns = the text has ended
 TIGHTEN_PAD = 40           # whitespace kept around the text so glyphs don't ride the edge
 
