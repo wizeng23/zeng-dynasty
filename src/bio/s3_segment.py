@@ -375,13 +375,15 @@ def tighten_box(ink: np.ndarray, box: list[int]) -> list[int]:
         return box
     left = _left_cut_rtl(col)
     right = int(text_cols.max())
-    h_img, w_img = ink.shape
+    _h_img, w_img = ink.shape
+    # Pad LEFT and RIGHT only. The right pad may extend past the original box edge (the
+    # header sits right at it), clamped to the image; the BLOCK_GAP margin keeps it out
+    # of the neighbor. Top/bottom trim to the text within the band -- NO pad, so the crop
+    # never crosses the generation rule into the row above/below.
     nl = l + max(0, left - TIGHTEN_PAD)
-    # right/top/bottom may pad PAST the original box edge (the header sits right at it),
-    # clamped only to the full image, so glyphs never ride the crop edge.
     nr = min(w_img, l + right + 1 + TIGHTEN_PAD)
-    nt = max(0, t + int(text_rows.min()) - TIGHTEN_PAD)
-    nb = min(h_img, t + int(text_rows.max()) + 1 + TIGHTEN_PAD)
+    nt = t + int(text_rows.min())
+    nb = t + int(text_rows.max()) + 1
     return [nl, nt, nr, nb]
 
 
