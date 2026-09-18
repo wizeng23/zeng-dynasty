@@ -27,6 +27,7 @@ import argparse
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 
 import numpy as np
@@ -123,6 +124,77 @@ def iter_blocks(book: str, sec: str, books_dir: str = "books") -> list[BlockCrop
                 BlockCrop(b.id, b.generation, bi, k, Image.fromarray(gray).convert("RGB"))
             )
     return out
+
+
+# --- field parsers (marker-based; sons is the gated P0 field) ---------------------
+
+_COUNT = "一二三四五六七八九十两"   # 生子{N}名
+_ORD = "长次三四五六七八九幼元"     # birth-order prefixes on each child
+
+
+_CN_NUM = {c: i for i, c in enumerate("一二三四五六七八九十", start=1)}
+
+
+def _count_word(s: str) -> int | None:
+    """Parse the ``N`` in ``生子N名`` (e.g. 一->1, 二->2). None if absent/unknown."""
+    m = re.search(rf"生子([{_COUNT}]+)名", s)
+    if not m:
+        return None
+    w = m.group(1)
+    if w in ("两",):
+        return 2
+    return _CN_NUM.get(w)
+
+
+def parse_sons(columns: list[str]) -> list[str]:
+    """Son given-names from ``生子…名 <sons>``, RTL/eldest-first, stopping at ``生女``.
+
+    ``columns`` are the ordered (RTL) column/line texts of the entry. Each son name is
+    printed in its **own column**, so we locate the ``生子N名`` column and take the next
+    columns as sons -- exactly ``N`` when the count word is present, else every column up
+    to ``生女`` or a new clause. Ordinal prefixes (长/次/…) are stripped. [] when no
+    ``生子`` clause.
+    """
+    idx = next((i for i, c in enumerate(columns) if re.search(rf"生子[{_COUNT}]*名", c)),
+               None)
+    if idx is None:
+        return []
+    n = _count_word(columns[idx])
+    sons: list[str] = []
+    for col in columns[idx + 1:]:
+        if re.search(r"生女", col) or re.match(r"[配继殁歿葬享寿卒]", col):
+            break
+        name = re.sub(rf"^[{_ORD}]", "", col).strip()
+        if name:
+            sons.append(name)
+        if n is not None and len(sons) >= n:
+            break
+    return sons
+
+
+def parse_father(lines: list[str]) -> str | None:
+    """Father name-char from the header line ``子[之|次|…]X`` (line 1 of a vision read)."""
+    if not lines:
+        return None
+    m = re.match(rf"子[之{_ORD}]?(.)", lines[0])
+    return m.group(1) if m else None
+
+
+def parse_daughters(columns: list[str]) -> list[str]:
+    """Daughter names from ``生女… 长/次…<name>适<place>`` (best-effort)."""
+    joined = "".join(columns)
+    m = re.search(rf"生女[{_COUNT}]*", joined)
+    if not m:
+        return []
+    tail = joined[m.end():]
+    return re.findall(rf"[{_ORD}](.{{1,2}}?)适", tail)
+
+
+def parse_dates(columns: list[str]) -> dict:
+    """Best-effort birth clause after ``生于``."""
+    joined = "".join(columns)
+    birth = re.search(r"生于([^殁歿葬配继]{2,14})", joined)
+    return {"birth": birth.group(1) if birth else None}
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
