@@ -23,7 +23,7 @@ higher), so the label y-window is found adaptively per band (:func:`find_labels`
 
 Count gate (hard fail)
 ----------------------
-The parsed tree (``data/{book}_stitched.jsonl``) is the oracle: we know exactly how
+The PRE-STITCH parse (``data/{book}.jsonl``) is the oracle: we know exactly how
 many people are in each generation of each subgraph. Detected labels per band MUST
 equal tree nodes per generation; on any mismatch the section **hard-fails** (per the
 design spec) with a QA overlay so the miss can be investigated. We never silently
@@ -380,7 +380,11 @@ def segment_book(book: str, sections: list[str] | None = None, books_dir: str = 
         (f[:-4] for f in os.listdir(merged_dir) if f.endswith(".png")),
         key=lambda s: int(s.split("_")[0]),
     )
-    jsonl = os.path.join(data_dir, f"{book}_stitched.jsonl")
+    # Gate against the PRE-STITCH parse (data/{book}.jsonl): bio pages are pre-stitch, so
+    # each bio section maps 1-1 to a pre-stitch graph. The stitched tree (s7) folds
+    # duplicate graph roots into canonical copies and drops/rewrites their stem, so its
+    # stems don't line up with the bio sections (e.g. Book 4 graphs 54, 169).
+    jsonl = os.path.join(data_dir, f"{book}.jsonl")
     tree_by_stem = tree_counts_by_stem(jsonl)
     sec_to_stem = map_sections_to_stems(all_sections, list(tree_by_stem))
     todo = sections or all_sections
