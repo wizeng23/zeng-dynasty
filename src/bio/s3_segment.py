@@ -51,7 +51,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 from PIL import Image, ImageDraw
 
-from src.imaging import get_image
+from src.imaging import get_image, save_image
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +298,11 @@ def segment_book(book: str, sections: list[str] | None = None, books_dir: str = 
                        "expected_per_gen": expected,
                        "detected_per_gen": [len(l) for l in labels],
                        "blocks": [asdict(b) for b in blocks]}, fh, indent=2)
+        # one crop per person block, for stage-4 field OCR to read
+        a = get_image(merged_path)
+        for b in blocks:
+            crop = a[b.y:b.y + b.height, b.x:b.x + b.width]
+            save_image(crop, os.path.join(out_dir, f"{b.id}.png"))
         if qa:
             _save_qa(get_image(merged_path), bands, labels, passed,
                      os.path.join(qa_dir, f"{sec}.png"))
