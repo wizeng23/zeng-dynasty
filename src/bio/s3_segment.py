@@ -292,7 +292,10 @@ def segment_section(
         if len(labels) != expected_per_gen[band_idx]:
             gate_passed = False
             logger.warning("%s gen%d: labels=%d nodes=%d", stem, gen, len(labels), expected_per_gen[band_idx])
-        blocks.extend(_blocks_from_labels(labels, top, bottom, gen, band_idx, stem, width))
+        for blk in _blocks_from_labels(labels, top, bottom, gen, band_idx, stem, width):
+            nl, nt, nr, nb = tighten_box(ink, [blk.x, blk.y, blk.x + blk.width, blk.y + blk.height])
+            blk.x, blk.y, blk.width, blk.height = nl, nt, nr - nl, nb - nt
+            blocks.append(blk)
     return blocks, per_band_labels, bands, gate_passed
 
 
@@ -324,6 +327,32 @@ def _save_qa(
             tag += f"  MISSING {miss}" if miss > 0 else f"  EXTRA {-miss}"
         draw.text((4, top // scale + 2), tag, fill=color)
     small.save(out_path)
+
+
+# Crop tightening: a column/row is "text" if its ink exceeds this floor (kills the faint
+# ADF smear that otherwise defeats a plain any-ink bounding box), plus a little padding.
+TIGHTEN_INK_FLOOR = 12
+TIGHTEN_PAD = 20
+
+
+def tighten_box(ink: np.ndarray, box: list[int]) -> list[int]:
+    """Shrink [l,t,r,b] to the block's real text extent within the merged ink grid.
+
+    ``ink`` is the full-section ink grid (1=ink). Columns/rows with ink above
+    TIGHTEN_INK_FLOOR are text; everything else (blank + smear) is trimmed, with a small
+    pad kept. Returns the original box if no text clears the floor.
+    """
+    l, t, r, b = box
+    sub = ink[t:b, l:r]
+    cols = np.where(sub.sum(axis=0) > TIGHTEN_INK_FLOOR)[0]
+    rows = np.where(sub.sum(axis=1) > TIGHTEN_INK_FLOOR)[0]
+    if len(cols) == 0 or len(rows) == 0:
+        return box
+    nl = l + max(0, int(cols.min()) - TIGHTEN_PAD)
+    nr = l + min(sub.shape[1], int(cols.max()) + 1 + TIGHTEN_PAD)
+    nt = t + max(0, int(rows.min()) - TIGHTEN_PAD)
+    nb = t + min(sub.shape[0], int(rows.max()) + 1 + TIGHTEN_PAD)
+    return [nl, nt, nr, nb]
 
 
 def _block_row(section: str, stem: str, b: Block, expected: list[int],

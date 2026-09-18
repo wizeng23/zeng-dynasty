@@ -68,9 +68,12 @@ def post_book(book: str, sections: list[str] | None = None, books_dir: str = "bo
         per_gen = nodes_by_stem_gen.get(stem, {}) if gate else {}
 
         a = get_image(os.path.join(merged_dir, f"{sec}.png"))
+        ink = 1 - a
         # d-index within each band -> the d-th DFS node of that generation
         band_d: dict[int, int] = {}
         for row in rows:
+            # re-tighten to text (catches QA-added/moved boxes) and store the tight box
+            row["box"] = seg.tighten_box(ink, row["box"])
             l, t, r_, b = row["box"]
             save_image(a[t:b, l:r_], os.path.join(seg_dir, f"{row['id']}.png"))
             n_crops += 1
