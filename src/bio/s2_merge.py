@@ -80,6 +80,24 @@ BOTTOM_RULE_TOL = 70
 # The baseline is a page's minimum column density (~0.004: the 4 horizontal rules
 # crossing an otherwise-blank column). Text columns run ~6-9x baseline (0.025-0.037),
 # so a 2x stop halts right at the text ramp without clipping the outermost glyphs.
+# Residual vertical border rule at a page edge: stage-1's frame trim can leave a few-px
+# sliver of the side rule (book3 p6/p18/p183/... 11 pages), which shows as a stub at the
+# merged seam. It is distinguishable from bio content because it reaches the VERY TOP of
+# the page (the top whitespace band, above the first horizontal rule) right at the edge
+# -- content never inks there. A rule is CONFIRMED when some edge column's run through
+# the top band is at least SIDE_RULE_BAND_FRAC of it; the cut then extends through every
+# edge column that inks the topmost SIDE_RULE_TOP_PX rows from row 0 (the rule's fainter
+# ramp columns still touch the top edge, whereas whitespace columns are blank there).
+# Confirm a rule when some edge column's longest run through the top band is at least
+# this fraction of it. 0.30 catches the strong/visible stubs (book3 p6 + ~12 others,
+# cuts <=20px) while never reaching real bio content, which does not ink the top band at
+# all (measured: content top-band edge runs are near 0). A handful of very faint sub-
+# threshold slivers may leave a 1-2px tick -- far less visible than p6's stub, and the
+# floor is deliberately conservative so no edge content is ever cut.
+SIDE_RULE_SEARCH_PX = 20
+SIDE_RULE_BAND_FRAC = 0.30
+SIDE_RULE_COL_MIN_INK = 10  # a rule column inks at least this many top-band px (spans its ramp)
+
 SIDE_TRIM_CAP = 80
 SIDE_TRIM_FACTOR = 2.0
 # When a side stops at content BEFORE the cap, keep this much whitespace before the
@@ -156,15 +174,44 @@ def _side_trim(col_dens: np.ndarray, baseline: float) -> int:
     return max(0, n - SIDE_TRIM_PAD)
 
 
-def trim_sides(a: np.ndarray) -> np.ndarray:
-    """Trim whitespace side-margins off a page so a seam gap is not doubled.
+def _edge_rule_cut(a: np.ndarray, top: int, side: str) -> int:
+    """Columns to cut off ``side`` to remove a residual vertical border rule, or 0.
 
-    Removes up to :data:`SIDE_TRIM_CAP` px of whitespace from the left and right
-    edges, stopping each side at its first content column (see :func:`_side_trim`).
-    The whitespace baseline is the page's minimum column density -- the 4 horizontal
-    rules crossing an otherwise-blank column -- so the rules themselves are preserved
-    (they span the full height; trimming columns only shortens them).
+    A residual rule inks the top whitespace band (rows ``0:top``) at the edge, where
+    content never inks. A rule is CONFIRMED when some edge column's longest run in that
+    band is at least :data:`SIDE_RULE_BAND_FRAC` of it; the cut then reaches the
+    INNERMOST edge column that still inks at least :data:`SIDE_RULE_COL_MIN_INK` px of
+    the top band (the rule plus its anti-aliased tail), taking any blank columns outside
+    it along the way -- they are whitespace the next step would trim anyway. Returns 0
+    when no rule is confirmed.
     """
+    w = a.shape[1]
+    cols = list(range(min(SIDE_RULE_SEARCH_PX, w))) if side == "left" \
+        else list(range(w - 1, max(-1, w - 1 - SIDE_RULE_SEARCH_PX), -1))
+    band_ink = [int((1 - a[:top, c]).sum()) for c in cols]
+    band_runs = [_longest_run((1 - a[:top, c]).astype(bool)) for c in cols]
+    if not any(r >= SIDE_RULE_BAND_FRAC * top for r in band_runs):
+        return 0
+    ruled = [i for i, ink in enumerate(band_ink) if ink >= SIDE_RULE_COL_MIN_INK]
+    return max(ruled) + 1
+
+
+def trim_sides(a: np.ndarray) -> np.ndarray:
+    """Trim whitespace side-margins (and any residual edge rule) off a page.
+
+    First strips a residual vertical border rule left at either edge by stage 1
+    (:func:`_edge_rule_cut`) -- otherwise it shows as a stub at the merged seam. Then
+    removes up to :data:`SIDE_TRIM_CAP` px of whitespace from each edge, stopping at
+    the first content column (see :func:`_side_trim`). The whitespace baseline is the
+    page's minimum column density -- the 4 horizontal rules crossing an otherwise-blank
+    column -- so those rules are preserved (they span the full height; trimming columns
+    only shortens them).
+    """
+    top = find_rules(a)[0]
+    rl = _edge_rule_cut(a, top, "left")
+    rr = _edge_rule_cut(a, top, "right")
+    a = a[:, rl:a.shape[1] - rr]
+
     col_dens = (1 - a).sum(axis=0) / a.shape[0]
     baseline = float(col_dens.min())
     left = _side_trim(col_dens, baseline)

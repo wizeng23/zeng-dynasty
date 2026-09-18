@@ -116,6 +116,49 @@ def _bio_page(h: int, w: int, text_left: int, text_right: int) -> np.ndarray:
     return a
 
 
+def test_trim_sides_strips_residual_edge_rule() -> None:
+    # A leftover vertical border rule at the right edge, piercing the top whitespace
+    # band from row 0 (stage-1 under-trim, e.g. book3 p6). trim_sides must remove it so
+    # it doesn't show as a stub at the merged seam.
+    h, w = 4000, 1000
+    a = _bio_page(h, w, text_left=200, text_right=800)
+    a[:, w - 4:w - 1] = 0            # 3px vertical rule at the right edge, full height
+    trimmed = m.trim_sides(a)
+    # No full-height vertical line remains in the outer few columns of either edge.
+    from src.bio.s1_crops import _longest_run
+    right_run = max(_longest_run((1 - trimmed[:, c]).astype(bool))
+                    for c in range(trimmed.shape[1] - 5, trimmed.shape[1]))
+    assert right_run < 0.4 * h
+
+
+def test_trim_sides_strips_thin_single_column_edge_rule() -> None:
+    # A faint 1px vertical rule at the very edge (book3 p273/p263), whose top-band run
+    # is ~40% of the band -- above the 30% confirm threshold. Must be removed.
+    h, w = 4000, 1000
+    a = _bio_page(h, w, text_left=200, text_right=800)
+    a[:, w - 1] = 0  # a full-height 1px rule in the very last column
+    trimmed = m.trim_sides(a)
+    from src.bio.s1_crops import _longest_run
+    top = int(BIO_RULE_YFRAC[0] * h)
+    right_run = max(_longest_run((1 - trimmed[:top, c]).astype(bool))
+                    for c in range(trimmed.shape[1] - 3, trimmed.shape[1]))
+    assert right_run < 0.3 * top
+
+
+def test_trim_sides_keeps_tall_edge_content() -> None:
+    # Tall content near an edge (a column of characters) starts BELOW the top band, not
+    # at row 0, so it is NOT a rule and must be preserved.
+    h, w = 4000, 1000
+    a = _bio_page(h, w, text_left=40, text_right=800)  # text starts 40px in
+    # a tall glyph column near the left edge, starting below the first rule band
+    top = int(BIO_RULE_YFRAC[0] * h)
+    a[top + 50:top + 900, 45:52] = 0
+    trimmed = m.trim_sides(a)
+    # the tall glyph column survived (dense content still present near the left).
+    col_dens = (1 - trimmed).sum(axis=0) / trimmed.shape[0]
+    assert col_dens[:30].max() > 0.05
+
+
 def test_trim_sides_removes_whitespace_up_to_the_cap() -> None:
     # Text sits 200px in from each side; the full 80px cap of whitespace comes off
     # (well beyond 80px is still whitespace, so no padding is withheld).
