@@ -326,6 +326,195 @@ def parse_vision(text: str) -> dict:
 # ``--no-vision`` skips this entirely (Paddle-only) for quick iteration.
 
 
+# --- reconcile + section/book runners (spec §2a, §5, §6) ---------------------------
+
+EMPTY_VISION = {"lines": [], "father_char": None, "name": None, "sons": []}
+
+
+def reconcile(paddle: dict, vision: dict, tree_name: str | None) -> dict:
+    """Merge the two reads into one block record; sons = flagged union (spec §2a)."""
+    p_sons, v_sons = list(paddle["sons"]), list(vision["sons"])
+    ps, vs = set(p_sons), set(v_sons)
+    union = list(dict.fromkeys(p_sons + v_sons))  # order-preserving dedupe
+    sons = [{"name": s, "agreed": (s in ps and s in vs)} for s in union]
+    name = vision.get("name") or tree_name
+    flags = list(paddle["qa_flags"])
+    if vision.get("name") and tree_name and vision["name"] != tree_name:
+        flags.append(f"name: vision '{vision['name']}' != tree '{tree_name}'")
+    if ps != vs:
+        flags.append(f"sons: paddle {sorted(ps)} != vision {sorted(vs)}")
+    return {
+        "name": name,
+        "father_char": vision.get("father_char"),
+        "sons": sons,
+        "daughters": parse_daughters(paddle["columns"]),
+        "birth": parse_dates(paddle["columns"]).get("birth"),
+        "paddle": {"columns": paddle["columns"], "sons": p_sons},
+        "vision": {"lines": vision["lines"], "sons": v_sons},
+        "qa_flags": flags,
+    }
+
+
+def _tree_names_by_gen(data_dir: str, book: str, stem: str) -> dict[int, list[str]]:
+    """Tree node names for a subgraph stem, grouped by generation (tree/RTL order)."""
+    names: dict[int, list[str]] = {}
+    with open(os.path.join(data_dir, f"{book}_stitched.jsonl")) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            n = json.loads(line)
+            prov = (n.get("notes", "") or "").split(" | ", 1)[0].split("/", 1)[0]
+            s = prov.rsplit("_", 1)[0] if prov else ""
+            if s == stem:
+                names.setdefault(n["generation"], []).append(n["name"])
+    return names
+
+
+def _section_stem(book: str, sec: str, books_dir: str, data_dir: str) -> str:
+    """Positional map from a bio section to its tree subgraph stem (spec §2.3)."""
+    from src.bio.s3_segment import tree_counts_by_stem, map_sections_to_stems
+
+    merged_dir = os.path.join(books_dir, book, BIO_DIR, MERGED_DIR)
+    all_sections = sorted(
+        (f[:-4] for f in os.listdir(merged_dir) if f.endswith(".png")),
+        key=lambda s: int(s.split("_")[0]),
+    )
+    tree_by_stem = tree_counts_by_stem(os.path.join(data_dir, f"{book}_stitched.jsonl"))
+    return map_sections_to_stems(all_sections, list(tree_by_stem))[sec]
+
+
+def _validate(records: list[dict], tree_by_gen: dict[int, list[str]]) -> dict:
+    """Gate: for each gen G, the union of gen-G sons should equal the gen-(G+1) tree names.
+
+    A subgraph's *leaf* generation lists sons of the NEXT subgraph (not in this tree), so
+    we only gate generations G where G+1 exists in this tree. The headline ``gen`` is the
+    deepest such valid generation (gen-5 -> gen-6 for a 6-gen Book-3 subgraph = the P0).
+    """
+    sons_by_gen: dict[int, list[str]] = {}
+    for r in records:
+        for s in r["sons"]:
+            sons_by_gen.setdefault(r["generation"], []).append(s["name"])
+
+    per_gen = {}
+    valid_src = [g for g in sons_by_gen if tree_by_gen.get(g + 1)]
+    for g in valid_src:
+        union = sorted(set(sons_by_gen[g]))
+        tree = sorted(set(tree_by_gen.get(g + 1, [])))
+        agreed = sum(s["agreed"] for r in records
+                     if r["generation"] == g for s in r["sons"])
+        per_gen[g] = {
+            "child_gen": g + 1,
+            "sons_union": union,
+            "tree_names": tree,
+            "missing_from_ocr": sorted(set(tree) - set(union)),
+            "extra_in_ocr": sorted(set(union) - set(tree)),
+            "agreed_count": agreed,
+            "match": set(union) == set(tree),
+        }
+
+    base = {"sons_by_gen": {k: sorted(set(v)) for k, v in sons_by_gen.items()},
+            "per_gen": per_gen}
+    if not per_gen:
+        base.update(match=None, note="no gate-able generation (no sons map to a tree gen)")
+        return base
+    g = max(per_gen)  # deepest gate-able = the P0 headline
+    base.update(gen=per_gen[g]["child_gen"], **{k: per_gen[g][k] for k in
+                ("sons_union", "tree_names", "missing_from_ocr", "extra_in_ocr",
+                 "agreed_count", "match")})
+    return base
+
+
+def ocr_section(book: str, sec: str, books_dir: str, data_dir: str,
+                vision_texts: dict[str, str] | None = None) -> dict:
+    """OCR every block of a section; reconcile; validate against the tree oracle."""
+    stem = _section_stem(book, sec, books_dir, data_dir)
+    tree_by_gen = _tree_names_by_gen(data_dir, book, stem)
+    engine = _paddle_engine()
+    blocks = iter_blocks(book, sec, books_dir)
+    records: list[dict] = []
+    for b in blocks:
+        # block k in gen g <-> tree node k in gen g (RTL/tree order); count gate passed
+        tree_name = None
+        gen_names = tree_by_gen.get(b.generation, [])
+        if b.k < len(gen_names):
+            tree_name = gen_names[b.k]
+        paddle = paddle_read(b.img, engine)
+        vision = EMPTY_VISION
+        if vision_texts and b.id in vision_texts:
+            vision = parse_vision(vision_texts[b.id])
+        rec = reconcile(paddle, vision, tree_name)
+        rec.update({"block_id": b.id, "generation": b.generation, "band": b.band, "k": b.k})
+        records.append(rec)
+        logger.info("%s gen%d k%d: sons=%s flags=%d", b.id, b.generation, b.k,
+                    [s["name"] for s in rec["sons"]], len(rec["qa_flags"]))
+    validation = _validate(records, tree_by_gen)
+    return {"section": sec, "stem": stem,
+            "engine": "ensemble:paddle+vision" if vision_texts else "paddle",
+            "blocks": records, "validation": validation}
+
+
+def save_crops(book: str, sec: str, books_dir: str) -> dict[str, str]:
+    """Write each block's tight crop to 4_ocr/{sec}/crops/{id}.png for the vision pass."""
+    out_dir = os.path.join(books_dir, book, BIO_DIR, OUT_DIR, sec, "crops")
+    os.makedirs(out_dir, exist_ok=True)
+    paths: dict[str, str] = {}
+    for b in iter_blocks(book, sec, books_dir):
+        p = os.path.join(out_dir, f"{b.id}.png")
+        b.img.save(p)
+        paths[b.id] = p
+    return paths
+
+
+def _save_qa(book: str, sec: str, records: list[dict], books_dir: str,
+             blocks: list[BlockCrop], engine) -> None:
+    """Per-block overlay: char boxes drawn, columns numbered, extracted sons annotated."""
+    from PIL import ImageDraw
+
+    qa_dir = os.path.join(books_dir, book, "qa", "bio_s4", sec)
+    os.makedirs(qa_dir, exist_ok=True)
+    by_id = {r["block_id"]: r for r in records}
+    for b in blocks:
+        chars = _char_boxes(engine, np.asarray(b.img))
+        cols = _cluster_columns(chars)
+        im = b.img.convert("RGB").copy()
+        draw = ImageDraw.Draw(im)
+        for col in cols:
+            for c in col:
+                draw.rectangle([c["x0"], c["y0"], c["x1"], c["y1"]], outline=(0, 140, 0))
+        rec = by_id.get(b.id, {})
+        title = f"{b.id} sons={[s['name'] for s in rec.get('sons', [])]}"
+        draw.text((4, 4), title, fill=(200, 0, 0))
+        im.save(os.path.join(qa_dir, f"{b.id}.png"))
+
+
+def ocr_book(book: str, sections: list[str] | None, books_dir: str, data_dir: str,
+             vision_texts: dict[str, str] | None = None, qa: bool = True) -> dict:
+    """OCR the given (or all) sections; write per-section sidecars + QA overlays."""
+    merged_dir = os.path.join(books_dir, book, BIO_DIR, MERGED_DIR)
+    all_sections = sorted(
+        (f[:-4] for f in os.listdir(merged_dir) if f.endswith(".png")),
+        key=lambda s: int(s.split("_")[0]),
+    )
+    todo = sections or all_sections
+    out_base = os.path.join(books_dir, book, BIO_DIR, OUT_DIR)
+    os.makedirs(out_base, exist_ok=True)
+    results: dict[str, dict] = {}
+    engine = _paddle_engine()
+    for sec in todo:
+        rec = ocr_section(book, sec, books_dir, data_dir, vision_texts=vision_texts)
+        with open(os.path.join(out_base, f"{sec}.json"), "w") as fh:
+            json.dump(rec, fh, ensure_ascii=False, indent=2)
+        if qa:
+            _save_qa(book, sec, rec["blocks"], books_dir, iter_blocks(book, sec, books_dir),
+                     engine)
+        v = rec["validation"]
+        logger.info("%s (%s): match=%s missing=%s extra=%s", sec, rec["stem"],
+                    v.get("match"), v.get("missing_from_ocr"), v.get("extra_in_ocr"))
+        results[sec] = rec
+    return results
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True)
@@ -341,7 +530,10 @@ def main(argv: list[str] | None = None) -> None:
     args = _parse_args(argv)
     logging.basicConfig(level=args.log_level,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    raise SystemExit("ocr_book not yet implemented (see plan Task 5)")
+    # --no-vision => Paddle-only. The ensemble vision pass is driven by the executing
+    # agent (dispatches subagents over save_crops output, then re-runs with vision_texts).
+    ocr_book(args.book, args.sections, books_dir=args.books_dir, data_dir=args.data_dir,
+             vision_texts=None)
 
 
 if __name__ == "__main__":
