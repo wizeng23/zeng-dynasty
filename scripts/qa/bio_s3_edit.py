@@ -47,12 +47,18 @@ def _merged_dir(book: str) -> str:
     return os.path.join(BOOKS_DIR, book, seg.BIO_DIR, seg.MERGED_DIR)
 
 
-def _manual_dir(book: str) -> str:
-    return os.path.join(DATA_DIR, f"{book}_bio_manual")
+def _segment_dir(book: str) -> str:
+    return os.path.join(BOOKS_DIR, book, seg.BIO_DIR, seg.SEGMENT_DIR)
 
 
-def _manual_path(book: str, stem: str) -> str:
-    return os.path.join(_manual_dir(book), f"{stem}.json")
+def _qa_input_path(book: str, sec: str) -> str:
+    """Pre-QA detections written by s3_segment (the editor's seed input)."""
+    return os.path.join(_segment_dir(book), seg.QA_INPUT_DIR, f"{sec}.jsonl")
+
+
+def _approved_path(book: str, sec: str) -> str:
+    """QA-approved full-copy JSONL the editor saves (read by s3_post)."""
+    return os.path.join(_segment_dir(book), f"{sec}.jsonl")
 
 
 def _section_stems(book: str) -> list[str]:
@@ -75,41 +81,78 @@ def _oracle(book: str) -> dict[str, list[int]]:
     out = {sec: [by[stem].get(g, 0) for g in seg.BAND_GENERATIONS]
            for sec, stem in sec_to_stem.items()}
     _ORACLE[book] = out  # type: ignore[assignment]
+    _SEC_TO_STEM[book] = sec_to_stem  # type: ignore[assignment]
     return out
 
 
-# --- override load / seed / save ---------------------------------------------------
-
-def seed_override(book: str, stem: str) -> dict:
-    """Seed a section's boxes from Stage-3 detection (full-res coords)."""
-    merged = os.path.join(_merged_dir(book), f"{stem}.png")
-    js = os.path.join(_merged_dir(book), f"{stem}.json")
-    expected = _oracle(book).get(stem, [0] * 5)
-    blocks, _labels, bands, _passed = seg.segment_section(merged, js, expected)
-    return {
-        "section": stem,
-        "bands": [{"gen": seg.BAND_GENERATIONS[i], "top": t, "bottom": b}
-                  for i, (t, b) in enumerate(bands)],
-        "boxes": [{"id": bl.id, "gen": bl.generation, "band": bl.band,
-                   "x": bl.x, "y": bl.y, "w": bl.width, "h": bl.height}
-                  for bl in blocks],
-    }
+_SEC_TO_STEM: dict[str, dict[str, str]] = {}
 
 
-def load_override(book: str, stem: str) -> dict:
-    path = _manual_path(book, stem)
-    if os.path.exists(path):
-        with open(path) as fh:
-            return json.load(fh)
-    ov = seed_override(book, stem)
-    save_override(book, stem, ov)
-    return ov
+def _section_stem(sec: str) -> str:
+    """Tree subgraph stem for a bio section (from the positional section<->stem map)."""
+    _oracle(BOOK)  # ensures _SEC_TO_STEM is populated
+    return _SEC_TO_STEM.get(BOOK, {}).get(sec, "")
 
 
-def save_override(book: str, stem: str, ov: dict) -> None:
-    os.makedirs(_manual_dir(book), exist_ok=True)
-    with open(_manual_path(book, stem), "w") as fh:
-        json.dump(ov, fh, ensure_ascii=False, indent=1)
+# --- section state load / save -----------------------------------------------------
+# The editor works with {section, bands:[{gen,top,bottom}], boxes:[{id,gen,band,x,y,w,h}]}.
+# It reads the block JSONL (rows of {id,band,generation,box:[l,t,r,b]}) that s3_segment
+# wrote, plus the merged section's rules_y for band boundaries. On save it writes a full
+# copy back as JSONL, recomputing each box's provenance id so d stays in RTL order.
+
+def _bands_of(book: str, sec: str) -> list[dict]:
+    with open(os.path.join(_merged_dir(book), f"{sec}.json")) as fh:
+        meta = json.load(fh)
+    a = get_image(os.path.join(_merged_dir(book), f"{sec}.png"))
+    h = a.shape[0]
+    tops = [0] + meta["rules_y"]
+    bots = meta["rules_y"] + [h]
+    return [{"gen": seg.BAND_GENERATIONS[i], "top": tops[i], "bottom": bots[i]}
+            for i in range(5)]
+
+
+def _rows_to_boxes(rows: list[dict]) -> list[dict]:
+    boxes = []
+    for row in rows:
+        l, t, r, b = row["box"]
+        boxes.append({"id": row["id"], "gen": row["generation"], "band": row["band"],
+                      "x": l, "y": t, "w": r - l, "h": b - t})
+    return boxes
+
+
+def load_section(book: str, sec: str) -> dict:
+    """Editor state for a section: the approved copy if it exists, else the pre-QA input."""
+    path = _approved_path(book, sec) if os.path.exists(_approved_path(book, sec)) \
+        else _qa_input_path(book, sec)
+    with open(path) as fh:
+        rows = [json.loads(l) for l in fh if l.strip()]
+    return {"section": sec, "stem": rows[0]["stem"] if rows else _section_stem(sec),
+            "bands": _bands_of(book, sec), "boxes": _rows_to_boxes(rows)}
+
+
+def save_section(book: str, sec: str, stem: str, bands: list[dict], boxes: list[dict],
+                 expected: list[int]) -> list[dict]:
+    """Write the approved full-copy JSONL, recomputing each box's {a}_{b}_{c}_{d} id
+    (band index c, then d=0 rightmost/eldest increasing leftward). Returns the rows."""
+    detected = [sum(1 for bx in boxes if bx["band"] == i) for i in range(5)]
+    passed = detected == expected
+    rows = []
+    for band_idx in range(5):
+        band_boxes = sorted((bx for bx in boxes if bx["band"] == band_idx),
+                            key=lambda bx: -(bx["x"] + bx["w"]))  # rightmost (eldest) first
+        for d, bx in enumerate(band_boxes):
+            row = {"section": sec, "stem": stem,
+                   "id": f"{sec}_{band_idx}_{d}", "band": band_idx,
+                   "generation": seg.BAND_GENERATIONS[band_idx],
+                   "box": [bx["x"], bx["y"], bx["x"] + bx["w"], bx["y"] + bx["h"]],
+                   "expected_per_gen": expected, "detected_per_gen": detected,
+                   "gate_passed": passed}
+            rows.append(row)
+    os.makedirs(_segment_dir(book), exist_ok=True)
+    with open(_approved_path(book, sec), "w") as fh:
+        for row in rows:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    return rows
 
 
 # --- image serving (downscaled) ----------------------------------------------------
@@ -144,18 +187,18 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path == "/":
             self._send(200, PAGE, "text/html; charset=utf-8")
         elif parsed.path == "/list":
-            out = [{"stem": s, "edited": os.path.exists(_manual_path(BOOK, s))}
+            out = [{"stem": s, "edited": os.path.exists(_approved_path(BOOK, s))}
                    for s in _section_stems(BOOK)]
             self._send(200, json.dumps({"book": BOOK, "sections": out}))
         elif parsed.path == "/section":
-            stem = q.get("stem", [""])[0]
-            ov = load_override(BOOK, stem)
-            _png, dw, dh, fw, fh = section_png(BOOK, stem)
+            sec = q.get("stem", [""])[0]
+            st = load_section(BOOK, sec)
+            _png, dw, dh, fw, fh = section_png(BOOK, sec)
             self._send(200, json.dumps({
-                "stem": stem, "scale": DISPLAY_SCALE,
+                "stem": sec, "scale": DISPLAY_SCALE,
                 "dw": dw, "dh": dh, "fw": fw, "fh": fh,
-                "bands": ov["bands"], "boxes": ov["boxes"],
-                "expected": _oracle(BOOK).get(stem, [0] * 5),
+                "bands": st["bands"], "boxes": st["boxes"],
+                "expected": _oracle(BOOK).get(sec, [0] * 5),
                 "generations": list(seg.BAND_GENERATIONS),
             }))
         elif parsed.path == "/img":
@@ -173,21 +216,19 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
         if parsed.path == "/save":
-            stem = body["stem"]
-            ov = {"section": stem, "bands": body["bands"], "boxes": body["boxes"]}
-            save_override(BOOK, stem, ov)
-            # count gate on the saved boxes
-            exp = _oracle(BOOK).get(stem, [0] * 5)
-            det = [sum(1 for b in ov["boxes"] if b["band"] == i) for i in range(5)]
+            sec = body["stem"]
+            exp = _oracle(BOOK).get(sec, [0] * 5)
+            save_section(BOOK, sec, _section_stem(sec), body["bands"], body["boxes"], exp)
+            det = [sum(1 for b in body["boxes"] if b["band"] == i) for i in range(5)]
             self._send(200, json.dumps({"ok": True, "detected": det,
                                         "expected": exp, "gate": det == exp}))
         elif parsed.path == "/reseed":
-            stem = body["stem"]
-            path = _manual_path(BOOK, stem)
+            sec = body["stem"]
+            path = _approved_path(BOOK, sec)
             if os.path.exists(path):
-                os.remove(path)
-            ov = load_override(BOOK, stem)  # re-seeds from detection and saves
-            self._send(200, json.dumps({"ok": True, "bands": ov["bands"], "boxes": ov["boxes"]}))
+                os.remove(path)          # drop the approved copy -> falls back to qa_input
+            st = load_section(BOOK, sec)
+            self._send(200, json.dumps({"ok": True, "bands": st["bands"], "boxes": st["boxes"]}))
         else:
             self._send(404, b"not found", "text/plain")
 

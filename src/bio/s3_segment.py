@@ -29,16 +29,21 @@ equal tree nodes per generation; on any mismatch the section **hard-fails** (per
 design spec) with a QA overlay so the miss can be investigated. We never silently
 split/merge to force the count.
 
-Output (flat, like the graph pipeline's 5_names): ``books/{book}/bio/3_segment/``
-- ``{a}_{b}_{c}_{d}.png`` -- one crop per person. ``a_b`` = section start/end pages,
-  ``c`` = band index (0 = top row = gen 2 ... 4 = bottom = gen 6), ``d`` = index within
-  the row (0 = rightmost/eldest, increasing leftward -- RTL).
-- ``{a}_{b}.blocks.json`` -- per-section sidecar: each block's ``box`` [l,t,r,b], plus,
-  when the count gate passes, the ``node_id``/``node_name`` it maps to (block d <-> the
-  d-th tree node of its generation in DFS eldest-first order -- the 1-1 alignment stage
-  4 relies on, confirmed here by the gate).
-QA: ``books/{book}/qa/bio_s3/{stem}.png`` -- the merged section downscaled with band
-rules drawn and each detected header label boxed (green = gate pass, red = fail).
+This is the PRE-QA stage: it detects blocks and writes them for review, but writes NO
+crop images (boxes change in QA, so cutting crops now would be wasted). The 3-step flow:
+
+  1. this stage  -> ``books/{book}/bio/3_segment/qa_input/{a}_{b}.jsonl``  (one block/row)
+  2. QA editor   -> ``books/{book}/bio/3_segment/{a}_{b}.jsonl``           (approved copy)
+  3. s3_post     -> ``books/{book}/bio/3_segment/{a}_{b}_{c}_{d}.png`` + final jsonl
+
+Block provenance ``{a}_{b}_{c}_{d}``: ``a_b`` = section start/end pages, ``c`` = band
+index (0 = top row = gen 2 ... 4 = bottom = gen 6), ``d`` = index within the row (0 =
+rightmost/eldest, increasing leftward -- RTL). Each JSONL row is one block, in order,
+carrying section context (stem, expected/detected per gen, gate_passed) on every row.
+
+QA overlay: ``books/{book}/qa/bio_s3/{stem}.png`` -- the merged section downscaled with
+band rules drawn, each detected header boxed, and a per-row diff (``gen3: 4/5 MISSING 1``,
+red when short, green when complete) so missing bios per generation are visible.
 
 Run:
     PYTHONPATH=. python -m src.bio.s3_segment --book book3
@@ -57,13 +62,14 @@ from dataclasses import dataclass
 import numpy as np
 from PIL import Image, ImageDraw
 
-from src.imaging import get_image, save_image
+from src.imaging import get_image
 
 logger = logging.getLogger(__name__)
 
 BIO_DIR = "bio"
 MERGED_DIR = "2_merged"
-SEGMENT_DIR = "3_segment"
+SEGMENT_DIR = "3_segment"        # final images + QA-approved jsonls live here (post writes them)
+QA_INPUT_DIR = "qa_input"        # 3_segment/qa_input/ : pre-QA detections (this stage writes)
 QA_DIR = "qa"
 QA_SUBDIR = "bio_s3"
 
@@ -206,6 +212,43 @@ def tree_counts_by_stem(jsonl_path: str) -> dict[str, Counter]:
     return by
 
 
+def tree_nodes_by_stem_gen(jsonl_path: str) -> dict[str, dict[int, list[dict]]]:
+    """Map stem -> generation -> nodes in DFS eldest-first (RTL) order.
+
+    Bio entries within a generation-band are laid out in the tree's depth-first,
+    eldest-first (right-to-left) order (children arrays are already eldest-first). A DFS
+    that recurses children in order therefore yields the bio reading order, so block d
+    (0 = rightmost/eldest) maps to the d-th node of its generation here. Used by the
+    post step to assign a tree node to each bio, once QA has completed the section.
+    """
+    rows = [json.loads(l) for l in open(jsonl_path) if l.strip()]
+    by_id = {n["id"]: n for n in rows}
+    roots_by_stem: dict[str, list[dict]] = defaultdict(list)
+    for n in rows:
+        if n.get("generation") == 1 or n.get("father", -1) in (-1, None):
+            stem = _stem_of_notes(n.get("notes", ""))
+            if stem:
+                roots_by_stem[stem].append(n)
+    out: dict[str, dict[int, list[dict]]] = {}
+    for stem, roots in roots_by_stem.items():
+        per_gen: dict[int, list[dict]] = defaultdict(list)
+        seen: set[int] = set()
+
+        def dfs(nid: int) -> None:
+            if nid in seen or nid not in by_id:
+                return
+            seen.add(nid)
+            n = by_id[nid]
+            per_gen[n["generation"]].append(n)
+            for c in n["children"]:
+                dfs(c)
+
+        for r in sorted(roots, key=lambda n: n["id"]):
+            dfs(r["id"])
+        out[stem] = per_gen
+    return out
+
+
 def map_sections_to_stems(section_stems: list[str], tree_stems: list[str]) -> dict[str, str]:
     """Positional map: the i-th bio section (by start page) <-> the i-th tree subgraph.
 
@@ -283,11 +326,27 @@ def _save_qa(
     small.save(out_path)
 
 
+def _block_row(section: str, stem: str, b: Block, expected: list[int],
+               detected: list[int], gate_passed: bool) -> dict:
+    """One JSONL row per person block (the shared schema for pre-QA, QA, and final).
+
+    Section-level context (stem, expected/detected per gen, gate_passed) is repeated on
+    every row so each JSONL is self-describing without a separate header.
+    """
+    return {
+        "section": section, "stem": stem,
+        "id": b.id, "band": b.band, "generation": b.generation,
+        "box": [b.x, b.y, b.x + b.width, b.y + b.height],
+        "expected_per_gen": expected, "detected_per_gen": detected,
+        "gate_passed": gate_passed,
+    }
+
+
 def segment_book(book: str, sections: list[str] | None = None, books_dir: str = "books",
                  data_dir: str = "data", qa: bool = True) -> dict[str, bool]:
     """Segment every (or the given) bio section of a book; return {stem: gate_passed}."""
     merged_dir = os.path.join(books_dir, book, BIO_DIR, MERGED_DIR)
-    out_base = os.path.join(books_dir, book, BIO_DIR, SEGMENT_DIR)
+    qa_input_dir = os.path.join(books_dir, book, BIO_DIR, SEGMENT_DIR, QA_INPUT_DIR)
     qa_dir = os.path.join(books_dir, book, QA_DIR, QA_SUBDIR)
     if qa:
         os.makedirs(qa_dir, exist_ok=True)
@@ -311,24 +370,17 @@ def segment_book(book: str, sections: list[str] | None = None, books_dir: str = 
         results[sec] = passed
         detected = [len(l) for l in labels]
 
-        # Flat output: one crop PNG per person named by provenance {a}_{b}_{c}_{d}.png,
-        # plus one per-section sidecar {a}_{b}.blocks.json recording each box [l,t,r,b].
-        # No node_id/name here on purpose: the block<->node mapping can only be finalized
-        # once every block in a section is found (QA-completed), so it is deferred.
-        a = get_image(merged_path)
-        os.makedirs(out_base, exist_ok=True)
-        for b in blocks:
-            crop = a[b.y:b.y + b.height, b.x:b.x + b.width]
-            save_image(crop, os.path.join(out_base, f"{b.id}.png"))
-        with open(os.path.join(out_base, f"{sec}.blocks.json"), "w") as fh:
-            json.dump({"section": sec, "stem": stem, "gate_passed": passed,
-                       "expected_per_gen": expected,
-                       "detected_per_gen": detected,
-                       "blocks": [{"id": b.id, "band": b.band, "generation": b.generation,
-                                   "box": [b.x, b.y, b.x + b.width, b.y + b.height]}
-                                  for b in blocks]}, fh, indent=2)
+        # Pre-QA output: ONE JSONL per section (one block per row, in order), NO images.
+        # Images are deferred to the post script -- boxes (and provenance d-indices) will
+        # change in QA, so cutting crops now would just be thrown away. This JSONL is the
+        # QA editor's input.
+        os.makedirs(qa_input_dir, exist_ok=True)
+        with open(os.path.join(qa_input_dir, f"{sec}.jsonl"), "w") as fh:
+            for b in blocks:
+                fh.write(json.dumps(_block_row(sec, stem, b, expected, detected, passed),
+                                    ensure_ascii=False) + "\n")
         if qa:
-            _save_qa(a, bands, labels, passed, expected, detected,
+            _save_qa(get_image(merged_path), bands, labels, passed, expected, detected,
                      os.path.join(qa_dir, f"{sec}.png"))
         logger.info("%s (%s): %s  expected=%s detected=%s", sec, stem,
                     "PASS" if passed else "FAIL", expected, [len(l) for l in labels])
