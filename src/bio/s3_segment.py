@@ -376,14 +376,15 @@ def tighten_box(ink: np.ndarray, box: list[int]) -> list[int]:
     left = _left_cut_rtl(col)
     right = int(text_cols.max())
     _h_img, w_img = ink.shape
-    # Pad LEFT and RIGHT only. The right pad may extend past the original box edge (the
-    # header sits right at it), clamped to the image; the BLOCK_GAP margin keeps it out
-    # of the neighbor. Top/bottom trim to the text within the band -- NO pad, so the crop
-    # never crosses the generation rule into the row above/below.
+    # Trim to the text extent on all four sides, then pad by TIGHTEN_PAD. The incoming box
+    # top/bottom (t, b) are the band's generation rules, so clamping the top/bottom pad to
+    # [t, b] keeps the crop off the divider line and out of the neighboring row -- while
+    # still giving consistent whitespace above/below the text. Left pad clamps at 0, right
+    # pad may run into the block's right margin (BLOCK_GAP keeps it off the neighbor).
     nl = l + max(0, left - TIGHTEN_PAD)
     nr = min(w_img, l + right + 1 + TIGHTEN_PAD)
-    nt = t + int(text_rows.min())
-    nb = t + int(text_rows.max()) + 1
+    nt = max(t, t + int(text_rows.min()) - TIGHTEN_PAD)
+    nb = min(b, t + int(text_rows.max()) + 1 + TIGHTEN_PAD)
     return [nl, nt, nr, nb]
 
 
