@@ -20,9 +20,11 @@ person's SONS** (`生子…名 <sons>`), the strong stitch signal (a parent's li
 are a subset of the next generation's names and say *which* nodes are whose children).
 Everything else (own name, dates, spouse, daughters, burial) is captured best-effort.
 
-**Engine: PaddleOCR PP-OCRv5** (reuse `src/s6_ocr_paddle.PaddleEngine`), chosen by a
-real bake-off (§2). Mistral hallucinates on the extreme block aspect ratios; Paddle is
-robust, local, free.
+**Engine: PaddleOCR PP-OCRv5 with detect-then-resort** (reuse `src/s6_ocr_paddle`),
+chosen by a real bake-off (§2): run Paddle's detector, then override its reading order
+by re-sorting the detected lines into RTL columns geometrically. This fixes the
+whole-block reading-order scramble (fatal for son extraction) and is robust to dense
+blocks where columns touch. Mistral rejected (tiling hallucination + API cost).
 
 **This session:** prove it on section **2_9** (subgraph `0_1` = 传禄). Validation gate:
 the union of all gen-5 blocks' extracted sons must reconstruct the 9 gen-6 tree names.
@@ -40,55 +42,63 @@ Per section stem (e.g. `2_9`):
   `{id, generation, band, x, y, width, height}`, plus `gate_passed`,
   `expected_per_gen`, `detected_per_gen`.
 
-**Stage 4 re-crops each block from the merged image using `blocks.json` (x/y/w/h),
-NOT the Stage-3 PNG files.** The on-disk crop filenames are unstable (currently
-band-indexed while `blocks.json` ids are generation-indexed) and Stage 3 is still being
-finalized; reading geometry from `blocks.json` keeps Stage 4 decoupled from that churn.
+**Stage 4 consumes tight per-person crops** — one person, blank margins removed, like
+the canonical example `books/book3/bio/Screenshot 2026-09-18 …png` (786×340, header
+`子之禄` + name `纪有` + prose columns). **Producing these tight crops is Stage 3's job**
+(coordinated with the in-flight S3 finalization), not Stage 4's. Stage 4 reads the crop
++ `blocks.json` for the block's `generation` (used to pick the oracle generation for
+son validation).
 
 The tree oracle `data/{book}_stitched.jsonl` gives each subgraph's node names grouped by
 generation (via provenance notes → stem; see Stage 3's `tree_counts_by_stem`), used for
 son-name validation.
 
-## 2. OCR engine — bake-off result
+## 2. OCR engine & method — bake-off result
 
-Prototyped both engines on real 2_9 blocks (`scratchpad/bakeoff*.py`):
+Prototyped Paddle (whole-block vs column-wise vs Paddle-detect-then-resort) and Mistral
+on the canonical tight crop and a stable 宪炳 block (`scratchpad/*bakeoff*.py`,
+`detect_resort.py`):
 
-| Block shape | Paddle PP-OCRv5 | Mistral mistral-ocr-latest |
+| Method | Canonical (纪有, tight) | 宪炳 (son 庆林) |
 |---|---|---|
-| Normal (宪炳, ~5:1) | sons `庆鸿/庆亮` ✓; name column garbled | sons ✓; prose clean; sideways header hallucinated |
-| Wide-sparse (up to 25:1) | reads real content ✓ | **hallucinates tiling** (`…西侧 ×50`, `1. 2. …100.`) ✗ |
-| Right-clustered pre-crop (纪有) | — | reads perfectly (`祿之祀有子 … 配失考`) ✓ |
+| Whole-block Paddle | glyphs ✓ but **reading order scrambled** (put last col right after header) | order risk on 2D layout |
+| Column-wise Paddle (vertical projection) | **perfect** (11 cols, RTL, conf ~1.0) | **fails** — dense block has no pixel gutters (columns touch / ADF smear) → 1 blob |
+| **Paddle-detect-then-resort** | 10 cols, correct RTL prose | **18 cols, `生子一名`→`庆林` adjacent & correct, conf 1.0** |
+| Mistral | correct but 戌→成, header merged; **tiling hallucination on wide/sparse crops** | — |
 
-**Decision: PaddleOCR PP-OCRv5** for the P0 path — robust to the extreme aspect ratios
-these blocks routinely have (the exact Mistral failure the geometric-parse design doc
-warned about), local, free, reproducible. Reuse `src/s6_ocr_paddle.PaddleEngine`
-(full detect+recognize pipeline reads multi-column images in reading order).
+**Decision: PaddleOCR PP-OCRv5 with detect-then-resort.** Run Paddle's full
+detect+recognize pipeline (`PaddleOCR(lang="ch")`, reuse `src/s6_ocr_paddle`) to get
+per-line boxes + text, then **discard Paddle's reading order** and re-sort the boxes
+geometrically into columns (RTL by x-center) then top-to-bottom within a column. This:
+- fixes the whole-block **reading-order scramble** (fatal for `生子…名 <sons>` where
+  order defines which glyphs are the sons);
+- is robust to **dense blocks where columns touch** (vertical-projection splitting
+  collapses there; Paddle's detector still separates the lines, and we only override
+  ordering);
+- keeps each glyph at native resolution; local, free, reproducible.
 
-Mistral remains an **optional** later secondary pass for prose fields on near-square
-crops; not on the P0 path.
+Mistral stays an **optional** later secondary prose pass; not on the P0 path (tiling
+risk + API cost).
 
-## 3. Per-block pre-crop (the one fiddly geometry piece)
+## 3. Detect-then-resort (the core algorithm)
 
-Stage-3 blocks run from one header's left edge to the next header's left edge, so a
-block can be ~25 000px wide with the person's vertical text columns clustered at the
-**right** and large blank to the **left** (space reserved for younger siblings printed
-lower in the same band). OCR wastes effort / downscales on that.
+Per tight crop:
+1. `PaddleOCR(lang="ch").predict(rgb)` → `rec_texts`, `rec_polys`, `rec_scores`.
+2. For each detected line take its poly's x-center and top-y.
+3. **Cluster into columns by x-center** (tolerance ≈ 0.7× median line width); order
+   columns **right-to-left** (descending x-center).
+4. Within each column order lines **top-to-bottom** (ascending y); join to column text.
+5. Concatenate columns RTL → the person's entry in true reading order.
 
-Pre-crop each block to its **right-side content**:
-1. From the block's right edge, walk left over columns; keep the contiguous run,
-   ending at the first blank-column run ≥ `CLUSTER_GAP` (tune on real 2_9; ~400px
-   start point).
-2. Trim to the ink bbox of that column range, add small padding.
-3. **Fallback:** if the resulting crop is still very wide (a genuinely wide entry —
-   e.g. a generation with a single person whose columns spread the full width), pass
-   the whole block to Paddle (it handles wide images; only Mistral tiled on them).
-
-Save the pre-crop box for QA overlay.
+Edge cases from the bake-off (handled in parse, §4): the **header band** (`子之X` /
+`子次X`, horizontal, top row) and the **bold name** need separate handling from the
+vertical prose columns — the header/name occasionally split or under-detect, but the
+son columns (the P0) read solidly. Keep per-line conf; flag low-conf columns to QA.
 
 ## 4. Field parsing (markers, not geometry)
 
-Paddle returns text pieces in reading order (RTL columns). Join them, then parse by
-**marker regex** — the bios follow a fixed clause pattern:
+Work over the ordered column texts. Parse by **marker regex** — the bios follow a fixed
+clause pattern:
 
 - **Sons (P0):** clause `生子…名` then the following name glyph(s) until `生女` or block
   end. Ordinals `长/次/三/…` may prefix each. Emit `sons: [...]`.
@@ -112,7 +122,7 @@ Paddle returns text pieces in reading order (RTL columns). Join them, then parse
       "name_ocr": "宪炳", "sons": ["庆鸿", "庆亮"],
       "daughters": ["雪英"], "birth": "…", "death": "…", "spouse": "…",
       "burial": "…", "father_char": null,
-      "raw_text": "…", "ocr_conf": 0.xx, "precrop": [x0,y0,x1,y1] }
+      "raw_text": "…", "ocr_conf": 0.xx, "columns": ["…","…"] }
   ],
   "sons_by_gen": { "5": ["庆鸿","庆亮", …] },
   "validation": {
@@ -124,8 +134,8 @@ Paddle returns text pieces in reading order (RTL columns). Join them, then parse
 }
 ```
 
-QA overlay: `books/{book}/qa/bio_s4/{stem}.png` — merged section downscaled, each
-block's pre-crop box drawn, extracted sons annotated.
+QA overlay: `books/{book}/qa/bio_s4/{stem}/` — per block, the tight crop with detected
+column boxes drawn (RTL order numbered) and the extracted sons annotated.
 
 ## 6. Validation (no unit tests — repo convention)
 
@@ -138,7 +148,8 @@ Per the repo's "no unit tests" rule, validate by running on real data:
 
 A partial match is expected on first pass (some son glyphs are rare / OCR-hard); the
 gap list tells us where to iterate. Sons are the must-get-right field — iterate the
-pre-crop / parse until the gen-5→gen-6 reconstruction is clean on 2_9, then generalize.
+column clustering / parse until the gen-5→gen-6 reconstruction is clean on 2_9, then
+generalize.
 
 ## 7. Module & CLI
 
@@ -147,21 +158,23 @@ pre-crop / parse until the gen-5→gen-6 reconstruction is clean on 2_9, then ge
 PYTHONPATH=. python -m src.bio.s4_ocr --book book3
 PYTHONPATH=. python -m src.bio.s4_ocr --book book3 --sections 2_9
 ```
-Functions: `precrop_block(merged, box) -> Image`, `parse_fields(text_pieces) -> dict`,
-`ocr_section(...)`, `ocr_book(...)`, plus `_save_qa`. Paddle engine imported lazily
-(optional dep), like `src/s6_ocr.py` does.
+Functions: `detect_columns(rgb, engine) -> list[Column]` (Paddle-detect-then-resort),
+`parse_fields(columns) -> dict`, `ocr_section(...)`, `ocr_book(...)`, plus `_save_qa`.
+Paddle engine imported lazily (optional dep), like `src/s6_ocr.py` does.
 
 ## 8. Out of scope this session
 
 - Node attachment (block k ↔ tree node k) — a later merge stage.
 - Stitch-edge creation from son names — later, feeds `s8_cross_stitch`.
-- Fixing Stage 3 crop-file naming — Stage 3 is being finalized separately.
+- Stage 3 crop finalization (tight cropping, file naming) — done in the S3 work.
 - Other books / all sections — generalize after 2_9 (and a couple more) pass.
 
 ## 9. Open questions to resolve during build
 
-1. `CLUSTER_GAP` value for the right-side pre-crop (tune on 2_9's 20 blocks).
-2. Son-clause regex robustness: ordinal prefixes, `名` vs `名曰`, multi-char son names,
-   daughters (`生女`) not bleeding into sons.
-3. Whether Paddle's reading-order join reliably keeps son glyphs contiguous after the
-   `生子…名` marker, or if a son-region sub-crop is needed.
+1. Column-clustering x-center tolerance (bake-off used 0.7× median line width; confirm
+   across 2_9's 20 blocks, esp. dense daughter-heavy entries).
+2. Son-clause regex robustness: ordinal prefixes (`长/次/三…`), `名` vs `名曰`, count
+   word (`生子二名`) as arity cross-check, `生女` not bleeding into sons.
+3. Header/name band: how reliably to isolate `子之X`/`子次X` (horizontal, top) and the
+   bold name from the prose columns — the bake-off showed these occasionally split or
+   under-detect (sons unaffected).
