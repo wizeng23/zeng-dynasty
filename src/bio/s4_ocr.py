@@ -290,6 +290,42 @@ def parse_dates(columns: list[str]) -> dict:
     return {"birth": birth.group(1) if birth else None}
 
 
+# --- vision reader (Claude subagent via the Agent tool; spec §2a) ------------------
+
+_PROMPT_PATH = os.path.join(os.path.dirname(__file__), "s4_vision_prompt.txt")
+
+
+def vision_prompt(crop_path: str) -> str:
+    """The validated transcription prompt with the crop path filled in."""
+    with open(_PROMPT_PATH) as fh:
+        return fh.read().format(crop_path=crop_path)
+
+
+def parse_vision(text: str) -> dict:
+    """Parse a vision subagent's RTL transcription into fields.
+
+    Contract (see ``s4_vision_prompt.txt``): line 1 = father header ``子之X``, line 2 =
+    the person's own name, lines 3+ = prose columns (RTL). Returns
+    ``{lines, father_char, name, sons}``.
+    """
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    father = parse_father(lines[:1]) if lines else None
+    name = lines[1] if len(lines) > 1 and lines[1] != "?" else None
+    sons = parse_sons(lines[2:])
+    return {"lines": lines, "father_char": father, "name": name, "sons": sons}
+
+
+# Dispatch contract for the vision reader
+# --------------------------------------
+# The image reader is a Claude vision subagent, invoked through the harness Agent tool --
+# not an in-process API call. The batch runner (``ocr_book``) therefore writes every
+# block crop to ``4_ocr/{stem}/crops/{id}.png`` and returns the crop paths; the executing
+# agent dispatches one subagent per crop with ``vision_prompt(crop_path)``, collects the
+# returned transcripts into ``{block_id: text}``, and passes that map back as
+# ``vision_texts`` to ``ocr_section``. ``parse_vision`` turns each transcript into fields.
+# ``--no-vision`` skips this entirely (Paddle-only) for quick iteration.
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--book", required=True)
