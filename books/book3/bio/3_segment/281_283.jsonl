@@ -1,0 +1,9 @@
+{"section": "281_283", "stem": "280_280", "id": "281_283_0_0", "band": 0, "generation": 2, "box": [6320, 18, 9202, 1068], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_1_0", "band": 1, "generation": 3, "box": [5552, 1107, 9202, 2211], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_2_0", "band": 2, "generation": 4, "box": [4612, 2241, 9222, 3326], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_3_0", "band": 3, "generation": 5, "box": [6180, 3358, 9196, 4429], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_3_1", "band": 3, "generation": 5, "box": [655, 3412, 3231, 4513], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_4_0", "band": 4, "generation": 6, "box": [6540, 4513, 9161, 5528], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_4_1", "band": 4, "generation": 6, "box": [3729, 4521, 6541, 5545], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_4_2", "band": 4, "generation": 6, "box": [2190, 4526, 3179, 5545], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}
+{"section": "281_283", "stem": "280_280", "id": "281_283_4_3", "band": 4, "generation": 6, "box": [824, 4525, 1813, 5546], "expected_per_gen": [1, 1, 1, 2, 4], "detected_per_gen": [1, 1, 1, 2, 4], "gate_passed": true}

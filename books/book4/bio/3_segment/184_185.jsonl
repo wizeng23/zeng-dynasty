@@ -1,0 +1,5 @@
+{"section": "184_185", "stem": "183_183", "id": "184_185_0_0", "band": 0, "generation": 2, "box": [2653, 56, 5844, 1112], "expected_per_gen": [1, 4, 0, 0, 0], "detected_per_gen": [1, 4, 0, 0, 0], "gate_passed": true}
+{"section": "184_185", "stem": "183_183", "id": "184_185_1_0", "band": 1, "generation": 3, "box": [4800, 1112, 5840, 2240], "expected_per_gen": [1, 4, 0, 0, 0], "detected_per_gen": [1, 4, 0, 0, 0], "gate_passed": true}
+{"section": "184_185", "stem": "183_183", "id": "184_185_1_1", "band": 1, "generation": 3, "box": [3228, 1112, 4478, 2240], "expected_per_gen": [1, 4, 0, 0, 0], "detected_per_gen": [1, 4, 0, 0, 0], "gate_passed": true}
+{"section": "184_185", "stem": "183_183", "id": "184_185_1_2", "band": 1, "generation": 3, "box": [2372, 1112, 3234, 2240], "expected_per_gen": [1, 4, 0, 0, 0], "detected_per_gen": [1, 4, 0, 0, 0], "gate_passed": true}
+{"section": "184_185", "stem": "183_183", "id": "184_185_1_3", "band": 1, "generation": 3, "box": [1200, 1112, 2064, 2240], "expected_per_gen": [1, 4, 0, 0, 0], "detected_per_gen": [1, 4, 0, 0, 0], "gate_passed": true}
