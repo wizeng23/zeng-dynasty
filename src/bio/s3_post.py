@@ -66,11 +66,15 @@ def post_book(book: str, sections: list[str] | None = None, books_dir: str = "bo
         rows = _read_section_jsonl(os.path.join(seg_dir, f"{sec}.jsonl"))
         rows.sort(key=lambda r: (r["band"], int(r["id"].rsplit("_", 1)[1])))
         a = get_image(os.path.join(merged_dir, f"{sec}.png"))
+        H, W = a.shape
         ink = 1 - a
         for row in rows:
-            # re-tighten to text (catches QA-added/moved boxes) and store the tight box
-            row["box"] = seg.tighten_box(ink, row["box"])
-            l, t, r_, b = row["box"]
+            # re-tighten to text (catches QA-added/moved boxes) and clamp to the image
+            # bounds (a QA box may extend a few px past the edge -> otherwise a bad crop).
+            l, t, r_, b = seg.tighten_box(ink, row["box"])
+            l, t = max(0, l), max(0, t)
+            r_, b = min(W, r_), min(H, b)
+            row["box"] = [l, t, r_, b]
             save_image(a[t:b, l:r_], os.path.join(seg_dir, f"{row['id']}.png"))
             n_crops += 1
             combined.append(row)
