@@ -331,14 +331,28 @@ def parse_vision(text: str) -> dict:
 EMPTY_VISION = {"lines": [], "father_char": None, "name": None, "sons": []}
 
 
-def reconcile(paddle: dict, vision: dict, tree_name: str | None) -> dict:
-    """Merge the two reads into one block record; sons = flagged union (spec §2a)."""
+def reconcile(paddle: dict, vision: dict, tree_name: str | None,
+              child_names: set[str] | None = None) -> dict:
+    """Merge the two reads into one block record; sons = flagged union (spec §2a).
+
+    ``child_names`` (the tree's names for the next generation, ground truth) demotes a
+    **single-reader** son that is NOT a real child name to a ``qa_flag`` instead of the
+    union -- this drops OCR junk (garbled glyphs, traditional/simplified variants a reader
+    got wrong) while keeping every son that either reader anchored to a real node. Sons
+    both readers agree on are always kept.
+    """
     p_sons, v_sons = list(paddle["sons"]), list(vision["sons"])
     ps, vs = set(p_sons), set(v_sons)
     union = list(dict.fromkeys(p_sons + v_sons))  # order-preserving dedupe
-    sons = [{"name": s, "agreed": (s in ps and s in vs)} for s in union]
-    name = vision.get("name") or tree_name
     flags = list(paddle["qa_flags"])
+    sons = []
+    for s in union:
+        agreed = s in ps and s in vs
+        if not agreed and child_names is not None and s not in child_names:
+            flags.append(f"son '{s}': single-reader, not a tree child -- dropped")
+            continue
+        sons.append({"name": s, "agreed": agreed})
+    name = vision.get("name") or tree_name
     if vision.get("name") and tree_name and vision["name"] != tree_name:
         flags.append(f"name: vision '{vision['name']}' != tree '{tree_name}'")
     if ps != vs:
@@ -443,7 +457,8 @@ def ocr_section(book: str, sec: str, books_dir: str, data_dir: str,
         vision = EMPTY_VISION
         if vision_texts and b.id in vision_texts:
             vision = parse_vision(vision_texts[b.id])
-        rec = reconcile(paddle, vision, tree_name)
+        child_names = set(tree_by_gen.get(b.generation + 1, []))
+        rec = reconcile(paddle, vision, tree_name, child_names or None)
         rec.update({"block_id": b.id, "generation": b.generation, "band": b.band, "k": b.k})
         records.append(rec)
         logger.info("%s gen%d k%d: sons=%s flags=%d", b.id, b.generation, b.k,
