@@ -223,7 +223,7 @@ PAGE = r"""<!doctype html><meta charset=utf-8>
  <span class=hint id=modehint>mode: select</span>
  <span id=gate></span>
 </div>
-<div class=hint>Boxes are person blocks per generation-band (blue dashed = rules). Drag box to move, corner to resize, 'a'+click to add (snaps to the band you click in), Del to remove. Image is downscaled for speed; boxes save at full resolution. Save advances to the next section.</div>
+<div class=hint>Boxes are person blocks per generation-band (blue dashed = rules). Fills screen height; ←/→ pan ~3/4 screen (starts at right edge = eldest). Drag box to move, corner to resize, 'a'+click to add (snaps to the band you click in), Del to remove. Image is downscaled for speed; boxes save at full resolution. Save advances to the next section.</div>
 <div id=view><div id=wrap><img id=g><svg id=ov></svg></div></div>
 <script>
 let stem="",data=null,dw=0,dh=0,scale=6,sel=null,mode="select",nextId=0,drag=null;
@@ -234,8 +234,13 @@ const view=document.getElementById('view'),wrap=document.getElementById('wrap'),
       gateEl=document.getElementById('gate');
 function setMode(m){mode=m;modehint.textContent="mode: "+m}
 function applyView(){wrap.style.transform=`translate(${vx}px,${vy}px) scale(${vz})`;render();}
-function fitWidthZoom(){const vw=view.clientWidth;return dw?vw/dw:1;}
-function fitView(){vz=fitWidthZoom();vx=0;vy=0;applyView();}
+// Fit the section's full HEIGHT to the viewport (bands stack vertically -> all 5 gens
+// visible); pan horizontally through the people. Start scrolled to the right edge
+// (eldest/first person is rightmost, RTL).
+function fitHeightZoom(){const vh=view.clientHeight;return dh?vh/dh:1;}
+function fitView(){vz=fitHeightZoom()*0.98;vy=0;vx=view.clientWidth-dw*vz;applyView();}
+// horizontal pan by ~3/4 of a screen width. dir=-1 moves the view left (content right).
+function panScreen(dir){vx-=dir*view.clientWidth*0.75;applyView();}
 async function loadList(){
   const j=await(await fetch('/list')).json();
   stemSel.innerHTML=j.sections.map(s=>`<option value="${s.stem}">${s.stem}${s.edited?' ✓':''}</option>`).join('');
@@ -330,6 +335,8 @@ window.addEventListener('keydown',ev=>{
   if(ev.target.tagName==='SELECT')return;
   if(ev.key==='a')setMode('add');else if(ev.key==='s'){ev.preventDefault();save();}
   else if(ev.key==='f')fitView();else if(ev.key==='Delete'||ev.key==='Backspace')delSel();
+  else if(ev.key==='ArrowRight'){ev.preventDefault();panScreen(1);}   // reveal content to the right
+  else if(ev.key==='ArrowLeft'){ev.preventDefault();panScreen(-1);}   // reveal content to the left
   else if(ev.key==='Escape'){sel=null;setMode('select');render();}
 });
 loadList();
