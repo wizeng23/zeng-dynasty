@@ -1,14 +1,25 @@
 # Bio Stage 4 — per-person field OCR — design
 
-**Status:** design (2026-09-18). Ready to build.
-**Branch:** `stage-4-bio-ocr` (off `review-bio-parse-design`, which contains all of
-`origin/main` plus bio stages 1–3).
+**Status:** built (2026-09-18).
+**Branch:** `stage-4-bio-ocr`.
 **Author:** William + session.
-**Depends on:** bio Stage 3 (`src/bio/s3_segment.py`) — per-person block boxes
-(`blocks.json`) + merged section image (`books/{book}/bio/2_merged/{stem}.png`).
-**Feeds:** a later merge stage folds Stage 4 fields into the tree nodes and the
-cross-book stitch (children-name evidence). Stage 4 itself does **not** mutate
-`data/{book}_stitched.jsonl`.
+**Depends on:** bio Stage 3 (finalized) — per-person tight crops + per-section sidecar
+`books/{book}/bio/3_segment/{stem}.jsonl` (one line per block: `id, band, generation,
+box, gate_passed`) + `{id}.png` tight crops.
+**Feeds:** **Stage 5** (future) does father/son validation against the tree and stitches
+edges into the graph. Stage 4 does **not** touch the tree.
+
+> **Scope revision (2026-09-18, supersedes §2a/§5/§6 below):** Stage 4 is now a **pure
+> per-crop OCR step** — no tree oracle, no generation-based validation gate, no
+> node-attachment. It emits BOTH readers' outputs **losslessly** (Paddle's full columns +
+> char boxes; the vision subagent's full transcript) plus a best-effort structured record
+> that keeps each reader's fields **separate and unmerged** (no dropping). All tree-based
+> reconciliation / the sons-union gate / the 宪烘↔庆粮 conflict handling move to **Stage 5**.
+> Also: Stage 3 is finalized and emits tight crops, so the `tight_crop` shim and the
+> merged-image re-crop are gone — Stage 4 reads `3_segment/{stem}.jsonl` + the `{id}.png`
+> crops directly. Output is now `4_ocr/{stem}.jsonl` (one record per block). The sections
+> below describe the readers (§2, §2a, §3, §4, §5a), which still hold; the validation gate
+> (§5 `validation`, §6 semantic gate) is Stage 5's, not Stage 4's.
 
 ---
 
