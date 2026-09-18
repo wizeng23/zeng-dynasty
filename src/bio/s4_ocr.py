@@ -17,8 +17,12 @@ Readers (chosen by bake-off; see docs/specs/2026-09-18-bio-stage4-field-ocr-desi
   prose). Catches Paddle's blind spots (header + short name column). Driven by the
   executing agent via the Agent tool (see the dispatch contract below).
 
-Input  (stage-3 final): ``books/{book}/bio/3_segment/{stem}.jsonl`` (one line per block:
-``id, band, generation, box, gate_passed``) + ``{id}.png`` tight crops.
+Input  (stage-3 final, post-QA): ``books/{book}/bio/3_segment/blocks.jsonl`` -- the
+combined final index s3_post writes ("the index stage 4 consumes"), one row per block:
+``section, stem, id, band, generation, box, gate_passed`` -- plus the ``{id}.png`` tight
+crops beside it. (Per s3_post: block count per section is NOT guaranteed to equal the
+subgraph's node count; block->node linking is a later evidence-based step -- so stage 4
+does pure OCR, no node mapping.)
 Output: ``books/{book}/bio/4_ocr/{stem}.jsonl`` -- one record per block with both raw
 reads + best-effort structured fields + structural ``qa_flags``.
 
@@ -41,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 BIO_DIR = "bio"
 SEGMENT_DIR = "3_segment"
+BLOCKS_INDEX = "blocks.jsonl"   # s3_post's combined final index; stage 4 consumes this
 OUT_DIR = "4_ocr"
 
 
@@ -54,23 +59,33 @@ class BlockCrop:
     meta: dict  # the raw stage-3 jsonl record (band, generation, gate_passed, ...)
 
 
-def iter_blocks(book: str, sec: str, books_dir: str = "books") -> list[BlockCrop]:
-    """Load stage-3's finalized per-person crops for a section, in file order.
+def _load_index(book: str, books_dir: str) -> list[dict]:
+    """All block rows from s3_post's combined ``blocks.jsonl`` (the final index)."""
+    path = os.path.join(books_dir, book, BIO_DIR, SEGMENT_DIR, BLOCKS_INDEX)
+    with open(path) as fh:
+        return [json.loads(line) for line in fh if line.strip()]
 
-    Reads ``3_segment/{sec}.jsonl`` (the authoritative block list) and the matching
-    ``{id}.png`` tight crops. Stage 3 emits crops already bounded to one person, so no
-    re-cropping is needed here.
+
+def list_sections(book: str, books_dir: str = "books") -> list[str]:
+    """Section stems present in the block index, ordered by first page."""
+    secs = {r["section"] for r in _load_index(book, books_dir)}
+    return sorted(secs, key=lambda s: int(s.split("_")[0]))
+
+
+def iter_blocks(book: str, sec: str, books_dir: str = "books") -> list[BlockCrop]:
+    """Load stage-3's finalized per-person crops for one section, in index order.
+
+    Reads the combined ``3_segment/blocks.jsonl`` (s3_post's authoritative post-QA index,
+    "the index stage 4 consumes") filtered to ``sec``, and the matching ``{id}.png`` tight
+    crops. Stage 3 emits crops already bounded to one person, so no re-cropping here.
     """
     seg_dir = os.path.join(books_dir, book, BIO_DIR, SEGMENT_DIR)
     out: list[BlockCrop] = []
-    with open(os.path.join(seg_dir, f"{sec}.jsonl")) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            rec = json.loads(line)
-            img = Image.open(os.path.join(seg_dir, f"{rec['id']}.png")).convert("RGB")
-            out.append(BlockCrop(rec["id"], rec.get("box", []), img, rec))
+    for rec in _load_index(book, books_dir):
+        if rec.get("section") != sec:
+            continue
+        img = Image.open(os.path.join(seg_dir, f"{rec['id']}.png")).convert("RGB")
+        out.append(BlockCrop(rec["id"], rec.get("box", []), img, rec))
     return out
 
 
@@ -373,12 +388,7 @@ def _save_qa(book: str, sec: str, books_dir: str, blocks: list[BlockCrop],
 def ocr_book(book: str, sections: list[str] | None, books_dir: str,
              vision_texts: dict[str, str] | None = None, qa: bool = True) -> dict:
     """OCR the given (or all) sections; write per-section jsonl sidecars + QA overlays."""
-    seg_dir = os.path.join(books_dir, book, BIO_DIR, SEGMENT_DIR)
-    all_sections = sorted(
-        (f[:-6] for f in os.listdir(seg_dir) if f.endswith(".jsonl")),
-        key=lambda s: int(s.split("_")[0]),
-    )
-    todo = sections or all_sections
+    todo = sections or list_sections(book, books_dir)
     out_base = os.path.join(books_dir, book, BIO_DIR, OUT_DIR)
     os.makedirs(out_base, exist_ok=True)
     engine = _paddle_engine()
