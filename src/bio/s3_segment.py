@@ -29,8 +29,14 @@ equal tree nodes per generation; on any mismatch the section **hard-fails** (per
 design spec) with a QA overlay so the miss can be investigated. We never silently
 split/merge to force the count.
 
-Output: ``books/{book}/bio/3_segment/{stem}/`` -- ``blocks.json`` (per-person boxes)
-and one ``{stem}_{gen}_{k}.png`` crop per person (RTL / eldest-first within a band).
+Output (flat, like the graph pipeline's 5_names): ``books/{book}/bio/3_segment/``
+- ``{a}_{b}_{c}_{d}.png`` -- one crop per person. ``a_b`` = section start/end pages,
+  ``c`` = band index (0 = top row = gen 2 ... 4 = bottom = gen 6), ``d`` = index within
+  the row (0 = rightmost/eldest, increasing leftward -- RTL).
+- ``{a}_{b}.blocks.json`` -- per-section sidecar: each block's ``box`` [l,t,r,b], plus,
+  when the count gate passes, the ``node_id``/``node_name`` it maps to (block d <-> the
+  d-th tree node of its generation in DFS eldest-first order -- the 1-1 alignment stage
+  4 relies on, confirmed here by the gate).
 QA: ``books/{book}/qa/bio_s3/{stem}.png`` -- the merged section downscaled with band
 rules drawn and each detected header label boxed (green = gate pass, red = fail).
 
@@ -46,7 +52,7 @@ import json
 import logging
 import os
 from collections import Counter, defaultdict
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -145,28 +151,33 @@ def find_labels(band_ink: np.ndarray) -> tuple[list[tuple[int, int]], int]:
     return sorted(best), best_y0
 
 
+# A person's box stops this many px short of the next person's label so adjacent
+# boxes don't touch (the header 子之X of the next entry stays outside this box).
+BLOCK_GAP = 30
+
+
 def _blocks_from_labels(
     labels: list[tuple[int, int]], band_top: int, band_bottom: int,
     generation: int, band_idx: int, stem: str, width: int,
 ) -> list[Block]:
     """Turn header-label x-runs into per-person blocks, RTL / eldest-first.
 
-    A block spans from one label's left edge to the next label's left edge (the entry
-    reads right-to-left, so the eldest is rightmost). Ordered eldest-first = by
-    descending x. IDs are ``{stem}_{gen}_{k}`` with k=0 the eldest (rightmost).
+    The book reads right-to-left: within a band each person's header ``子之X`` sits at
+    the RIGHT of their block and their prose fills leftward. So a block's RIGHT edge is
+    its own label's right edge, and its LEFT edge is just past the next (younger)
+    person's label. The eldest (rightmost label) is block k=0.
     """
-    starts = sorted(s for s, _ in labels)  # left edges, ascending x
-    # Right-to-left blocks: block i occupies [starts[i], starts[i+1]) ; last extends to width.
-    ranges = []
-    for i, s in enumerate(starts):
-        e = starts[i + 1] - 1 if i + 1 < len(starts) else width - 1
-        ranges.append((s, e))
-    ranges.sort(key=lambda r: -r[0])  # eldest (rightmost) first
+    spans = sorted(labels, key=lambda se: -se[1])   # by right edge, rightmost (eldest) first
     blocks = []
-    for k, (x0, x1) in enumerate(ranges):
+    for d, (ls, le) in enumerate(spans):
+        right = le                                   # box right edge = this label's right edge
+        # left edge = just past the next-younger person's label (or the image left)
+        left = (spans[d + 1][1] + 1 + BLOCK_GAP) if d + 1 < len(spans) else 0
+        left = min(left, ls)                         # never cut into this person's own label
+        # id = {stem}_{c}_{d}: c = band index (0=top row), d = 0 rightmost/eldest, up leftward
         blocks.append(Block(
-            id=f"{stem}_{generation}_{k}", generation=generation, band=band_idx,
-            x=x0, y=band_top, width=x1 - x0 + 1, height=band_bottom - band_top,
+            id=f"{stem}_{band_idx}_{d}", generation=generation, band=band_idx,
+            x=left, y=band_top, width=right - left + 1, height=band_bottom - band_top,
         ))
     return blocks
 
@@ -184,16 +195,55 @@ def _stem_of_notes(notes: str) -> str:
 def tree_counts_by_stem(jsonl_path: str) -> dict[str, Counter]:
     """Map each subgraph stem -> Counter of node count per generation."""
     by: dict[str, Counter] = defaultdict(Counter)
-    with open(jsonl_path) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            node = json.loads(line)
-            stem = _stem_of_notes(node.get("notes", ""))
-            if stem:
-                by[stem][node["generation"]] += 1
+    for node in _load_jsonl(jsonl_path):
+        stem = _stem_of_notes(node.get("notes", ""))
+        if stem:
+            by[stem][node["generation"]] += 1
     return by
+
+
+def _load_jsonl(jsonl_path: str) -> list[dict]:
+    with open(jsonl_path) as fh:
+        return [json.loads(l) for l in fh if l.strip()]
+
+
+def tree_nodes_by_stem_gen(jsonl_path: str) -> dict[str, dict[int, list[dict]]]:
+    """Map stem -> generation -> nodes in DFS eldest-first (RTL) order.
+
+    Bio entries within a generation-band are laid out in the tree's depth-first,
+    eldest-first (right-to-left) traversal order (verified: gen6 of 传禄 = 庆林, 庆鸿,
+    庆亮, ... rightmost-first). ``children`` arrays are already eldest-first, so a DFS
+    that recurses children in order yields the bio reading order. Block ``d`` (0 =
+    rightmost/eldest) then maps 1-1 to the d-th node of its generation here -- which is
+    exactly what the count gate confirms.
+    """
+    rows = _load_jsonl(jsonl_path)
+    by_id = {n["id"]: n for n in rows}
+    by_stem_roots: dict[str, list[dict]] = defaultdict(list)
+    for n in rows:
+        if n.get("generation") == 1 or n.get("father", -1) in (-1, None):
+            stem = _stem_of_notes(n.get("notes", ""))
+            if stem:
+                by_stem_roots[stem].append(n)
+
+    out: dict[str, dict[int, list[dict]]] = {}
+    for stem, roots in by_stem_roots.items():
+        per_gen: dict[int, list[dict]] = defaultdict(list)
+        seen: set[int] = set()
+
+        def dfs(nid: int) -> None:
+            if nid in seen or nid not in by_id:
+                return
+            seen.add(nid)
+            n = by_id[nid]
+            per_gen[n["generation"]].append(n)
+            for c in n["children"]:
+                dfs(c)
+
+        for r in sorted(roots, key=lambda n: n["id"]):
+            dfs(r["id"])
+        out[stem] = per_gen
+    return out
 
 
 def map_sections_to_stems(section_stems: list[str], tree_stems: list[str]) -> dict[str, str]:
@@ -278,7 +328,9 @@ def segment_book(book: str, sections: list[str] | None = None, books_dir: str = 
         (f[:-4] for f in os.listdir(merged_dir) if f.endswith(".png")),
         key=lambda s: int(s.split("_")[0]),
     )
-    tree_by_stem = tree_counts_by_stem(os.path.join(data_dir, f"{book}_stitched.jsonl"))
+    jsonl = os.path.join(data_dir, f"{book}_stitched.jsonl")
+    tree_by_stem = tree_counts_by_stem(jsonl)
+    nodes_by_stem_gen = tree_nodes_by_stem_gen(jsonl)
     sec_to_stem = map_sections_to_stems(all_sections, list(tree_by_stem))
     todo = sections or all_sections
 
@@ -291,21 +343,41 @@ def segment_book(book: str, sections: list[str] | None = None, books_dir: str = 
         blocks, labels, bands, passed = segment_section(merged_path, json_path, expected)
         results[sec] = passed
 
-        out_dir = os.path.join(out_base, sec)
-        os.makedirs(out_dir, exist_ok=True)
-        with open(os.path.join(out_dir, "blocks.json"), "w") as fh:
+        # Always emit a QA overlay (needed to fix the failing sections in the editor).
+        a = get_image(merged_path)
+        if qa:
+            _save_qa(a, bands, labels, passed, os.path.join(qa_dir, f"{sec}.png"))
+
+        # Only emit crops + sidecar when the gate PASSES: a section's blocks can be
+        # aligned 1-1 to tree nodes (block d <-> the d-th DFS eldest-first node of its
+        # generation) only once every block in it is found. Failing sections wait for
+        # the QA editor to complete them, then re-run.
+        if not passed:
+            continue
+
+        node_of: dict[str, dict] = {}
+        per_gen = nodes_by_stem_gen.get(stem, {})
+        for band_idx, gen in enumerate(BAND_GENERATIONS):
+            band_blocks = sorted((b for b in blocks if b.band == band_idx),
+                                 key=lambda b: int(b.id.rsplit("_", 1)[1]))
+            for b, n in zip(band_blocks, per_gen.get(gen, [])):
+                node_of[b.id] = n
+
+        # Flat output: one crop PNG per person named by provenance {a}_{b}_{c}_{d}.png,
+        # plus one per-section sidecar {a}_{b}.blocks.json recording each box [l,t,r,b].
+        os.makedirs(out_base, exist_ok=True)
+        for b in blocks:
+            crop = a[b.y:b.y + b.height, b.x:b.x + b.width]
+            save_image(crop, os.path.join(out_base, f"{b.id}.png"))
+        with open(os.path.join(out_base, f"{sec}.blocks.json"), "w") as fh:
             json.dump({"section": sec, "stem": stem, "gate_passed": passed,
                        "expected_per_gen": expected,
                        "detected_per_gen": [len(l) for l in labels],
-                       "blocks": [asdict(b) for b in blocks]}, fh, indent=2)
-        # one crop per person block, for stage-4 field OCR to read
-        a = get_image(merged_path)
-        for b in blocks:
-            crop = a[b.y:b.y + b.height, b.x:b.x + b.width]
-            save_image(crop, os.path.join(out_dir, f"{b.id}.png"))
-        if qa:
-            _save_qa(get_image(merged_path), bands, labels, passed,
-                     os.path.join(qa_dir, f"{sec}.png"))
+                       "blocks": [{"id": b.id, "band": b.band, "generation": b.generation,
+                                   "box": [b.x, b.y, b.x + b.width, b.y + b.height],
+                                   "node_id": node_of[b.id]["id"] if b.id in node_of else None,
+                                   "node_name": node_of[b.id].get("name") if b.id in node_of else None}
+                                  for b in blocks]}, fh, indent=2)
         logger.info("%s (%s): %s  expected=%s detected=%s", sec, stem,
                     "PASS" if passed else "FAIL", expected, [len(l) for l in labels])
     npass = sum(results.values())
