@@ -375,10 +375,13 @@ def tighten_box(ink: np.ndarray, box: list[int]) -> list[int]:
         return box
     left = _left_cut_rtl(col)
     right = int(text_cols.max())
+    h_img, w_img = ink.shape
     nl = l + max(0, left - TIGHTEN_PAD)
-    nr = l + min(sub.shape[1], right + 1 + TIGHTEN_PAD)
-    nt = t + max(0, int(text_rows.min()) - TIGHTEN_PAD)
-    nb = t + min(sub.shape[0], int(text_rows.max()) + 1 + TIGHTEN_PAD)
+    # right/top/bottom may pad PAST the original box edge (the header sits right at it),
+    # clamped only to the full image, so glyphs never ride the crop edge.
+    nr = min(w_img, l + right + 1 + TIGHTEN_PAD)
+    nt = max(0, t + int(text_rows.min()) - TIGHTEN_PAD)
+    nb = min(h_img, t + int(text_rows.max()) + 1 + TIGHTEN_PAD)
     return [nl, nt, nr, nb]
 
 
