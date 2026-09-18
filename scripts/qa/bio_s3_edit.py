@@ -76,7 +76,9 @@ def _oracle(book: str) -> dict[str, list[int]]:
     """Map section stem -> expected node count for generations 2..6."""
     if book in _ORACLE:  # cached across requests
         return _ORACLE[book]  # type: ignore[return-value]
-    by = seg.tree_counts_by_stem(os.path.join(DATA_DIR, f"{book}_stitched.jsonl"))
+    # PRE-STITCH parse (bio sections map 1-1 to pre-stitch graphs; stitch drops/rewrites
+    # stems -- see src/bio/s3_segment.py).
+    by = seg.tree_counts_by_stem(os.path.join(DATA_DIR, f"{book}.jsonl"))
     sec_to_stem = seg.map_sections_to_stems(_section_stems(book), list(by))
     out = {sec: [by[stem].get(g, 0) for g in seg.BAND_GENERATIONS]
            for sec, stem in sec_to_stem.items()}
