@@ -6,25 +6,38 @@ what-is-left.
 
 ## Bio stage 4 (field OCR) — status (2026-09-18)
 
-`src/bio/s4_ocr.py` is built and validated on Book 3 section 2_9 (Era 14). Branch
-`stage-4-bio-ocr`. Ensemble = Paddle detect-then-resort + a vision Claude subagent;
-P0 = sons; output `books/{book}/bio/4_ocr/{stem}.json`. On 2_9 the gen-5 sons-union
-reconstructs 8/9 gen-6 tree names, 0 extras; the 1 miss (`庆粮`) is a real bio↔graph
-conflict (宪烘's bio lists 庆财/庆铭, tree says 庆粮), flagged not hidden.
+`src/bio/s4_ocr.py` built + validated on Book 3 section 2_9. Branch `stage-4-bio-ocr`.
+**Stage 4 = PURE per-crop OCR** (no tree, no validation, no stitch — that's stage 5).
+Reads finalized stage-3 `3_segment/{stem}.jsonl` + tight `{id}.png` crops; emits
+`4_ocr/{stem}.jsonl`, one lossless record per block: BOTH readers' raw output preserved
+(`raw.paddle.columns`+char_boxes, `raw.vision.text`) + best-effort structured fields kept
+**per-reader, unmerged** (`sons/name/father_char/daughters/birth` each `{paddle, vision}`)
++ structural `qa_flags`. Ensemble = Paddle detect-then-resort + vision Claude subagent.
+
+**Result on finalized 2_9 (full ensemble, 20 blocks):** vision reconstructs father→son
+edges at every level — gen4→gen5 = all 7 宪-names; **gen5→gen6 = the full 9-name 庆-set
+(9/9)**; gen6→gen7 = 繁 roots. Vision fixes every Paddle noise (召其→昭棋/昭柏, 庆鸿3→庆鸿,
+2庆粮→庆粮); Paddle confirms the clean ones. Father-char per block clean too. The earlier
+"宪烘/庆粮 conflict" was an OLD-segmentation artifact — gone with finalized S3.
 
 **Remaining for stage 4:**
-- **Vision pass is driven by the executing agent**, not the CLI: `--no-vision` runs
-  Paddle-only; for the ensemble, `save_crops(book, sec)` writes crops, an agent
-  dispatches one vision subagent per crop (`vision_prompt(crop_path)`), and the
-  `{block_id: text}` map is passed to `ocr_section(..., vision_texts=...)`. Consider a
-  gating step (only run vision on Paddle-QA-flagged blocks) before full-book runs.
-- **Tight-crop dependency:** stage 3 still emits wide blocks; s4's `tight_crop` shim
-  handles it (no-op once s3 tightens). Dense blocks (no ≥400px gap) stay wide — Paddle
-  handles them, but confirm on other sections.
-- **Generalize:** run 66_77 and a couple more Book 3 sections; then Book 4.
-- **Investigate the 宪烘/庆粮 bio↔graph conflict** — candidate stitch/graph fix.
-- QA overlay generation re-OCRs each block (slow); fine for one section, batch/background
-  for a book.
+- **Vision pass is agent-driven**, not the CLI: `--no-vision` = Paddle-only; ensemble =
+  `save_crops(book, sec)` → agent dispatches vision subagents (batch ~5/subagent works
+  well, see `vision_prompt`) → pass `{id: text}` to `ocr_section(vision_texts=...)`.
+  Consider gating vision to Paddle-QA-flagged blocks for full-book cost.
+- **Generalize:** run 66_77 + more Book-3 sections, then Book 4.
+- **Run in place:** validated against a scratchpad copy of finalized S3; run against the
+  real `books/book3/...` once the shared dirs settle. `4_ocr/*.jsonl` sidecars are
+  git-tracked (PNGs ignored) — commit the data from an in-place run.
+- QA overlay (`_save_qa`) re-OCRs each block (slow); ran with `qa=False` for speed —
+  batch/background it for a full book.
+
+## Bio STAGE 5 (next) — validation + stitch
+
+New stage: read `4_ocr` + the tree; cross-check each block's `father_char`/`sons`
+against the graph edges; **stitch confirmed father→son edges into the graph** (the P0
+purpose). The son-union-vs-next-gen-names gate lives here now. Must tolerate Paddle son
+noise (prefer vision / agreed sons; the tree is ground truth for which names exist).
 
 ## Hard rules in force
 
