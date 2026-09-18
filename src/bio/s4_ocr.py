@@ -126,6 +126,99 @@ def iter_blocks(book: str, sec: str, books_dir: str = "books") -> list[BlockCrop
     return out
 
 
+# --- Paddle reader: detect-then-resort + structural QA (spec §3, §5a) --------------
+
+_ENGINE = None
+
+
+def _paddle_engine():
+    """Cached PP-OCRv5 full detect+recognize pipeline (lazy: paddle is optional)."""
+    global _ENGINE
+    if _ENGINE is None:
+        from paddleocr import PaddleOCR
+
+        _ENGINE = PaddleOCR(lang="ch")
+    return _ENGINE
+
+
+def _char_boxes(engine, rgb: np.ndarray) -> list[dict]:
+    """Per-character boxes via ``return_word_box=True`` (text_word + text_word_boxes)."""
+    res = engine.predict(rgb, return_word_box=True)
+    if not res:
+        return []
+    d = getattr(res[0], "json", None)
+    d = d.get("res", d) if isinstance(d, dict) else res[0]
+    wtexts = d.get("text_word") or []
+    wboxes = d.get("text_word_boxes") or []
+    chars: list[dict] = []
+    for line_words, line_boxes in zip(wtexts, wboxes):
+        for ch, bx in zip(line_words, line_boxes):
+            x0, y0, x1, y1 = (float(v) for v in bx)
+            chars.append(dict(ch=ch, x0=x0, y0=y0, x1=x1, y1=y1,
+                              xc=(x0 + x1) / 2, yc=(y0 + y1) / 2))
+    return chars
+
+
+def _cluster_columns(chars: list[dict], tol_frac: float = 0.7) -> list[list[dict]]:
+    """Cluster chars into RTL columns by x-center; sort each column top-to-bottom."""
+    if not chars:
+        return []
+    med_w = float(np.median([c["x1"] - c["x0"] for c in chars])) or 30.0
+    tol = max(med_w * tol_frac, 12.0)
+    ordered = sorted(chars, key=lambda c: -c["xc"])  # RTL
+    cols: list[list[dict]] = []
+    centers: list[float] = []
+    for c in ordered:
+        if cols and abs(centers[-1] - c["xc"]) <= tol:
+            cols[-1].append(c)
+            centers[-1] = float(np.mean([x["xc"] for x in cols[-1]]))
+        else:
+            cols.append([c])
+            centers.append(c["xc"])
+    for ci, col in enumerate(cols):
+        col.sort(key=lambda c: c["y0"])
+        for c in col:
+            c["col"] = ci
+    return cols
+
+
+def _qa_checks(cols: list[list[dict]]) -> list[str]:
+    """Structural flags from char boxes: pitch gap / intra-column gap / fill ratio."""
+    if not cols:
+        return ["no text detected"]
+    all_chars = [c for col in cols for c in col]
+    med_h = float(np.median([c["y1"] - c["y0"] for c in all_chars])) or 30.0
+    centers = [float(np.mean([c["xc"] for c in col])) for col in cols]
+    pitches = [abs(centers[i] - centers[i + 1]) for i in range(len(centers) - 1)]
+    med_pitch = float(np.median(pitches)) if pitches else 0.0
+    flags: list[str] = []
+    for i, p in enumerate(pitches):
+        if med_pitch and p > 1.6 * med_pitch:
+            flags.append(f"col{i}->col{i+1}: pitch gap {p:.0f} (missed column?)")
+    for ci, col in enumerate(cols):
+        for j in range(len(col) - 1):
+            gap = col[j + 1]["y0"] - col[j]["y1"]
+            if gap > 1.2 * med_h:
+                flags.append(f"col{ci}: y-gap {gap:.0f} after '{col[j]['ch']}' (dropped char?)")
+        span = (col[-1]["y1"] - col[0]["y0"]) if col else 0
+        if span > 3 * med_h and len(col) * med_h < 0.5 * span:
+            flags.append(f"col{ci}: fill ratio low ({len(col)} chars / {span:.0f}px)")
+    return flags
+
+
+def paddle_read(img: Image.Image, engine) -> dict:
+    """Read a tight person crop with detect-then-resort + structural QA.
+
+    Returns ``{columns, char_boxes, sons, qa_flags}`` -- ``columns`` are the RTL-ordered
+    joined column texts, ``char_boxes`` carry a ``col`` index for the QA overlay.
+    """
+    chars = _char_boxes(engine, np.asarray(img))
+    cols = _cluster_columns(chars)
+    col_texts = ["".join(c["ch"] for c in col) for col in cols]
+    return {"columns": col_texts, "char_boxes": chars,
+            "sons": parse_sons(col_texts), "qa_flags": _qa_checks(cols)}
+
+
 # --- field parsers (marker-based; sons is the gated P0 field) ---------------------
 
 _COUNT = "一二三四五六七八九十两"   # 生子{N}名
