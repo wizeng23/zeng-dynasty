@@ -122,7 +122,8 @@ clause pattern:
       "name_ocr": "宪炳", "sons": ["庆鸿", "庆亮"],
       "daughters": ["雪英"], "birth": "…", "death": "…", "spouse": "…",
       "burial": "…", "father_char": null,
-      "raw_text": "…", "ocr_conf": 0.xx, "columns": ["…","…"] }
+      "raw_text": "…", "ocr_conf": 0.xx, "columns": ["…","…"],
+      "qa_flags": ["col3: intra-gap dropped char", …] }   // empty = clean
   ],
   "sons_by_gen": { "5": ["庆鸿","庆亮", …] },
   "validation": {
@@ -134,16 +135,44 @@ clause pattern:
 }
 ```
 
+## 5a. Structural QA checks (auto, from Paddle char boxes — no extra OCR)
+
+`predict(rgb, return_word_box=True)` returns per-**character** boxes (`text_word` +
+`text_word_boxes` `[x0,y0,x1,y1]`, grouped per detected line). From these we compute
+three cheap structural checks per block that catch OCR misses *without* ground truth —
+validated on the canonical 纪有 and 宪炳 crops (`scratchpad/qa_gaps.py`):
+
+1. **Inter-column pitch.** Column x-centers should be ~1 pitch apart (median pitch ≈
+   median char width: canonical 77 vs 66; 宪炳 220 vs 193 — all gaps within ±15%). A
+   gap **> 1.6× median pitch** ⇒ a whole column (a person's clause) was likely missed.
+   *Confirmed no false positives; would fire on a dropped column (≈2× pitch).*
+2. **Intra-column contiguity.** Down a column, consecutive char boxes should touch. A
+   **y-gap > 1.2× median char height** between consecutive chars ⇒ a dropped character
+   mid-column. *Confirmed no false positives on clean 7-char columns.*
+3. **Column fill ratio.** A column whose (char-count × char-height) ≪ its pixel span ⇒
+   chars dropped. *This caught the truncated header/name columns the other two missed:
+   canonical col0 read `子` alone (should be `子之禄纪有`) and col10 `配` (should be
+   `配失考`).* The header/name band is the known weak spot (§3); sons read solidly.
+
+Each check writes a per-column flag into the block record and the QA overlay, so a
+reviewer sees *where* an entry is suspect, not just that a count is off.
+
 QA overlay: `books/{book}/qa/bio_s4/{stem}/` — per block, the tight crop with detected
-column boxes drawn (RTL order numbered) and the extracted sons annotated.
+**char** boxes drawn, columns numbered RTL, flagged columns (checks 1–3) outlined red,
+extracted sons annotated.
 
 ## 6. Validation (no unit tests — repo convention)
 
-Per the repo's "no unit tests" rule, validate by running on real data:
-- Run Stage 4 on section 2_9.
-- **Gate:** union of all gen-5 blocks' `sons` == the 9 gen-6 tree names
+Per the repo's "no unit tests" rule, validate by running on real data. Two layers:
+
+- **Structural (self-contained, §5a):** the three char-box checks flag suspect columns
+  with no ground truth needed — the assurance the QA "will work" even on sections/books
+  we have no oracle for.
+- **Semantic gate (ground truth):** run Stage 4 on section 2_9; the union of all gen-5
+  blocks' `sons` must equal the 9 gen-6 tree names
   (`庆林 庆鸿 庆亮 庆海 庆荣 庆华 庆财 庆铭 庆粮`). Report `missing_from_ocr` /
-  `extra_in_ocr`.
+  `extra_in_ocr`. This is the ultimate P0 check; the structural flags say *where* to
+  look when it fails.
 - Eyeball a few blocks' `name_ocr` vs the tree name; eyeball the QA overlay.
 
 A partial match is expected on first pass (some son glyphs are rare / OCR-hard); the
