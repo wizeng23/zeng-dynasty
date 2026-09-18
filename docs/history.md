@@ -481,6 +481,42 @@ hundreds). Book 4 p214 is excluded from its section via s1's `SKIP_PAGES`. Outpu
 
 ---
 
+## Era 14 — Bio stage 4: per-person field OCR (ensemble) for Book 3 (2026-09-18)
+
+**Stage 4 (`src/bio/s4_ocr.py`)** reads each per-person block and extracts its fields —
+**P0 = sons** (`生子…名 <sons>`, the stitch signal). Two independent readers, reconciled:
+- **Paddle PP-OCRv5 detect-then-resort** — run Paddle's detector, discard its reading
+  order, re-sort the per-character boxes (`return_word_box`) into RTL columns
+  (top-to-bottom within a column). A bake-off showed whole-block Paddle scrambles reading
+  order (fatal for sons) and naive vertical-projection column splitting collapses on dense
+  blocks where columns touch (ADF smear); detect-then-resort fixes both. Yields char boxes
+  for three structural QA checks (inter-column pitch gap, intra-column contiguity, column
+  fill ratio) that flag OCR drops with no ground truth.
+- **A vision Claude subagent** (`s4_vision_prompt.txt`) transcribes the crop semantically,
+  one line per column RTL (line 1 = the *horizontal* father header `子之X`, line 2 = the
+  vertical bold name, 3+ = prose). Catches exactly Paddle's blind spots (header + short
+  name column).
+
+`reconcile` merges them: sons = union with per-son `agreed` flags; a single-reader son
+that is not a real tree child (garbled glyph / trad-simp variant) is demoted to a QA flag
+against the tree oracle, keeping the union honest. Block *k* in gen *g* ↔ tree node *k*
+(the stage-3 count gate guarantees the mapping); the tree supplies the identity name.
+
+**Validated on section 2_9 (subgraph 0_1 = 传禄):** the union of gen-5 fathers' sons
+reconstructs **8 of 9** gen-6 tree names (`庆林 庆鸿 庆亮 庆海 庆荣 庆华 庆财 庆铭`), 0
+spurious extras (Paddle-alone: 5/9 with 2 junk extras). The one miss, `庆粮`, is a genuine
+**bio↔graph conflict**, not an OCR failure: the tree assigns 庆粮 to father 宪烘, but 宪烘's
+biography lists `生子二名 庆财 庆铭` — evidence the graph mis-assigned that edge, exactly the
+kind of discrepancy the children-name signal exists to surface for stitching. Output →
+`books/book3/bio/4_ocr/{stem}.json` (per-block sons/name/father/daughters + both readers +
+`qa_flags` + a `validation` gate); QA overlays → `books/book3/qa/bio_s4/`. A `tight_crop`
+shim narrows the still-wide stage-3 blocks (no-op once stage 3 emits tight crops). Design
+`docs/specs/2026-09-18-bio-stage4-field-ocr-design.md`, plan
+`docs/superpowers/plans/2026-09-18-bio-stage4-field-ocr.md`. Validated by running on real
+data (no unit tests, per repo convention).
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1

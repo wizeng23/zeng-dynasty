@@ -4,6 +4,28 @@ Rolling handoff note for the next session. Read `docs/history.md` Era 10 and
 `docs/bridge-revisit-notes.md` (bottom sections) for the why; this file is the
 what-is-left.
 
+## Bio stage 4 (field OCR) — status (2026-09-18)
+
+`src/bio/s4_ocr.py` is built and validated on Book 3 section 2_9 (Era 14). Branch
+`stage-4-bio-ocr`. Ensemble = Paddle detect-then-resort + a vision Claude subagent;
+P0 = sons; output `books/{book}/bio/4_ocr/{stem}.json`. On 2_9 the gen-5 sons-union
+reconstructs 8/9 gen-6 tree names, 0 extras; the 1 miss (`庆粮`) is a real bio↔graph
+conflict (宪烘's bio lists 庆财/庆铭, tree says 庆粮), flagged not hidden.
+
+**Remaining for stage 4:**
+- **Vision pass is driven by the executing agent**, not the CLI: `--no-vision` runs
+  Paddle-only; for the ensemble, `save_crops(book, sec)` writes crops, an agent
+  dispatches one vision subagent per crop (`vision_prompt(crop_path)`), and the
+  `{block_id: text}` map is passed to `ocr_section(..., vision_texts=...)`. Consider a
+  gating step (only run vision on Paddle-QA-flagged blocks) before full-book runs.
+- **Tight-crop dependency:** stage 3 still emits wide blocks; s4's `tight_crop` shim
+  handles it (no-op once s3 tightens). Dense blocks (no ≥400px gap) stay wide — Paddle
+  handles them, but confirm on other sections.
+- **Generalize:** run 66_77 and a couple more Book 3 sections; then Book 4.
+- **Investigate the 宪烘/庆粮 bio↔graph conflict** — candidate stitch/graph fix.
+- QA overlay generation re-OCRs each block (slow); fine for one section, batch/background
+  for a book.
+
 ## Hard rules in force
 
 - **Do NOT re-run Book 2 stages 3–7** (`s3_segment`, `s4_merge_pages`,
