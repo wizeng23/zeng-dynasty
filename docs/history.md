@@ -549,6 +549,29 @@ blocks. Next: **stage 5** (validate father/son vs the tree, stitch edges into th
 
 ---
 
+## Era 16 — Bio stage 5: link bio entries to graph nodes + fold into combined tree (2026-09-19)
+
+**Stage 5 (`src/bio/s5_link.py` + `s5_fold_combined.py`)** associates each stage-4 bio
+block with its tree-graph node, per subgraph. Within a (stem, generation) it matches bio
+blocks to tree nodes with a cascade: **exact name** (block vision-name == node name) →
+**fuzzy name** (≤1 differing char, catches OCR/trad-simp variants) → **sons overlap**
+(block sons ∩ node's children names — an independent edge signal) → **positional**
+(remaining blocks ↔ nodes in RTL/eldest order, only when counts line up). Each matched node
+gets a lossless `bio` field (name_ocr, father_char, sons, daughters, birth, qa_flags, both
+raw reads).
+
+**Linked: Book 3 615/620 (99%)** — 490 exact / 78 fuzzy / 18 sons / 29 positional;
+**Book 4 301/307 (98%)** — 285/11/1/4. Output `data/{book}_bio_linked.jsonl` +
+`_bio_link_report.json`. Then `s5_fold_combined` keys each linked bio by
+`{book-tag}:{provenance}` (e.g. `b3:0_1_0`) and folds it onto the renumbered combined
+graph → **`data/tree_bio.jsonl`: 875 combined nodes carry a bio** (574 b3 + 301 b4; the
+~41 b3 shortfall are nodes cross-stitch pruned from `tree.jsonl`). The 5–6 unmatched
+blocks per book are in the sections with the known S3 chunk gap / dup crop (85_133,
+18_63, 263_271). Next: use the bio father/sons as evidence to *correct* graph edges
+(the 宪烘/庆粮-style conflicts) and to strengthen cross-book stitch.
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1
