@@ -517,6 +517,38 @@ data (no unit tests, per repo convention).
 
 ---
 
+## Era 15 — Bio stage 4 finalized + full-book ensemble OCR (Books 3 & 4) (2026-09-19)
+
+**Scope change: stage 4 is now a PURE per-crop OCR step.** No tree, no generation-based
+validation, no node mapping — that moves to a future **stage 5** (father/son cross-check +
+stitch into the graph). Stage 4 reads s3_post's finalized combined
+`books/{book}/bio/3_segment/blocks.jsonl` (the post-QA index s3_post writes for stage 4) +
+the tight `{id}.png` crops, and emits `books/{book}/bio/4_ocr/{stem}.jsonl` — one
+**lossless** record per block: BOTH readers' raw output preserved verbatim
+(`raw.paddle.columns` + char boxes, `raw.vision.text`) plus best-effort structured fields
+kept **per-reader, unmerged** (`sons/name/father_char/daughters/birth`, each
+`{paddle, vision}`) + structural `qa_flags`. The branch was rebased on latest `main`
+(S3 fully done incl. Book 4); the `tight_crop` shim is now a no-op on the tight crops.
+
+**Ran the full ensemble on both books** (Paddle-only first for a lossless baseline, then a
+vision pass layered on): **Book 3 = 620 blocks / 15 sections, Book 4 = 307 blocks / 132
+sections.** Paddle ran as two background jobs. The vision pass used a **write-to-file
+subagent pattern** (~40 Claude vision subagents, each transcribing a section or chunk and
+writing its `{id: transcript}` JSON to disk, replying only "done N") to keep transcripts
+out of the orchestrator's context; a helper (`apply_vision.py`) merges the transcripts and
+re-runs `ocr_book` with `vision_texts`. Vision fixes Paddle's systematic noise (reversed
+2-char reads like 伟庆→庆伟, stray digits 庆鸿3, garbled headers) and reads the horizontal
+father header + short bold name that Paddle drops; Paddle confirms the clean reads and
+supplies the char-box QA. On the 2_9 re-run with finalized crops the gen-5→gen-6 son set
+reconstructs **9/9** (the old 8/9 miss, 宪烘/庆粮, was an artifact of pre-final S3
+segmentation). Coverage: Book 3 vision ~617/620 (85_133 chunking dropped 3), Book 4 307/307.
+
+**Known issues (for stage 5 / S3):** `85_133` vision 112/115; `263_271_4_3`/`_4_4` look
+like a duplicated crop (S3 over-segmentation). Neither loses data — Paddle covers all 927
+blocks. Next: **stage 5** (validate father/son vs the tree, stitch edges into the graph).
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1

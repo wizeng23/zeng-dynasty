@@ -4,11 +4,24 @@ Rolling handoff note for the next session. Read `docs/history.md` Era 10 and
 `docs/bridge-revisit-notes.md` (bottom sections) for the why; this file is the
 what-is-left.
 
-## Bio stage 4 (field OCR) — status (2026-09-18)
+## Bio stage 4 (field OCR) — DONE for Books 3 & 4 (2026-09-19)
 
-`src/bio/s4_ocr.py` built + validated on Book 3 section 2_9. Branch `stage-4-bio-ocr`,
-**rebased on latest main** (S3 fully done incl. Book 4). **Stage 4 = PURE per-crop OCR**
-(no tree, no validation, no stitch — that's stage 5). Reads s3_post's combined
+`src/bio/s4_ocr.py`, branch `stage-4-bio-ocr` (rebased on latest main, S3 fully done incl.
+Book 4). **Stage 4 = PURE per-crop OCR** (no tree/validation/stitch — that's stage 5).
+**Full-book ensemble run committed:** Book 3 = 620 blocks (617 with vision; 85_133 has
+112/115), Book 4 = 307 blocks (307 with vision). Output `books/book{3,4}/bio/4_ocr/*.jsonl`,
+lossless (both readers' raw preserved). Ran Paddle-only first (committed baseline), then a
+vision pass via ~40 write-to-file subagents + `scratchpad/apply_vision.py`. Commits:
+`b90e75e` (Paddle both books), `2f4b92b` (Book 3 vision), `4bbaa50` (Book 4 vision).
+
+**Next: bio STAGE 5** — validate father/son vs the tree, stitch confirmed edges into the
+graph (see below). Known issues to handle there / in S3: `85_133` vision 112/115;
+`263_271_4_3`/`_4_4` look like a duplicated crop (S3 over-seg). apply_vision.py needlessly
+re-runs Paddle; a future speedup is to merge vision into the existing Paddle jsonl.
+
+--- (original stage-4 build notes) ---
+
+`src/bio/s4_ocr.py` reads s3_post's combined
 `3_segment/blocks.jsonl` (post-QA final index) + tight `{id}.png` crops; emits
 `4_ocr/{stem}.jsonl`, one lossless record per block: BOTH readers' raw output preserved
 (`raw.paddle.columns`+char_boxes, `raw.vision.text`) + best-effort structured fields kept
