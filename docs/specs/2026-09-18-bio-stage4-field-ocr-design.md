@@ -20,11 +20,17 @@ person's SONS** (`生子…名 <sons>`), the strong stitch signal (a parent's li
 are a subset of the next generation's names and say *which* nodes are whose children).
 Everything else (own name, dates, spouse, daughters, burial) is captured best-effort.
 
-**Engine: PaddleOCR PP-OCRv5 with detect-then-resort** (reuse `src/s6_ocr_paddle`),
-chosen by a real bake-off (§2): run Paddle's detector, then override its reading order
-by re-sorting the detected lines into RTL columns geometrically. This fixes the
-whole-block reading-order scramble (fatal for son extraction) and is robust to dense
-blocks where columns touch. Mistral rejected (tiling hallucination + API cost).
+**Engine: an ensemble of two independent readers**, chosen by a real bake-off (§2, §2a):
+1. **PaddleOCR PP-OCRv5 with detect-then-resort** (reuse `src/s6_ocr_paddle`) — run
+   Paddle's detector, then override its reading order by re-sorting the detected lines
+   into RTL columns geometrically. Fixes the whole-block reading-order scramble (fatal
+   for son extraction), robust to dense touching columns, and yields char-boxes for the
+   structural QA checks.
+2. **A vision Claude subagent** — transcribes the crop semantically (RTL, one line per
+   column, father-header first, name second). Catches Paddle's blind spots (horizontal
+   header, short bold name).
+Sons (P0) are the reconciled union with per-son agreement flags. Mistral rejected
+(tiling hallucination + API cost).
 
 **This session:** prove it on section **2_9** (subgraph `0_1` = 传禄). Validation gate:
 the union of all gen-5 blocks' extracted sons must reconstruct the 9 gen-6 tree names.
@@ -80,7 +86,46 @@ geometrically into columns (RTL by x-center) then top-to-bottom within a column.
 Mistral stays an **optional** later secondary prose pass; not on the P0 path (tiling
 risk + API cost).
 
-## 3. Detect-then-resort (the core algorithm)
+## 2a. Ensemble — vision-subagent reader backs Paddle
+
+Paddle is backed by a **second, independent reader**: a vision-capable Claude subagent
+(dispatched via the Agent tool with the tight crop) that transcribes the block
+semantically. The two readers have **complementary failure modes** — Paddle is strong
+on the long vertical prose columns and gives deterministic char-boxes (the QA
+gap-checks, §5a), but drops the **horizontal father header** and truncates the **short
+bold name column**; the vision reader gets exactly those. Validated on both test crops
+(`scratchpad/`, results in the design session):
+
+| Field | Paddle | Vision subagent |
+|---|---|---|
+| Father header (`子之禄`/`子次棋`) | ✗ dropped `之禄` / partial | **✓ ✓** both crops |
+| Bold name (`纪有`/`宪炳`) | ✗ truncated | **✓ ✓** both |
+| Sons P0 (`庆林`) | ✓ | **✓** (own line, right after `生子…名`) |
+| `配失考` marker | ✗ (`配` only) | **✓** |
+| Prose columns | ✓ | ✓ |
+
+**Subagent prompt (validated verbatim):** transcribe one 族谱 person block; vertical
+columns read RIGHT-TO-LEFT; output one line per column, RTL; **line 1 = the top-right
+horizontal header `子之X`/`子次X` (father marker), line 2 = the person's own
+(vertical, bold) name, lines 3+ = the bio prose columns**; `?` for unreadable chars;
+transcription only, no translation/commentary.
+
+**Reconciliation (per field):**
+- **Father-char** (P1): subagent line 1 (Paddle blind here). Agreement = confirmed.
+- **Own name:** subagent line 2, cross-checked against the tree oracle (the identity
+  truth) and Paddle's name column; disagreement → `qa_flag`.
+- **Sons (P0):** parse `生子…名` from **each** reader independently. Emit the **union**
+  for recall, and mark each son with `agreed: true` when **both** readers found it.
+  Sons found by only one reader are flagged for review. The sons-union gate (§6) then
+  distinguishes ensemble-confirmed from single-source.
+- **Prose/dates/spouse/daughters:** keep both reads in `raw_text`; no gate.
+
+**Cost/latency note:** one subagent call per block (~10–16 s, ~37k tokens in the test).
+Acceptable for 2_9 (20 blocks); for full-book runs we can gate the subagent to blocks
+where Paddle's structural checks (§5a) flag a problem, rather than every block. Decide
+when generalizing.
+
+## 3. Detect-then-resort (Paddle's core algorithm)
 
 Per tight crop:
 1. `PaddleOCR(lang="ch").predict(rgb)` → `rec_texts`, `rec_polys`, `rec_scores`.
@@ -90,10 +135,19 @@ Per tight crop:
 4. Within each column order lines **top-to-bottom** (ascending y); join to column text.
 5. Concatenate columns RTL → the person's entry in true reading order.
 
-Edge cases from the bake-off (handled in parse, §4): the **header band** (`子之X` /
-`子次X`, horizontal, top row) and the **bold name** need separate handling from the
-vertical prose columns — the header/name occasionally split or under-detect, but the
-son columns (the P0) read solidly. Keep per-line conf; flag low-conf columns to QA.
+Edge cases from the bake-off (handled in parse, §4). Two elements in the top-right need
+care:
+- **Father header** (`子之X` / `子次X`) — the *one* HORIZONTAL element on the page (子 之
+  X, left-to-right), against otherwise vertical columns. This orientation break is what
+  makes Paddle's vertical-tuned detector drop it (it kept only `子`). This is Paddle's
+  true blind spot; the vision-ensemble reader (§2a) handles it.
+- **Bold name** (`纪有`) — VERTICAL, same orientation as the prose, but the **short
+  rightmost column** (often 2 chars) in bold/large type just under the header. Paddle
+  truncates or merges it with the header above; not an orientation problem, a
+  short-column / header-adjacency one.
+
+The son columns (the P0) read solidly on both engines. Keep per-line conf; flag
+low-conf columns to QA.
 
 ## 4. Field parsing (markers, not geometry)
 
@@ -104,28 +158,32 @@ clause pattern:
   end. Ordinals `长/次/三/…` may prefix each. Emit `sons: [...]`.
   - `生子一名 X` → one son; `生子二名 X Y` → two; count word is a cross-check on arity.
   - **No-children blocks** (end `配失考`, or no `生子`) → `sons: []` (valid).
-- **Own name:** the larger glyph(s) after the header `子之X` / `子次X`. The header
-  itself is the *father* char and OCRs poorly (sideways) — skip it for the name.
+- **Own name:** line 2 of the ensemble read — the vertical bold column just under the
+  header (the ensemble reader delivers it as an explicit line; §2a). The header itself
+  is the *father* char, not the person's name — do not use it for the name.
 - **Best-effort fields:** `生于…`(birth) `殁`(death) `葬`(burial) `配…`(spouse)
   `生女… 长/次… 适 <place>`(daughters). Store parsed where clean, else leave in
   `raw_text`.
-- **P1 verification (optional):** header father-char, as independent parent evidence.
-  Attempt only if the sideways header reads reliably; not required this session.
+- **Father-char (P1, now free):** line 1 of the ensemble read (the horizontal header
+  `子之X`). Independent parent evidence — the vision reader gets it reliably (both test
+  crops), so capture it as `father_char` even though it's not required this session.
 
 ## 5. Output — `books/{book}/bio/4_ocr/{stem}.json`
 
 ```jsonc
 {
-  "section": "2_9", "stem": "0_1", "engine": "paddle:PP-OCRv5",
+  "section": "2_9", "stem": "0_1", "engine": "ensemble:paddle+vision",
   "blocks": [
     { "block_id": "0_1_5_1", "generation": 5, "band": 3, "k": 1,
-      "name_ocr": "宪炳", "sons": ["庆鸿", "庆亮"],
+      "name": "宪炳", "father_char": "棋",
+      "sons": [ {"name": "庆林", "agreed": true} ],   // agreed = both readers
       "daughters": ["雪英"], "birth": "…", "death": "…", "spouse": "…",
-      "burial": "…", "father_char": null,
-      "raw_text": "…", "ocr_conf": 0.xx, "columns": ["…","…"],
-      "qa_flags": ["col3: intra-gap dropped char", …] }   // empty = clean
+      "burial": "…",
+      "paddle": { "columns": ["…"], "sons": ["庆林"], "ocr_conf": 0.xx },
+      "vision":  { "lines": ["子次棋","宪炳","…"], "sons": ["庆林"] },
+      "qa_flags": ["col3: intra-gap dropped char", "name: paddle≠vision"] } // [] = clean
   ],
-  "sons_by_gen": { "5": ["庆鸿","庆亮", …] },
+  "sons_by_gen": { "5": ["庆林","庆鸿", …] },
   "validation": {
     "gen": 6,
     "sons_union": ["庆林","庆鸿", …],
@@ -172,8 +230,9 @@ Per the repo's "no unit tests" rule, validate by running on real data. Two layer
   blocks' `sons` must equal the 9 gen-6 tree names
   (`庆林 庆鸿 庆亮 庆海 庆荣 庆华 庆财 庆铭 庆粮`). Report `missing_from_ocr` /
   `extra_in_ocr`. This is the ultimate P0 check; the structural flags say *where* to
-  look when it fails.
-- Eyeball a few blocks' `name_ocr` vs the tree name; eyeball the QA overlay.
+  look when it fails. Track how many gate members are ensemble-`agreed` (both readers)
+  vs single-source — full agreement on the reconstruction is the strong pass.
+- Eyeball a few blocks' `name` vs the tree name; eyeball the QA overlay.
 
 A partial match is expected on first pass (some son glyphs are rare / OCR-hard); the
 gap list tells us where to iterate. Sons are the must-get-right field — iterate the
@@ -187,9 +246,17 @@ generalize.
 PYTHONPATH=. python -m src.bio.s4_ocr --book book3
 PYTHONPATH=. python -m src.bio.s4_ocr --book book3 --sections 2_9
 ```
-Functions: `detect_columns(rgb, engine) -> list[Column]` (Paddle-detect-then-resort),
-`parse_fields(columns) -> dict`, `ocr_section(...)`, `ocr_book(...)`, plus `_save_qa`.
-Paddle engine imported lazily (optional dep), like `src/s6_ocr.py` does.
+Functions:
+- `paddle_read(rgb, engine) -> {columns, sons, char_boxes}` — detect-then-resort + the
+  §5a structural checks.
+- `vision_read(crop_path) -> {lines, father_char, name, sons}` — dispatch the vision
+  subagent (§2a prompt), parse its RTL lines (line 1 father, line 2 name, 3+ prose).
+- `reconcile(paddle, vision, tree_names) -> block_record` — the §2a per-field rules,
+  sons = flagged union.
+- `ocr_section(...)`, `ocr_book(...)`, `_save_qa`.
+Paddle engine imported lazily (optional dep), like `src/s6_ocr.py` does. The vision
+reader uses the Agent tool; a `--no-vision` flag runs Paddle-only (for quick iteration
+or when the subagent is unavailable).
 
 ## 8. Out of scope this session
 
