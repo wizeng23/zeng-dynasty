@@ -332,7 +332,7 @@ def _save_qa(
 # Crop tightening: a column/row is "text" if its ink exceeds this floor (kills the faint
 # ADF smear that otherwise defeats a plain any-ink bounding box), plus a little padding.
 TIGHTEN_INK_FLOOR = 12
-TIGHTEN_PAD = 20
+TIGHTEN_PAD = 40
 
 
 def tighten_box(ink: np.ndarray, box: list[int]) -> list[int]:
