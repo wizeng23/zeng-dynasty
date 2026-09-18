@@ -3,9 +3,12 @@
 **Status:** built (2026-09-18).
 **Branch:** `stage-4-bio-ocr`.
 **Author:** William + session.
-**Depends on:** bio Stage 3 (finalized) — per-person tight crops + per-section sidecar
-`books/{book}/bio/3_segment/{stem}.jsonl` (one line per block: `id, band, generation,
-box, gate_passed`) + `{id}.png` tight crops.
+**Depends on:** bio Stage 3 (finalized, incl. Book 4; flow = s3_segment → QA editor →
+s3_post). Stage 4 consumes **s3_post's combined `books/{book}/bio/3_segment/blocks.jsonl`**
+(the post-QA final index, "the index stage 4 consumes"; rows: `section, stem, id, band,
+generation, box, gate_passed`) + the `{id}.png` tight crops beside it. Per s3_post, block
+count per section is **not** guaranteed to equal the subgraph's node count, and block→node
+linking is a later evidence-based step — confirming Stage 4 = pure OCR, Stage 5 = link.
 **Feeds:** **Stage 5** (future) does father/son validation against the tree and stitches
 edges into the graph. Stage 4 does **not** touch the tree.
 

@@ -6,9 +6,10 @@ what-is-left.
 
 ## Bio stage 4 (field OCR) — status (2026-09-18)
 
-`src/bio/s4_ocr.py` built + validated on Book 3 section 2_9. Branch `stage-4-bio-ocr`.
-**Stage 4 = PURE per-crop OCR** (no tree, no validation, no stitch — that's stage 5).
-Reads finalized stage-3 `3_segment/{stem}.jsonl` + tight `{id}.png` crops; emits
+`src/bio/s4_ocr.py` built + validated on Book 3 section 2_9. Branch `stage-4-bio-ocr`,
+**rebased on latest main** (S3 fully done incl. Book 4). **Stage 4 = PURE per-crop OCR**
+(no tree, no validation, no stitch — that's stage 5). Reads s3_post's combined
+`3_segment/blocks.jsonl` (post-QA final index) + tight `{id}.png` crops; emits
 `4_ocr/{stem}.jsonl`, one lossless record per block: BOTH readers' raw output preserved
 (`raw.paddle.columns`+char_boxes, `raw.vision.text`) + best-effort structured fields kept
 **per-reader, unmerged** (`sons/name/father_char/daughters/birth` each `{paddle, vision}`)
