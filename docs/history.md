@@ -682,9 +682,21 @@ correct 875). Also: candidate pool filtered to `b3:` (keeps fold direction B4→
 `bio_index` loads B4 bios too), disjoint canonical/dup id-sets asserted (no fold chains, so
 no `folded_into` needed), empty son-list guarded against false-welds.
 
-A **future verification** noted: each bio's `father_char` should read
-`子` + birth-order (之/二/三…) + the father's last name char (e.g. a 2nd son of 庆辉 → `子二辉`),
-checkable within a subgraph — a standalone QA script, not a stitch change.
+**Father-header QA (`scripts/qa/s5_father_char.py`).** New standalone check of each bio's
+father header `子<order><father>` against the tree, within a subgraph. Stage 4's structured
+`father_char` field keeps only the father's-name char (`parse_father` strips 子 + the order
+glyph), but the FULL header survives in the raw vision transcription (`raw.vision.text` line 1,
+e.g. `子长炯`), so the QA reads that and checks all three parts: (1) char 1 == 子; (2) char 2
+birth-order glyph (长/之=eldest, 次/二=2nd, 三…八) == the node's index among `father.children`;
+(3) char 3 == father's-name last char (independent link-correctness check). Baseline **book3
+436/615 (70%), book4 205/301 (68%)** clean. Flags bucket by kind so signals don't drown:
+`name_mismatch` (father-name OCR error — clusters by father, fix one clear many),
+`order_mismatch` (single-graph: mis-OCR'd order glyph or wrong tree sibling order), and
+`order_multigraph` (a section root re-printed across graph slices, each re-numbering its sons
+1/2/3 — a STITCH artifact, not a header error; expected on B4's unstitched floater roots, and
+indeed book4 shows 68 vs book3's 3, corroborating the stitch state). Emits triaged terminal
+summary + `data/{book}_father_char_qa.json` (parsed header + problems + provenance per node);
+report-only, nothing consumes it.
 
 ---
 
