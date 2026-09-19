@@ -22,19 +22,19 @@ import {
 } from "@/lib/tree";
 
 // The shared surname, carried by everyone in the book but never stored per-person
-// (the data holds given names only). We show it before each name in a muted style
-// so it reads as "surname · given name" without being mistaken for the given name.
+// (the data holds given names only). We show it before each name, in the same color
+// as the given name so "surname + given name" reads as one continuous name.
 const SURNAME_HANZI = "曾";
 const SURNAME_PINYIN = "Zēng";
 
-// The muted surname glyph shown just before a Hanzi given name.
+// The surname glyph shown just before a Hanzi given name (same color as the name).
 function SurnameHanzi() {
-  return <span className="mr-0.5 text-muted-foreground opacity-70">{SURNAME_HANZI}</span>;
+  return <span className="mr-0.5">{SURNAME_HANZI}</span>;
 }
 
-// The muted surname reading shown just before a given-name pinyin reading.
+// The surname reading shown just before a given-name pinyin reading (same color).
 function SurnamePinyin() {
-  return <span className="mr-1 text-muted-foreground opacity-70">{SURNAME_PINYIN}</span>;
+  return <span className="mr-1">{SURNAME_PINYIN}</span>;
 }
 
 interface DetailPanelProps {
