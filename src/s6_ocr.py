@@ -341,14 +341,34 @@ def _provenance_of(notes: str) -> str:
 
 
 def _strip_ocr_tags(notes: str) -> str:
-    """Drop any prior ``ocr_conf=``/``ocr_low_conf``/``ocr_override`` tags from notes.
+    """Drop any prior ``ocr_conf=``/``ocr_low_conf``/``ocr_override``/``flagged:`` tags.
 
     Keeps the leading provenance and any other human notes, so :func:`apply_names`
-    is idempotent -- re-running never stacks duplicate ocr tags.
+    is idempotent -- re-running never stacks duplicate ocr or flag tags.
     """
     segs = [s for s in notes.split(" | ") if s]
-    kept = [s for s in segs if not s.startswith(("ocr_conf=", "ocr_low_conf", "ocr_override"))]
+    kept = [
+        s
+        for s in segs
+        if not s.startswith(("ocr_conf=", "ocr_low_conf", "ocr_override", "flagged:"))
+    ]
     return " | ".join(kept)
+
+
+def _load_flag_reasons(book: str, data_dir: str = "data") -> dict[str, str]:
+    """Return ``{provenance: reason}`` from ``data/{book}_flags.json``.
+
+    The flags file (written by ``scripts/qa/s6_ocr.py``) marks nodes whose correct
+    digital character couldn't be determined, each with a short reason. Tolerates the
+    legacy bare-list format by reading each entry as a reasonless flag.
+    """
+    path = os.path.join(data_dir, f"{book}_flags.json")
+    if not os.path.exists(path):
+        return {}
+    raw = json.load(open(path))
+    if isinstance(raw, list):
+        return {prov: "" for prov in raw}
+    return dict(raw)
 
 
 def _resolve_name(prov: str, ocr_name: str, overrides: dict[str, str]) -> tuple[str, bool]:
@@ -401,6 +421,7 @@ def apply_names(book: str, data_dir: str = "data") -> int:
     sidecar = json.load(open(names_path))
     ov_path = os.path.join(data_dir, f"{book}_overrides.json")
     overrides = json.load(open(ov_path)) if os.path.exists(ov_path) else {}
+    flag_reasons = _load_flag_reasons(book, data_dir)
 
     jsonl = os.path.join(data_dir, f"{book}.jsonl")
     lines = [json.loads(line) for line in open(jsonl) if line.strip()]
@@ -422,6 +443,11 @@ def apply_names(book: str, data_dir: str = "data") -> int:
                 tags.append("ocr_low_conf")
         if had_override:
             tags.append("ocr_override")
+        # Flag reason (from {book}_flags.json): a node whose true glyph couldn't be
+        # digitized -- recorded as IDS, a supplementary-plane char, or a substitution.
+        if prov in flag_reasons:
+            reason = flag_reasons[prov]
+            tags.append(f"flagged: {reason}" if reason else "flagged")
         node["notes"] = " | ".join([base, *tags]) if base else " | ".join(tags)
         if name:
             applied += 1

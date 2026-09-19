@@ -124,7 +124,8 @@ extracts each component from its cv2 bbox (identical output, ~60× faster:
 across missing bio pages. On a Book 2 re-run, `data/book2_fixes.json` reduces to
 **just `delete 8_10_9`** (the 106_113 merge is now auto-resolved by bridging).
 New QA tool `scripts/qa/s5_fixes.py`. `NAME_HALF_WIDTH` stays 120 (widening
-regressed). All in-memory-validated against `books/book2/frozen_2026-09-14`.
+regressed). All in-memory-validated against the Book 2 frozen snapshot (since
+DELETED — pipeline retired 2026-09-19, Era 18; old state in git `48cc577`).
 
 **Book 1 is DONE through all 7 v1 stages** → `data/book1_stitched.jsonl` (150
 nodes, 1 root 点, 56 gens, OCR'd names), published to the website. Stitch seams are

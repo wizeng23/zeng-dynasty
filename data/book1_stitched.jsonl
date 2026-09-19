@@ -78,7 +78,7 @@
 {"id": 78, "name": "产", "name_images": ["books/book1/5_names/85.png"], "generation": 45, "father": 75, "children": [83, 84], "biography": "", "notes": "8_8_10 | ocr_conf=0.9816"}
 {"id": 79, "name": "星", "name_images": ["books/book1/5_names/84.png"], "generation": 45, "father": 75, "children": [85], "biography": "", "notes": "8_8_9 | ocr_conf=0.9999"}
 {"id": 80, "name": "泰", "name_images": ["books/book1/5_names/93.png"], "generation": 46, "father": 76, "children": [86], "biography": "", "notes": "8_8_18/12_12_0 | ocr_conf=1.0"}
-{"id": 81, "name": "添", "name_images": ["books/book1/5_names/92.png"], "generation": 46, "father": 76, "children": [87, 88], "biography": "", "notes": "8_8_17/11_11_0 | ocr_conf=0.614 | ocr_low_conf"}
+{"id": 81, "name": "⿰亻忝", "name_images": ["books/book1/5_names/92.png"], "generation": 46, "father": 76, "children": [87, 88], "biography": "", "notes": "8_8_17/11_11_0 | ocr_conf=0.614 | ocr_low_conf | flagged: ids"}
 {"id": 82, "name": "春", "name_images": ["books/book1/5_names/91.png"], "generation": 46, "father": 77, "children": [], "biography": "", "notes": "8_8_16 | ocr_conf=1.0"}
 {"id": 83, "name": "托", "name_images": ["books/book1/5_names/90.png"], "generation": 46, "father": 78, "children": [], "biography": "", "notes": "8_8_15 | ocr_conf=1.0"}
 {"id": 84, "name": "振", "name_images": ["books/book1/5_names/89.png"], "generation": 46, "father": 78, "children": [89], "biography": "", "notes": "8_8_14/10_10_0 | ocr_conf=1.0"}

@@ -1,10 +1,10 @@
-[
-  "134_138_6",
-  "202_203_6",
-  "202_203_7",
-  "217_220_7",
-  "217_220_8",
-  "249_250_1",
-  "261_262_6",
-  "272_272_3"
-]
+{
+  "0_1_6": "supplementary unicode 𤍤 U+24364",
+  "134_138_6": "supplementary unicode 䤾 U+493E; substituted traditional character (钅→金)",
+  "202_203_6": "ids; supplementary unicode 𬫳 U+2CAF3",
+  "202_203_7": "supplementary unicode 𨫟 U+28ADF; substituted traditional character (钅→金)",
+  "217_220_7": "supplementary unicode 𨩃 U+28A43; substituted traditional character (钅→金)",
+  "217_220_8": "ids; supplementary unicode 𨩰 U+28A70",
+  "261_262_6": "ids",
+  "272_272_3": "ids"
+}

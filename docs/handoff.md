@@ -55,17 +55,21 @@ noise (prefer vision / agreed sons; the tree is ground truth for which names exi
 
 ## Hard rules in force
 
-- **Do NOT re-run Book 2 stages 3–7** (`s3_segment`, `s4_merge_pages`,
-  `s5_build_tree`, `s6_ocr --populate`, `s7_stitch`) unless William says so. Book 2's
-  results carry his hand fixes; a full Stage 5 run is ~50 min. Frozen, restorable
-  snapshot: `books/book2/frozen_2026-09-14/` (README inside). Validate code changes
-  in memory against it (recipe below). Never write into `books/book2/` or `data/book2*`.
+- **The pipeline is retired (2026-09-19): never re-run any book's stages 1–7.** Live
+  `data/*` is the authoritative result. Metadata-only folds (`s6_ocr.apply_names`) are
+  still fine. The Book 2 `frozen_2026-09-14/` snapshot that this doc's validation recipe
+  below relied on was DELETED in Era 18 (old state in git `48cc577`); that recipe is now
+  historical — there is nothing to validate against because nothing gets re-run.
 - **Do not run Book 1 regression checks** (William: Book 1 is confirmed correct).
 - Repo is public; agents never `git push`. Commit locally.
 - Long runs: the harness kills background Bash after 10 min — use `nohup … &` and a
   `Monitor` on the log.
 
-## Validation recipe (used for every fix today)
+## Validation recipe (HISTORICAL — frozen snapshot deleted Era 18, pipeline retired)
+
+> Kept for the record only. `books/book2/frozen_2026-09-14/` no longer exists, so this
+> recipe can't be run; the pipeline is retired and nothing gets re-validated. Old
+> snapshot recoverable from git commit `48cc577` if ever needed.
 
 Parse a frozen graph in memory with its recorded fills drawn on, compare to the
 hand-fixed sidecar:

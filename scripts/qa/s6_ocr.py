@@ -353,28 +353,43 @@ def _flags_path(book: str) -> str:
     return os.path.join(DATA_DIR, f"{book}_flags.json")
 
 
-def _load_flags(book: str) -> set[str]:
-    """Return the set of node provenances flagged 'impossible' (unresolvable name).
+def _load_flag_reasons(book: str) -> dict[str, str]:
+    """Return ``{provenance: reason}`` for nodes flagged 'impossible'.
 
-    Persisted server-side (not just in the browser) because it is a real annotation
-    about the data -- names whose correct digital character couldn't be determined
-    and should be revisited -- separate from the reviewer's session progress.
+    The flags file is a ``{provenance: reason}`` map: a node whose correct digital
+    character couldn't be determined and should be revisited, with a short reason
+    (e.g. ``ids``, ``supplementary unicode 𤍤 U+24364``). Persisted server-side (not
+    just in the browser) because it is a real annotation about the data. An empty
+    string is a valid reason (flagged, reason not yet written). Tolerates the legacy
+    list format (``["prov", ...]``), reading each entry as a reasonless flag.
     """
     path = _flags_path(book)
     if not os.path.exists(path):
-        return set()
-    return set(json.load(open(path)))
+        return {}
+    raw = json.load(open(path))
+    if isinstance(raw, list):  # legacy: bare list of flagged provenances
+        return {prov: "" for prov in raw}
+    return dict(raw)
 
 
-def save_flag(book: str, prov: str, flagged: bool) -> None:
-    """Set or clear the 'impossible' flag for a node (by provenance)."""
-    flags = _load_flags(book)
+def _load_flags(book: str) -> set[str]:
+    """Return the set of flagged provenances (drops reasons; see _load_flag_reasons)."""
+    return set(_load_flag_reasons(book))
+
+
+def save_flag(book: str, prov: str, flagged: bool, reason: str | None = None) -> None:
+    """Set or clear the 'impossible' flag for a node (by provenance).
+
+    Writes the ``{provenance: reason}`` map. Setting a flag keeps any existing reason
+    unless ``reason`` is given; clearing removes the entry.
+    """
+    flags = _load_flag_reasons(book)
     if flagged:
-        flags.add(prov)
+        flags[prov] = reason if reason is not None else flags.get(prov, "")
     else:
-        flags.discard(prov)
+        flags.pop(prov, None)
     with open(_flags_path(book), "w") as f:
-        json.dump(sorted(flags), f, ensure_ascii=False, indent=2)
+        json.dump(dict(sorted(flags.items())), f, ensure_ascii=False, indent=2)
 
 
 def build_cells() -> list[dict]:

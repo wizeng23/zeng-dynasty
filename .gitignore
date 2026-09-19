@@ -264,5 +264,7 @@ data/book*_v2_*.jsonl
 books/*/book?.pdf
 books/*/gray/*.pdf
 
-# Frozen, hand-corrected pipeline outputs (not regenerable; kept on disk, not in git)
+# Frozen, hand-corrected pipeline snapshots (if ever re-introduced). The Book 2
+# frozen_2026-09-14 anchor was deleted in Era 18 once the pipeline was retired —
+# live data/book2* is authoritative; the old state is in git commit 48cc577.
 books/*/frozen_*/

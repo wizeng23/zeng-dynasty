@@ -600,6 +600,41 @@ runs on his push to `main`.
 
 ---
 
+## Era 18 — Rare-glyph convention + retiring the Book 2 frozen snapshot (2026-09-19)
+
+**Rare/uncodeable name characters.** OCR review surfaced ~20 names whose true glyph
+Unicode can't easily represent. Settled the convention (see
+`memory/rare-glyph-convention.md`): transcribe the printed glyph faithfully (including
+the book's inconsistent simplified/traditional radicals, e.g. 钅 vs 金); if it renders
+in a **system default CJK font** use the real character — many rare zupu chars ARE
+encoded, in **CJK Ext-B/C, the Supplementary Ideographic Plane (U+2xxxx)** (e.g. 宪𤍤
+= ⿰火章, U+24364); otherwise store an **IDS** (⿰/⿱ + regular unified-ideograph
+components, all BMP so always renders). Measured font coverage programmatically
+(fontTools cmap vs target codepoints; cjkvi-ids `ids.txt` as the composition→codepoint
+authority): no single font covers the whole set (Noto CJK ~5/10, BabelStone Han ~7/10,
+2 chars in none), so **no web font bundled** — real char only where the system font
+draws it. `data/{book}_flags.json` changed from a bare list to a `{provenance: reason}`
+map; `src.s6_ocr.apply_names` now folds `| flagged: <reason>` into each node's notes
+(idempotent). 5 nodes became real supplementary chars (3 noted as 钅→金 substitutions),
+15 stay IDS; all 20 flagged with reasons, propagated to `tree.jsonl`/`tree_bio.jsonl`
+via metadata-only `apply_names` (NOT a stage re-run — frozen snapshot untouched at the
+time). `.gitignore` also fixed to track non-regenerable data (the `frozen_*` JSON/JSONL,
+before it was deleted below).
+
+**Book 2 frozen snapshot deleted.** `books/book2/frozen_2026-09-14/` was created in
+Era 10/11 as a NOT-regenerable safety copy of the hand-verified Book 2 result (parse +
+OCR + post-fixes, built from the OLD 2026-09-01 Stage-3 crops), guarding against a
+script change silently overwriting it before a sanctioned re-run. William has since
+decided **the pipeline will never be re-run**, so the snapshot's purpose is gone: live
+`data/book2*.jsonl` + `books/book2/{4_graphs,5_names}` are now the authoritative result
+(newer than frozen on every file — confirmed via git; the live/frozen `book2_stitched`
+1542-vs-1549 delta is the already-committed OCR-review re-stitch `9b00d54`, and live has
+the Era-18 flag notes frozen lacks). Deleted the whole dir so `books/book2/` matches the
+other books' layout; the old state remains recoverable from git commit `48cc577`. The
+`.gitignore` frozen-tracking rules were reverted since there's no frozen dir left.
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1
