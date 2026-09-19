@@ -12,7 +12,14 @@
 
 import { childrenTitle, genLabel, idLabel, notFoundLabel, useLang } from "@/lib/i18n";
 import { toDisplayPinyin } from "@/lib/pinyin";
-import { ancestryChain, type FamilyNode, type LoadedTree } from "@/lib/tree";
+import {
+  ancestryChain,
+  type BioEntry,
+  bioBest,
+  bioBestList,
+  type FamilyNode,
+  type LoadedTree,
+} from "@/lib/tree";
 
 // The shared surname, carried by everyone in the book but never stored per-person
 // (the data holds given names only). We show it before each name in a muted style
@@ -157,6 +164,10 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
         )}
       </Section>
 
+      {/* Scanned biography (bio OCR pipeline): birth clause, sons/daughters, and
+          the full transcription. Only shown when a bio was linked to this node. */}
+      {person.bio && <ScannedBio bio={person.bio} />}
+
       {/* Biography / notes, only if present. In the golden data biography is
           sometimes a bare Wikipedia URL, so render those as a link. */}
       {person.biography.trim() && (
@@ -191,6 +202,61 @@ export function DetailPanel({ tree, selectedId, onSelect }: DetailPanelProps) {
 // True for a bare http(s) URL (some golden biographies are Wikipedia links).
 function isUrl(s: string): boolean {
   return /^https?:\/\/\S+$/.test(s);
+}
+
+// The scanned-biography block: what the bio OCR pipeline read off the book for this
+// person. Shows the birth clause, the listed sons/daughters, and the full column-by-
+// column transcription (vision reading preferred, paddle fallback). Everything is
+// best-effort OCR, so it carries a muted "may contain errors" note.
+function ScannedBio({ bio }: { bio: BioEntry }) {
+  const { t } = useLang();
+  const birth = bioBest(bio.birth);
+  const sons = bioBestList(bio.sons);
+  const daughters = bioBestList(bio.daughters);
+  const fullText = bio.raw?.vision?.text?.trim() || (bio.raw?.paddle?.columns ?? []).join("\n");
+
+  // Nothing worth showing (all fields empty) — skip the section entirely.
+  if (!birth && sons.length === 0 && daughters.length === 0 && !fullText) return null;
+
+  return (
+    <Section title={t("bioScanned")}>
+      <div className="flex flex-col gap-2">
+        {birth && (
+          <div className="flex gap-2">
+            <span className="shrink-0 text-muted-foreground text-xs">{t("bioBirth")}</span>
+            <span className="text-foreground">{birth}</span>
+          </div>
+        )}
+        {sons.length > 0 && (
+          <div className="flex gap-2">
+            <span className="shrink-0 text-muted-foreground text-xs">{t("bioSons")}</span>
+            <span className="text-foreground">
+              {sons.map((s) => `${SURNAME_HANZI}${s}`).join("、")}
+            </span>
+          </div>
+        )}
+        {daughters.length > 0 && (
+          <div className="flex gap-2">
+            <span className="shrink-0 text-muted-foreground text-xs">{t("bioDaughters")}</span>
+            <span className="text-foreground">
+              {daughters.map((s) => `${SURNAME_HANZI}${s}`).join("、")}
+            </span>
+          </div>
+        )}
+        {fullText && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-muted-foreground text-xs hover:text-foreground">
+              {t("bioFullText")}
+            </summary>
+            <p className="mt-1.5 whitespace-pre-wrap text-foreground text-sm leading-relaxed">
+              {fullText}
+            </p>
+          </details>
+        )}
+        <p className="text-muted-foreground text-xs italic">{t("bioOcrNote")}</p>
+      </div>
+    </Section>
+  );
 }
 
 // A titled block in the panel.

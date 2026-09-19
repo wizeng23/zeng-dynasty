@@ -31,6 +31,35 @@ export interface FamilyNode {
   children: number[]; // child IDs, ordered eldest-first (right-to-left in the book)
   biography: string;
   notes: string;
+  bio?: BioEntry; // OCR'd biography from the scanned zupu (bio pipeline stage 4/5)
+}
+
+// A person's biography as read off the scanned book by the bio OCR pipeline
+// (src/bio/s4_ocr ensemble + s5_link). Fields are best-effort per reader; `raw`
+// preserves each engine's full read losslessly. We render the vision reading and
+// fall back to paddle. See docs/specs/2026-09-18-bio-stage4-field-ocr-design.md.
+export interface BioEntry {
+  block_id: string;
+  name_ocr?: { paddle?: string | null; vision?: string | null };
+  father_char?: { vision?: string | null };
+  sons?: { paddle?: string[]; vision?: string[] };
+  daughters?: { paddle?: string[]; vision?: string[] };
+  birth?: { paddle?: string | null; vision?: string | null };
+  qa_flags?: string[];
+  raw?: { paddle?: { columns?: string[] }; vision?: { text?: string } };
+}
+
+// The most trustworthy reading of a bio string field: prefer vision, fall back to paddle.
+export function bioBest(
+  field: { paddle?: string | null; vision?: string | null } | undefined,
+): string | null {
+  return field?.vision || field?.paddle || null;
+}
+
+// The best available son/daughter list (vision preferred, else paddle).
+export function bioBestList(field: { paddle?: string[]; vision?: string[] } | undefined): string[] {
+  const v = field?.vision ?? [];
+  return v.length > 0 ? v : (field?.paddle ?? []);
 }
 
 // The shape d3.hierarchy walks. We keep the raw FamilyNode payload on `data`

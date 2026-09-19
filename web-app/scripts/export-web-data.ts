@@ -30,7 +30,10 @@ const PUBLIC_NAMES = join(WEB_APP, "public", "names");
 // "/names/book{1,2,3,4}/*.png" (the per-node book is inferred from that path, so
 // every book's crops are served). Subtrees whose cross-book parent isn't resolved
 // yet float as extra roots placed at their 字辈 generation.
-const DATASET = { jsonl: "data/tree.jsonl" } as const;
+// Source the bio-folded combined tree (src/bio/s5_fold_combined -> data/tree_bio.jsonl:
+// tree.jsonl with a per-node `bio` field wherever a scanned biography was linked). It
+// falls back to plain tree.jsonl if the bio fold hasn't been run.
+const DATASET = { jsonl: "data/tree_bio.jsonl", fallback: "data/tree.jsonl" } as const;
 const NAME_BOOKS = ["book1", "book2", "book3", "book4"] as const;
 
 function copyJsonl(srcRel: string, destName: string): number {
@@ -76,8 +79,9 @@ function main() {
   mkdirSync(PUBLIC_NAMES, { recursive: true });
 
   console.log("Copying JSONL data -> public/data/");
-  const n = copyJsonl(DATASET.jsonl, "tree.jsonl");
-  console.log(`  ${DATASET.jsonl}  (${n} nodes)  [rewrote image paths]`);
+  const srcRel = existsSync(join(REPO_ROOT, DATASET.jsonl)) ? DATASET.jsonl : DATASET.fallback;
+  const n = copyJsonl(srcRel, "tree.jsonl");
+  console.log(`  ${srcRel}  (${n} nodes)  [rewrote image paths]`);
 
   console.log("Copying name-crop images -> public/names/");
   for (const book of NAME_BOOKS) {
