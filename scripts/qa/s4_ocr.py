@@ -149,8 +149,11 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .cell.paddle .lab {{ color:var(--paddle); }}
   .cell.vision .lab {{ color:var(--vision); }}
   .cell.verified .lab {{ color:var(--ok); }}
-  img.crop {{ width:100%; max-height:40vh; border:1px solid var(--line); border-radius:6px;
-              background:#fff; object-fit:contain; object-position:right center; }}
+  /* Height set per-block in JS so a scanned glyph renders ~= the OCR font size
+     (height = FONT_PX * chars-in-tallest-column). Natural aspect, right-aligned (RTL). */
+  img.crop {{ max-width:100%; border:1px solid var(--line); border-radius:6px;
+              background:#fff; object-fit:contain; object-position:right top;
+              align-self:flex-end; }}
   /* vertical, right-to-left: columns run right->left, chars top->bottom (mirrors the scan). */
   .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-start;
              align-items:flex-start; gap:3px; padding:8px; border:1px solid var(--line);
@@ -180,6 +183,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
 let BLOCKS = [];
 let VERIFIED = {{}};
 let CUR = 0;
+const FONT_PX = 30;   // OCR glyph size; the crop is scaled so its glyphs match this
 
 function escapeHtml(s) {{ return (s||"").replace(/[&<>]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c])); }}
 function colsToText(cols) {{ return cols.join("\\n"); }}
@@ -212,8 +216,13 @@ function renderCurrent() {{
   st.textContent = done ? "✓ verified" : (disagree ? "⚠ readers differ" : "· unreviewed");
   st.className = "status " + (done ? "done" : "todo");
   document.getElementById("prog").textContent = `(${{Object.keys(VERIFIED).length}} verified)`;
+  // Scale the crop so a scanned glyph ~= FONT_PX: displayed height = FONT_PX * (chars in
+  // the tallest OCR column) * line-height, since the scan's columns hold ~the same glyphs.
+  const maxChars = Math.max(1, ...b.paddle.map(c => c.length), ...b.vision.map(c => c.length));
+  const cropH = Math.round(FONT_PX * 1.45 * maxChars) + 18;  // +padding
   document.getElementById("rows").innerHTML = `
-    <div class="cell crop"><span class="lab">Original (scan)</span><img class="crop" src="/img/${{b.id}}"></div>
+    <div class="cell crop"><span class="lab">Original (scan)</span>
+      <img class="crop" style="height:${{cropH}}px" src="/img/${{b.id}}"></div>
     <div class="cell verified"><span class="lab">Verified — defaults to Claude (e=edit · Ctrl+Enter=save)</span>
       <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>
     <div class="cell vision"><span class="lab">Claude</span>${{panel(b.vision, b, "vision")}}</div>
