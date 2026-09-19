@@ -572,6 +572,34 @@ blocks per book are in the sections with the known S3 chunk gap / dup crop (85_1
 
 ---
 
+## Era 17 — Bio-driven cross-book stitch + bios on the website (2026-09-19)
+
+**Bio-driven stitch (`src/bio/s5_bio_stitch.py`).** The bio-listed sons disambiguate
+floater/ambiguous parents that name-only stitching couldn't. Motivating case: 繁中 (Book 4)
+had father-name 庆辉, but ~11 people are named 庆辉 — so its subtree floated. Exactly one
+庆辉 (Book 3 `78_84_105`) lists 繁中 among its bio sons, so 繁中 re-parents there. Algorithm:
+for each child C whose current father is a **floater root** or a **name-ambiguous** parent,
+find nodes named like that father whose bio-sons claim C (exact / substring / same first-2
+chars, to tolerate OCR bleed like `繁中双桃承`); if exactly one, re-parent C to it.
+**Result: 106 children re-parented, 17 emptied duplicate floaters pruned, roots 53→36**,
+0 cycles / 0 dangling / 0 father-children mismatches (2668→2651 nodes). Output
+`data/tree_bio_stitched.jsonl` + `data/bio_stitch_report.json` (every edge with evidence).
+Conservative: only re-parents on unique bio evidence, never edits names or forces edges;
+does NOT overwrite existing trusted edges from noisy bio OCR (edge *conflicts* are mostly
+OCR variants, so left alone). `s5_fold_combined --combined tree_bio_stitched.jsonl` then
+regenerates `data/tree_bio.jsonl` (stitched + 875 bios) — the website's data source.
+
+**Website renders the scanned bio.** `web-app` `FamilyNode` gains a `bio` field (`BioEntry`
+type); `DetailPanel` shows a "Biography (from scan)" section — sons/daughters (surname-
+prefixed), birth, and a collapsible full transcription, with an OCR caveat. i18n en/zh
+labels added. `export-web-data.ts` now sources `data/tree_bio.jsonl` (fallback
+`tree.jsonl`); the deploy CI watches it. Verified in-browser (Playwright): 875 nodes carry
+a bio; 曾纪菖 (#60) shows sons 曾广承/广指/广堂/广连 + full text. Build + typecheck + lint green.
+**Publish is William's step** — repo is public, agents don't `git push`; the Pages deploy
+runs on his push to `main`.
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1
