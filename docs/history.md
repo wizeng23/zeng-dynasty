@@ -654,6 +654,40 @@ human-QA data files (memory `never-clear-human-qa-data`).
 
 ---
 
+## Era 19 — Bio-stitch rewritten to strict node-identity fold (2026-09-19)
+
+**`src/bio/s5_bio_stitch.py` rewritten** from Era 17's per-child re-parenting to
+**node-identity folding**, mirroring the graph stitcher `src/s7_stitch.py`. A **Book-4
+subgraph root** and a **Book-3 node** are declared the SAME person — and folded into one
+node — when they share a name AND the B3 node's linked-bio son-list equals the B4 root's
+graph-children names **exactly, element-wise, in age order** (vision list, then paddle).
+B3 is canonical (survives, keeps id and tree position); the B4 root's subtree re-parents
+beneath it and the B4 id is dropped. Generations recompute from the true root; ids are NOT
+renumbered (downstream fold + website key by the `notes` provenance head).
+
+**Strict = precision over recall, by design.** An exact ordered multi-son match is
+essentially unforgeable, so no `exactly-one-candidate` contortions are needed. The old loose
+per-son match (substring / same-first-2-chars) welded unrelated lineages — e.g. a Book-4
+庆辉 root drawn with 10 sons is really *five distinct* Book-3 庆辉s, each listing a slice of
+those sons; strict correctly declines to merge it (the old code split it child-by-child).
+**Result: 10 exact merges, roots 53→43, 2668→2658 nodes, 0 integrity errors, 875 bios
+folded.** 42 B4 roots stay unstitched, awaiting a human OCR-QA pass (which lifts exact-match
+rate) then a future looser pass. William chose B3-canonical, strict-only for now.
+
+**Code review caught a ship-blocker (fixed):** the seam trace must be an appended
+`bio_stitch=canon/dup` notes TAG, not a rewrite of the provenance head — `s5_fold_combined`
+re-keys bios by the bare `{tag}:{prov}` head afterward, so a rewritten head dropped the bio
+from every merged canonical (exactly the son-listing parent that drove the merge; 865 vs the
+correct 875). Also: candidate pool filtered to `b3:` (keeps fold direction B4→B3, since
+`bio_index` loads B4 bios too), disjoint canonical/dup id-sets asserted (no fold chains, so
+no `folded_into` needed), empty son-list guarded against false-welds.
+
+A **future verification** noted: each bio's `father_char` should read
+`子` + birth-order (之/二/三…) + the father's last name char (e.g. a 2nd son of 庆辉 → `子二辉`),
+checkable within a subgraph — a standalone QA script, not a stitch change.
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1
