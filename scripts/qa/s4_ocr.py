@@ -141,30 +141,29 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
                padding:0 4px; font:inherit; }}
   .legend {{ color:var(--muted); font-size:12px; }}
   .legend b {{ font-weight:600; }}
-  #stage {{ flex:1; padding:16px; overflow:hidden; }}
-  .cols {{ display:flex; gap:14px; align-items:stretch; height:100%; }}
-  .cell {{ display:flex; flex-direction:column; gap:5px; height:100%; min-width:0; }}
-  .cell.crop {{ flex:0 0 auto; }}
-  .cell.paddle, .cell.vision, .cell.verified {{ flex:1 1 0; min-width:0; }}
-  .cell .lab {{ font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }}
+  /* Stacked full-width rows: crop -> verified -> claude -> paddle, scroll within block. */
+  #stage {{ flex:1; padding:16px; overflow:auto; }}
+  .rows {{ display:flex; flex-direction:column; gap:14px; }}
+  .cell {{ display:flex; flex-direction:column; gap:4px; }}
+  .cell .lab {{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }}
   .cell.paddle .lab {{ color:var(--paddle); }}
   .cell.vision .lab {{ color:var(--vision); }}
   .cell.verified .lab {{ color:var(--ok); }}
-  img.crop {{ max-height:82vh; max-width:300px; border:1px solid var(--line); border-radius:6px;
-              background:#fff; object-fit:contain; }}
-  /* vertical, right-to-left: columns run right->left, chars top->bottom (mirrors the scan).
-     align-items:flex-start so columns size to their own text height, not stretched. */
-  .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-end;
-             align-items:flex-start; gap:3px; flex:1; min-height:0; padding:8px;
-             border:1px solid var(--line); border-radius:6px; background:#fff; overflow:auto; }}
+  img.crop {{ width:100%; max-height:40vh; border:1px solid var(--line); border-radius:6px;
+              background:#fff; object-fit:contain; object-position:right center; }}
+  /* vertical, right-to-left: columns run right->left, chars top->bottom (mirrors the scan). */
+  .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-start;
+             align-items:flex-start; gap:3px; padding:8px; border:1px solid var(--line);
+             border-radius:6px; background:#fff; overflow-x:auto; }}
+  /* OCR glyphs sized to roughly match the scanned characters for column-by-column compare. */
   .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-           font-size:21px; line-height:1.4; padding:1px 2px; border-radius:3px; }}
+           font-size:30px; line-height:1.45; padding:1px 3px; border-radius:3px; }}
   .vcol.diff {{ background:#ffe9d6; }}
   .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}
   .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }}
   textarea.vtext {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-            font-family:inherit; font-size:22px; line-height:1.4; resize:none; width:100%;
-            flex:1; min-height:0; color:var(--ok); padding:8px; border:1px solid var(--line);
+            font-family:inherit; font-size:30px; line-height:1.45; resize:vertical; width:100%;
+            min-height:34vh; color:var(--ok); padding:8px; border:1px solid var(--line);
             border-radius:6px; background:#fff; }}
   textarea.vtext:focus {{ outline:2px solid var(--ok); border-color:var(--ok); }}
 </style></head><body>
@@ -176,7 +175,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   <span class="legend"><span style="background:#ffe9d6">orange</span>=differ · <b style="color:#c0392b">red</b>=son · <b style="color:var(--ok)">green</b>=name</span>
   <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> prev/next · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> prev/next to-review · <kbd>e</kbd> edit · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
-<div id="stage"><div class="cols" id="cols"></div></div>
+<div id="stage"><div class="rows" id="rows"></div></div>
 <script>
 let BLOCKS = [];
 let VERIFIED = {{}};
@@ -213,12 +212,12 @@ function renderCurrent() {{
   st.textContent = done ? "✓ verified" : (disagree ? "⚠ readers differ" : "· unreviewed");
   st.className = "status " + (done ? "done" : "todo");
   document.getElementById("prog").textContent = `(${{Object.keys(VERIFIED).length}} verified)`;
-  document.getElementById("cols").innerHTML = `
-    <div class="cell crop"><span class="lab">crop</span><img class="crop" src="/img/${{b.id}}"></div>
-    <div class="cell paddle"><span class="lab">Paddle</span>${{panel(b.paddle, b, "paddle")}}</div>
+  document.getElementById("rows").innerHTML = `
+    <div class="cell crop"><span class="lab">Original (scan)</span><img class="crop" src="/img/${{b.id}}"></div>
+    <div class="cell verified"><span class="lab">Verified — defaults to Claude (e=edit · Ctrl+Enter=save)</span>
+      <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>
     <div class="cell vision"><span class="lab">Claude</span>${{panel(b.vision, b, "vision")}}</div>
-    <div class="cell verified"><span class="lab">Verified — defaults to Claude</span>
-      <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>`;
+    <div class="cell paddle"><span class="lab">Paddle</span>${{panel(b.paddle, b, "paddle")}}</div>`;
 }}
 
 function go(delta) {{
