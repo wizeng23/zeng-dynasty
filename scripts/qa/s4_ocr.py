@@ -161,6 +161,9 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   /* OCR glyphs sized to roughly match the scanned characters for column-by-column compare. */
   /* Fixed per-column slot width so Claude & Paddle rows line up column-for-column
      (a missing column shows as an empty .gap slot of the same width). */
+  /* Every text row (Claude, Paddle, AND Verified) uses these identical fixed-width slots,
+     so the three rows are structurally identical and cannot misalign. Slot width is set
+     per-block from the scan's rendered pixel width (--slot). */
   .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
            font-size:30px; line-height:1.45; padding:1px 0; border-radius:3px;
            flex:0 0 var(--slot,40px); width:var(--slot,40px); text-align:center; }}
@@ -168,11 +171,10 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .vcol.diff {{ background:#ffe9d6; }}
   .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}
   .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }}
-  textarea.vtext {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-            font-family:inherit; font-size:30px; line-height:1.45; resize:vertical; width:100%;
-            min-height:34vh; color:var(--ok); padding:8px; border:1px solid var(--line);
-            border-radius:6px; background:#fff; }}
-  textarea.vtext:focus {{ outline:2px solid var(--ok); border-color:var(--ok); }}
+  /* Verified columns are the same slot, but editable. */
+  .vcol.edit {{ color:var(--ok); cursor:text; min-height:2em; }}
+  .vcol.edit:focus {{ outline:2px solid var(--ok); background:#f0faf3; }}
+  .cell.verified .vpanel {{ min-height:40vh; }}
 </style></head><body>
 <header>
   <span class="bid" id="bid">…</span>
@@ -257,25 +259,42 @@ function renderCurrent() {{
     return {{ text: p, cls: p !== v ? ["diff"] : [] }};
   }});
 
+  // Verified: same slots as Claude, but each column is editable. Defaults to Claude's
+  // text per slot (saved edits override). Gap slots start empty. Structurally identical
+  // to the Claude/Paddle rows, so it aligns to them by construction.
+  const savedCols = VERIFIED[b.id] !== undefined ? VERIFIED[b.id].split("\\n") : null;
+  const verifiedCells = slots.map((v, i) => {{
+    const text = savedCols ? (savedCols[i] ?? "") : (v == null ? "" : v);
+    return text;
+  }});
+  const verifiedRow = verifiedCells.map((t, i) =>
+    `<span class="vcol edit" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(t)}}</span>`
+  ).join("");
+
   const nSlots = slots.length;
   const rows = document.getElementById("rows");
   rows.innerHTML = `
     <div class="cell crop"><span class="lab">Original (scan)</span>
       <img class="crop" id="cropimg" style="height:${{cropH}}px" src="/img/${{b.id}}"></div>
-    <div class="cell verified"><span class="lab">Verified — defaults to Claude (e=edit · Ctrl+Enter=save)</span>
-      <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>
+    <div class="cell verified"><span class="lab">Verified — click a column to edit · ←/→ move · Ctrl+Enter save</span>
+      <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     <div class="cell vision"><span class="lab">Claude</span>${{slotRow(claudeCells)}}</div>
     <div class="cell paddle"><span class="lab">Paddle</span>${{slotRow(paddleCells)}}</div>`;
-  // Once the scan renders, size each OCR column slot to the scan's per-column pixel width
-  // (rendered crop width / number of slots) so the text rows span the same width and line
-  // up column-for-column with the image. The 8px panel padding is subtracted so the inner
-  // slots match the crop's content width.
+  // Once the scan renders, size each column slot to the scan's per-column pixel width
+  // (rendered crop width / number of slots) so every text row spans the scan's width and
+  // shares its right edge. Panel padding (8px each side) subtracted.
   const img = document.getElementById("cropimg");
   const applySlot = () => {{
     const w = img.getBoundingClientRect().width;
     if (w > 0 && nSlots > 0) rows.style.setProperty("--slot", ((w - 16) / nSlots) + "px");
   }};
   if (img.complete) applySlot(); else img.onload = applySlot;
+}}
+
+// Read the Verified row back as \\n-joined columns (slot order == Claude slot order).
+function verifiedText() {{
+  return [...document.querySelectorAll("#vrow .vcol.edit")]
+    .map(el => el.textContent).join("\\n");
 }}
 
 function go(delta) {{
@@ -288,30 +307,46 @@ function goReview(delta) {{
     if (needsReview(BLOCKS[i])) {{ CUR = i; renderCurrent(); return; }}
   }}
 }}
-function focusEdit() {{ const ta = document.getElementById("ta"); if (ta) {{ ta.focus();
-    ta.setSelectionRange(ta.value.length, ta.value.length); }} }}
+// Focus a Verified column by index (columns render right-to-left; index 0 = rightmost).
+function focusCol(i) {{
+  const cols = [...document.querySelectorAll("#vrow .vcol.edit")];
+  if (!cols.length) return;
+  i = Math.max(0, Math.min(cols.length - 1, i));
+  cols[i].focus();
+  const r = document.createRange(); r.selectNodeContents(cols[i]); r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}}
+function curCol() {{
+  const el = document.activeElement;
+  return el && el.classList && el.classList.contains("edit") ? +el.dataset.i : -1;
+}}
 
 async function save() {{
   const b = BLOCKS[CUR];
-  const ta = document.getElementById("ta");
+  const text = verifiedText();
   const r = await fetch("/save", {{ method:"POST", headers:{{"Content-Type":"application/json"}},
-    body: JSON.stringify({{ id: b.id, text: ta.value }}) }});
-  if (r.ok) {{ VERIFIED[b.id] = ta.value; ta.blur(); go(1); }}
+    body: JSON.stringify({{ id: b.id, text }}) }});
+  if (r.ok) {{ VERIFIED[b.id] = text; if (document.activeElement) document.activeElement.blur(); go(1); }}
 }}
 
 document.addEventListener("keydown", (e) => {{
-  // Ctrl+Enter saves+advances from anywhere (incl. inside the textarea)
   if (e.ctrlKey && e.key === "Enter") {{ e.preventDefault(); save(); return; }}
-  // Shift+arrows navigate even while typing (plain arrows stay as the text cursor)
+  // Shift+arrows: navigate BLOCKS (prev/next, and up/down = prev/next to-review)
   if (e.shiftKey) {{
     if (e.key === "ArrowRight") {{ e.preventDefault(); go(1); return; }}
     if (e.key === "ArrowLeft")  {{ e.preventDefault(); go(-1); return; }}
     if (e.key === "ArrowDown")  {{ e.preventDefault(); goReview(1); return; }}
     if (e.key === "ArrowUp")    {{ e.preventDefault(); goReview(-1); return; }}
+    return;
   }}
-  const editing = document.activeElement && document.activeElement.id === "ta";
-  if (!editing && (e.key === "e" || e.key === "Enter")) {{ e.preventDefault(); focusEdit(); }}
-  if (e.key === "Escape") {{ const ta = document.getElementById("ta"); if (ta) ta.blur(); }}
+  const editing = curCol() >= 0;
+  // Plain ←/→ move between Verified columns (columns are single glyphs stacked vertically,
+  // so there's no horizontal text cursor to conflict with). RTL: → goes to the next column
+  // to the LEFT (higher index), ← to the right (lower index).
+  if (editing && e.key === "ArrowRight") {{ e.preventDefault(); focusCol(curCol() + 1); return; }}
+  if (editing && e.key === "ArrowLeft")  {{ e.preventDefault(); focusCol(curCol() - 1); return; }}
+  if (!editing && (e.key === "e" || e.key === "Enter")) {{ e.preventDefault(); focusCol(0); }}
+  if (e.key === "Escape" && document.activeElement) document.activeElement.blur();
 }});
 
 async function boot() {{
