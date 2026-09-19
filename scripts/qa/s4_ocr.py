@@ -159,8 +159,12 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
              align-items:flex-start; gap:3px; padding:8px; border:1px solid var(--line);
              border-radius:6px; background:#fff; overflow-x:auto; }}
   /* OCR glyphs sized to roughly match the scanned characters for column-by-column compare. */
+  /* Fixed per-column slot width so Claude & Paddle rows line up column-for-column
+     (a missing column shows as an empty .gap slot of the same width). */
   .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-           font-size:30px; line-height:1.45; padding:1px 3px; border-radius:3px; }}
+           font-size:30px; line-height:1.45; padding:1px 0; border-radius:3px;
+           flex:0 0 40px; width:40px; text-align:center; }}
+  .vcol.gap {{ background:repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 4px,#fafafa 4px,#fafafa 8px); }}
   .vcol.diff {{ background:#ffe9d6; }}
   .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}
   .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }}
@@ -191,17 +195,31 @@ function isDone(b) {{ return VERIFIED[b.id] !== undefined; }}
 function isDisagree(b) {{ return colsToText(b.paddle) !== colsToText(b.vision); }}
 function needsReview(b) {{ return !isDone(b) || isDisagree(b); }}
 
-// Highlight a column as "differ" if its text is absent from the OTHER reader's columns
-// (content membership, tolerant of column-split drift). son/name boxes only on Claude.
-function panel(cols, b, whichReader) {{
-  const nameI = b.name_idx, sons = new Set(b.son_idxs || []);
-  const other = new Set(whichReader === "vision" ? b.paddle : b.vision);
-  const spans = cols.map((c, i) => {{
-    const cls = ["vcol"];
-    if (!other.has(c)) cls.push("diff");
-    if (whichReader === "vision" && sons.has(i)) cls.push("son");
-    if (whichReader === "vision" && i === nameI) cls.push("name");
-    return `<span class="${{cls.join(" ")}}">${{escapeHtml(c)}}</span>`;
+// Map Paddle's columns onto Claude's slot order (Claude = canonical). Each Claude slot i
+// gets the Paddle column that matches its text (greedy, first unused match); Claude slots
+// with no Paddle match stay empty (a gap in the Paddle row). Paddle columns that match no
+// Claude slot are appended as extra slots at the end (with a gap in the Claude row) so no
+// text is lost. Returns {{ slots: [claudeText...], paddleAt: [paddleText|null...] }} of
+// equal length so the two rows line up column-for-column.
+function alignToClaude(vision, paddle) {{
+  const slots = vision.slice();          // Claude defines slot 0..n-1
+  const usedP = new Array(paddle.length).fill(false);
+  const paddleAt = slots.map(v => {{
+    const j = paddle.findIndex((p, k) => !usedP[k] && p === v);
+    if (j >= 0) {{ usedP[j] = true; return paddle[j]; }}
+    return null;                          // gap: Paddle has no matching column here
+  }});
+  // leftover Paddle columns (no Claude match) -> extra trailing slots
+  paddle.forEach((p, k) => {{ if (!usedP[k]) {{ slots.push(null); paddleAt.push(p); }} }});
+  return {{ slots, paddleAt }};
+}}
+
+// Render one text row as fixed-width slots so every row's columns sit at the same x.
+// `cells` is an array of {{text, cls[]}} (null text => an empty gap slot).
+function slotRow(cells) {{
+  const spans = cells.map(c => {{
+    if (c.text == null) return `<span class="vcol gap"></span>`;
+    return `<span class="${{["vcol", ...c.cls].join(" ")}}">${{escapeHtml(c.text)}}</span>`;
   }});
   return `<div class="vpanel">${{spans.join("") || "—"}}</div>`;
 }}
@@ -220,13 +238,32 @@ function renderCurrent() {{
   // the tallest OCR column) * line-height, since the scan's columns hold ~the same glyphs.
   const maxChars = Math.max(1, ...b.paddle.map(c => c.length), ...b.vision.map(c => c.length));
   const cropH = Math.round(FONT_PX * 1.45 * maxChars) + 18;  // +padding
+
+  // Align Paddle onto Claude's slots so columns line up row-to-row (gaps where a reader
+  // is missing a column). Build the two slotted rows with diff/son/name flags.
+  const {{ slots, paddleAt }} = alignToClaude(b.vision, b.paddle);
+  const sons = new Set(b.son_idxs || []), nameI = b.name_idx;
+  const claudeCells = slots.map((v, i) => {{
+    if (v == null) return {{ text: null, cls: [] }};      // slot Paddle-only -> gap in Claude
+    const cls = [];
+    if (paddleAt[i] !== v) cls.push("diff");              // Paddle here differs / is missing
+    if (sons.has(i)) cls.push("son");
+    if (i === nameI) cls.push("name");
+    return {{ text: v, cls }};
+  }});
+  const paddleCells = slots.map((v, i) => {{
+    const p = paddleAt[i];
+    if (p == null) return {{ text: null, cls: [] }};       // gap: Paddle missing this column
+    return {{ text: p, cls: p !== v ? ["diff"] : [] }};
+  }});
+
   document.getElementById("rows").innerHTML = `
     <div class="cell crop"><span class="lab">Original (scan)</span>
       <img class="crop" style="height:${{cropH}}px" src="/img/${{b.id}}"></div>
     <div class="cell verified"><span class="lab">Verified — defaults to Claude (e=edit · Ctrl+Enter=save)</span>
       <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>
-    <div class="cell vision"><span class="lab">Claude</span>${{panel(b.vision, b, "vision")}}</div>
-    <div class="cell paddle"><span class="lab">Paddle</span>${{panel(b.paddle, b, "paddle")}}</div>`;
+    <div class="cell vision"><span class="lab">Claude</span>${{slotRow(claudeCells)}}</div>
+    <div class="cell paddle"><span class="lab">Paddle</span>${{slotRow(paddleCells)}}</div>`;
 }}
 
 function go(delta) {{
