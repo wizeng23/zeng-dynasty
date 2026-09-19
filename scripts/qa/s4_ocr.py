@@ -28,6 +28,97 @@ SEG_DIR = os.path.join("bio", "3_segment")
 OCR_DIR = os.path.join("bio", "4_ocr")
 
 
+# --- graph reference (what the tree says a block should be) ------------------------
+# For each block, show the tree node at the SAME (subgraph, generation, position) so the
+# reviewer can copy the graph's name/father/sons over when the OCR is wrong. Purely
+# positional (pos-th node in that gen of that subgraph) -- no fuzzy matching; a position
+# with no node just shows blank. Reuses s5_link's subgraph grouping (stem via provenance
+# in notes) over data/{book}_stitched.jsonl.
+
+def build_graph_index(book: str, books_dir: str, data_dir: str):
+    """(stem,gen)->[nodes RTL/eldest-first] + id->name, from the stitched tree. {} if absent."""
+    from collections import defaultdict
+    from src.bio.s5_link import _stem_of, section_to_stem
+    tree_path = os.path.join(data_dir, f"{book}_stitched.jsonl")
+    if not os.path.exists(tree_path):
+        return {"tb": {}, "byid": {}, "sec2stem": {}}
+    rows = [json.loads(l) for l in open(tree_path) if l.strip()]
+    byid = {r["id"]: r for r in rows}
+    tb = defaultdict(lambda: defaultdict(list))
+    for n in rows:
+        tb[_stem_of(n)][n["generation"]].append(n)
+    try:
+        sec2stem = section_to_stem(book, books_dir)
+    except Exception:
+        sec2stem = {}
+    return {"tb": tb, "byid": byid, "sec2stem": sec2stem}
+
+
+def _node_ref(byid: dict, n: dict, matched: bool) -> dict:
+    father = byid.get(n["father"], {}).get("name") if n.get("father", -1) != -1 else None
+    sons = [byid[c]["name"] for c in n.get("children", []) if c in byid]
+    return {"name": n.get("name"), "father": father, "sons": sons, "matched": matched}
+
+
+def _bio_name_candidates(block: dict, verified: str | None) -> list[str]:
+    """The block's own-name as best we know it, most-trusted first: the reviewer's Verified
+    name (col 1), then each reader's detected name (col at that reader's name_idx)."""
+    out: list[str] = []
+    if verified:
+        cols = [c for c in verified.split("\n")]
+        if len(cols) > 1 and cols[1].strip():
+            out.append(cols[1].strip())
+    fields = block.get("fields") or {}
+    for rd in ("vision", "gemini", "mistral", "paddle"):
+        cols = block.get(rd) or []
+        ni = (fields.get(rd) or {}).get("name_idx")
+        if ni is not None and ni < len(cols) and cols[ni].strip():
+            out.append(cols[ni].strip())
+    # de-dup preserving order
+    seen = set(); uniq = []
+    for c in out:
+        if c not in seen:
+            seen.add(c); uniq.append(c)
+    return uniq
+
+
+def graph_ref(idx: dict, block: dict, verified: str | None = None) -> dict | None:
+    """The tree node this bio block corresponds to.
+
+    Smart match: if any candidate bio-name (the reviewer's Verified name, else a reader's
+    detected name) equals a graph node's VERIFIED name in this block's subgraph+generation,
+    show THAT node (``matched: true``) -- robust to segmentation gaps/over-splits. Otherwise
+    fall back to the positional node (pos-th in the gen; ``matched: false``). None if no
+    graph is loaded.
+    """
+    tb, byid, sec2stem = idx["tb"], idx["byid"], idx["sec2stem"]
+    if not tb:
+        return None
+    bid = block["id"]
+    parts = bid.split("_")
+    pos = int(parts[-1])
+    sec = "_".join(parts[:-2])
+    stem = sec2stem.get(sec, sec)
+    gen = block.get("generation")
+    nodes = tb.get(stem, {}).get(gen, [])
+    if not nodes:
+        return {"name": None, "father": None, "sons": None, "matched": False}
+
+    # 1. name-match against the verified graph names in this generation
+    cands = _bio_name_candidates(block, verified)
+    by_name: dict[str, dict] = {}
+    for n in nodes:                       # first occurrence wins (RTL/eldest-first)
+        by_name.setdefault((n.get("name") or "").strip(), n)
+    for c in cands:
+        if c in by_name:
+            return _node_ref(byid, by_name[c], matched=True)
+
+    # 2. positional fallback
+    if pos < len(nodes):
+        return _node_ref(byid, nodes[pos], matched=False)
+    return {"name": None, "father": None, "sons": None, "matched": False}
+
+
 # --- data loading -----------------------------------------------------------------
 
 def load_blocks(book: str, books_dir: str) -> list[dict]:
@@ -148,10 +239,15 @@ def load_fields(book: str, data_dir: str) -> dict:
 
 
 def save_fields(book: str, data_dir: str, bid: str, fields: dict) -> None:
-    """Persist ``{slot_index: 'father'|'name'|'son'|None}`` for one block."""
+    """Persist ``{slot_index: 'father'|'name'|'son'|'none'}`` for one block.
+
+    ``'none'`` is a REAL, persisted override meaning "this column is not a field" -- it
+    must survive reload so it overrides auto-detection (e.g. the reviewer clearing a column
+    that was wrongly auto-tagged as a son). Only genuinely absent keys are dropped.
+    """
     p = fields_path(book, data_dir)
     cur = load_fields(book, data_dir)
-    clean = {k: v for k, v in (fields or {}).items() if v}   # drop cleared (None) slots
+    clean = {k: v for k, v in (fields or {}).items() if v}   # v is a non-empty string
     if clean:
         cur[bid] = clean
     else:
@@ -223,6 +319,10 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
            text-align:center; }}
   .vcol.gap {{ background:repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 4px,#fafafa 4px,#fafafa 8px); }}
   .vcol.diff {{ background:#ffe9d6; }}
+  /* FIELD-detection disagreement with Claude: this reader tagged this column as a
+     different field (father/name/son/none) than Claude did. Dashed magenta outline,
+     distinct from the orange text-diff background. */
+  .vcol.fdiff {{ outline:2px dashed #b5179e; outline-offset:-2px; }}
   /* Field emphasis: father = blue underline, own name = green bold, sons = red bold.
      Applied to the glyphs so the same field reads down every reader row + Verified. */
   .vcol.f-father {{ color:var(--father); text-decoration:underline; text-underline-offset:3px;
@@ -247,6 +347,18 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .vcol.edit.f-name   {{ border-top:3px solid var(--name); }}
   .vcol.edit.f-son    {{ border-top:3px solid var(--son); }}
   .cell.verified .vpanel {{ min-height:40vh; }}
+  /* Graph reference row: horizontal chips (father / name / sons) to copy from. */
+  .cell.graph .lab {{ color:#555; }}
+  .gline {{ display:flex; gap:18px; flex-wrap:wrap; align-items:baseline;
+            padding:8px 10px; border:1px solid var(--line); border-radius:6px;
+            background:#f7f9ff; }}
+  .gchip {{ display:inline-flex; gap:6px; align-items:baseline; }}
+  .glab {{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; }}
+  .gval {{ font-family:"PingFang SC","Hiragino Sans GB",var(--font-cjk); font-size:26px;
+           user-select:all; }}   /* click selects the whole value for easy copy */
+  .gtag {{ font-size:11px; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:8px; }}
+  .gtag.ok {{ background:#e6f6ec; color:var(--ok); }}
+  .gtag.guess {{ background:#fdeecf; color:#8a5a00; }}
   .cell.gemini .lab {{ color:#6d28d9; }}
   .cell.mistral .lab {{ color:#b45309; }}
   .fieldbar {{ font-size:12px; color:var(--muted); }}
@@ -257,7 +369,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   <span class="prog" id="pos"></span>
   <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="background:#ffe9d6">orange</span>=differ</span>
+  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="background:#ffe9d6">orange</span>=text differs · <span style="outline:2px dashed #b5179e;padding:0 3px">dashed</span>=field differs from Claude</span>
   <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> block · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> to-review · <kbd>e</kbd> edit · <kbd>←/→</kbd> col · <kbd>f</kbd>/<kbd>n</kbd>/<kbd>s</kbd>/<kbd>x</kbd> set father/name/son/none · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
 <div id="stage"><div class="rows" id="rows"></div></div>
@@ -385,14 +497,20 @@ function renderCurrent() {{
   const nSlots = slots.length;
   // Build each reader row's cells, with diff (vs Claude) + field highlight.
   const readerCellRows = {{}};
+  // Claude's field-type at each SLOT (the reference the other readers are compared to).
+  const claudeFieldAt = slots.map(s => readerFieldCls("vision", s));
   for (const rd of READERS) {{
     readerCellRows[rd] = slots.map((s, i) => {{
       const t = rowText[rd][i];
       if (t == null) return {{ text: null, cls: [] }};
       const cls = [];
-      if (rd !== "vision" && t !== s) cls.push("diff");    // differs from Claude here
+      if (rd !== "vision" && t !== s) cls.push("diff");    // text differs from Claude here
       const fc = readerFieldCls(rd, t);
       if (fc) cls.push("f-" + fc);
+      // FIELD-detection disagreement: this reader assigns a different field type to this
+      // slot than Claude does (e.g. Gemini thinks this column is the father, Claude doesn't).
+      // Mark with a dashed outline. (Claude is the reference, so it never flags itself.)
+      if (rd !== "vision" && (fc || null) !== (claudeFieldAt[i] || null)) cls.push("fdiff");
       return {{ text: t, cls }};
     }});
   }}
@@ -403,25 +521,56 @@ function renderCurrent() {{
   const ov = FIELDS[b.id] || {{}};
   const vfields = (b.fields || {{}}).vision || {{}};
   function verifiedFieldCls(i) {{
-    if (i in ov) return ov[i];                 // reviewer override (may be null = cleared)
+    // A reviewer override wins over auto-detection. "none" means "explicitly not a field"
+    // (return null so no color, but it still suppresses the auto-detected field).
+    if (i in ov) return ov[i] === "none" ? null : ov[i];
     return fieldClassFor(vfields, i);
   }}
-  const verifiedRow = slots.map((s, i) => {{
+  // The Verified row must show EVERY saved column, even if the reader-derived `slots` are
+  // fewer (readers split columns differently than the reviewer did). Length = max(slots,
+  // saved) so a saved edit is never truncated/dropped on reload. Unsaved blocks default to
+  // one editable slot per Claude slot (prefill).
+  const nVerified = Math.max(slots.length, savedCols ? savedCols.length : 0);
+  let verifiedRow = "";
+  for (let i = 0; i < nVerified; i++) {{
+    const s = slots[i];
     const text = savedCols ? (savedCols[i] ?? "") : (s == null ? "" : s);
     const fc = verifiedFieldCls(i);
     const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
     if (fc === "father") cls.push("horiz");   // father header reads horizontally
-    return `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
-  }}).join("");
+    verifiedRow += `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
+  }}
 
   const readerRowsHtml = READERS.map(rd =>
     `<div class="cell ${{rd}}"><span class="lab">${{READER_LABEL[rd]}}</span>${{slotRow(readerCellRows[rd])}}</div>`
   ).join("");
 
+  // Graph reference: what the tree says this block's person is (name/father/sons), by
+  // position in its subgraph generation. A flat, copyable line -- the truth to copy over
+  // when the OCR is wrong. Empty when the graph has no node at this position.
+  const g = b.graph;
+  let graphHtml = "";
+  if (g && (g.name || g.father || (g.sons && g.sons.length))) {{
+    const chip = (label, val, color) => val
+      ? `<span class="gchip"><span class="glab" style="color:${{color}}">${{label}}</span>` +
+        `<span class="gval">${{escapeHtml(val)}}</span></span>` : "";
+    const sons = (g.sons || []).map(s => escapeHtml(s)).join("、");
+    // matched = found this node by NAME (trustworthy); else positional guess.
+    const tag = g.matched
+      ? `<span class="gtag ok">✓ name-matched</span>`
+      : `<span class="gtag guess">≈ positional guess</span>`;
+    graphHtml = `<div class="cell graph"><span class="lab">Graph (tree) — reference to copy from ${{tag}}</span>
+      <div class="gline">${{chip("father", g.father, "var(--father)")}}` +
+      `${{chip("name", g.name, "var(--name)")}}` +
+      `${{sons ? `<span class="gchip"><span class="glab" style="color:var(--son)">sons</span><span class="gval">${{sons}}</span></span>` : ""}}` +
+      `</div></div>`;
+  }}
+
   const rows = document.getElementById("rows");
   rows.innerHTML = `
     <div class="cell crop"><span class="lab">Original (scan)</span>
       <img class="crop" id="cropimg" src="/img/${{b.id}}"></div>
+    ${{graphHtml}}
     <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     ${{readerRowsHtml}}`;
@@ -440,6 +589,51 @@ function renderCurrent() {{
     if (w > 0 && nSlots > 0) rows.style.setProperty("--slot", ((w - 16) / nSlots) + "px");
   }};
   if (img.complete && img.naturalWidth) applySlot(); else img.onload = applySlot;
+
+  // Paste of MULTI-LINE text (e.g. a whole reader's transcription copied in) must land as
+  // SEPARATE columns, not a blob in one cell -- otherwise field-labeling hits the whole
+  // blob. Split the paste on newlines and distribute across columns from the focused one,
+  // then re-render the verified row so each line is its own editable cell immediately.
+  const vrow = document.getElementById("vrow");
+  vrow.addEventListener("paste", (e) => {{
+    const raw = (e.clipboardData || window.clipboardData).getData("text");
+    if (!raw.includes("\\n")) return;               // single-line paste: let it be normal
+    e.preventDefault();
+    const lines = raw.split(/\\r?\\n/);
+    const cols = currentVerifiedCols();
+    const start = Math.max(0, curCol());
+    // overwrite from `start`, extending the column list if the paste is longer
+    for (let k = 0; k < lines.length; k++) cols[start + k] = lines[k];
+    setVerifiedCols(cols);
+    focusCol(start + lines.length - 1);
+  }});
+}}
+
+// The current Verified columns as an array (one entry per editable cell).
+function currentVerifiedCols() {{
+  return [...document.querySelectorAll("#vrow .vcol.edit")].map(el => el.textContent);
+}}
+
+// Replace the Verified row's cells with `cols` (re-rendered in place), preserving field
+// highlights from the current block's detection/overrides. Used by multi-line paste.
+function setVerifiedCols(cols) {{
+  const b = BLOCKS[CUR];
+  const ov = FIELDS[b.id] || {{}};
+  const vfields = (b.fields || {{}}).vision || {{}};
+  const fieldCls = (i) => {{
+    if (i in ov) return ov[i] === "none" ? null : ov[i];
+    if (i === vfields.father_idx) return "father";
+    if (i === vfields.name_idx) return "name";
+    if ((vfields.son_idxs || []).includes(i)) return "son";
+    return null;
+  }};
+  const vrow = document.getElementById("vrow");
+  vrow.innerHTML = cols.map((t, i) => {{
+    const fc = fieldCls(i);
+    const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
+    if (fc === "father") cls.push("horiz");
+    return `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(t)}}</span>`;
+  }}).join("");
 }}
 
 // Read the Verified row back as \\n-joined columns (slot order == Claude slot order).
@@ -494,14 +688,18 @@ document.addEventListener("keydown", (e) => {{
   // Plain ←/→ move between Verified columns (columns are single glyphs stacked vertically,
   // so there's no horizontal text cursor to conflict with). RTL: → goes to the next column
   // to the LEFT (higher index), ← to the right (lower index).
-  if (editing && e.key === "ArrowRight") {{ e.preventDefault(); focusCol(curCol() + 1); return; }}
-  if (editing && e.key === "ArrowLeft")  {{ e.preventDefault(); focusCol(curCol() - 1); return; }}
+  // Columns render RIGHT-TO-LEFT (index 0 = rightmost), so visual-left = higher index.
+  if (editing && e.key === "ArrowLeft")  {{ e.preventDefault(); focusCol(curCol() + 1); return; }}
+  if (editing && e.key === "ArrowRight") {{ e.preventDefault(); focusCol(curCol() - 1); return; }}
   // f/n/s/x: (re)assign the focused Verified column's FIELD type (father/name/son/none).
-  // These fire while a column is focused; the column is contenteditable but these single
-  // letters aren't Chinese text, so we intercept them as commands, not input.
-  if (editing && "fnsx".includes(e.key)) {{
+  // Bare single keys (reviewer's choice). Skip while an IME is composing so rare-glyph
+  // input isn't disrupted.
+  if (editing && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey
+      && "fnsx".includes(e.key)) {{
     e.preventDefault();
-    const map = {{f:"father", n:"name", s:"son", x:null}};
+    // x = "none": an explicit, PERSISTED override that this column is NOT a field, so it
+    // overrides auto-detection on reload (e.g. clearing a wrongly auto-tagged son).
+    const map = {{f:"father", n:"name", s:"son", x:"none"}};
     setField(curCol(), map[e.key]);
     return;
   }}
@@ -514,7 +712,7 @@ async function setField(i, type) {{
   if (i < 0) return;
   const b = BLOCKS[CUR];
   FIELDS[b.id] = FIELDS[b.id] || {{}};
-  FIELDS[b.id][i] = type;                       // null = explicitly "none"
+  FIELDS[b.id][i] = type;                       // "none" = explicitly not a field (persisted)
   const el = document.querySelector(`#vrow .vcol.edit[data-i="${{i}}"]`);
   if (el) {{ el.classList.remove("f-father","f-name","f-son");
             if (type) el.classList.add("f-" + type); }}
@@ -546,6 +744,7 @@ class Handler(BaseHTTPRequestHandler):
     books_dir = "books"
     data_dir = "data"
     blocks: list[dict] = []
+    graph_idx: dict = {}   # (stem,gen)->nodes index for the graph reference
 
     def log_message(self, format, *args):  # quiet
         pass
@@ -564,7 +763,12 @@ class Handler(BaseHTTPRequestHandler):
             html = PAGE.format(book=self.book, book_json=json.dumps(self.book))
             return self._send(200, html, "text/html; charset=utf-8")
         if self.path == "/data":
-            payload = [dict(b, **analyze(b)) for b in self.blocks]
+            verified = load_verified(self.book, self.data_dir)
+            payload = []
+            for b in self.blocks:
+                ab = dict(b, **analyze(b))          # ab now carries per-reader `fields`
+                ab["graph"] = graph_ref(self.graph_idx, ab, verified.get(b["id"]))
+                payload.append(ab)
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":
             return self._send(200, json.dumps(load_verified(self.book, self.data_dir),
@@ -605,6 +809,7 @@ def main(argv=None):
     Handler.books_dir = args.books_dir
     Handler.data_dir = args.data_dir
     Handler.blocks = load_blocks(args.book, args.books_dir)
+    Handler.graph_idx = build_graph_index(args.book, args.books_dir, args.data_dir)
     done = len(load_verified(args.book, args.data_dir))
     print(f"Loaded {len(Handler.blocks)} blocks for {args.book} ({done} already verified).")
     print(f"Open  http://localhost:{args.port}/")

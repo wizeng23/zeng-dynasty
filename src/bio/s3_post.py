@@ -67,11 +67,13 @@ def post_book(book: str, sections: list[str] | None = None, books_dir: str = "bo
         rows.sort(key=lambda r: (r["band"], int(r["id"].rsplit("_", 1)[1])))
         a = get_image(os.path.join(merged_dir, f"{sec}.png"))
         H, W = a.shape
-        ink = 1 - a
         for row in rows:
-            # re-tighten to text (catches QA-added/moved boxes) and clamp to the image
-            # bounds (a QA box may extend a few px past the edge -> otherwise a bad crop).
-            l, t, r_, b = seg.tighten_box(ink, row["box"])
+            # Trust the QA-approved box verbatim; only CLAMP it to the image bounds (a QA
+            # box may extend a few px past the edge -> otherwise a bad crop). We do NOT
+            # re-tighten: tighten_box was over-shrinking wide/sparse blocks and dropping
+            # whole columns (e.g. 18_63_1_12: 4789px -> 2639px), losing real content. The
+            # reviewer already set the correct extent, so the crop must match it.
+            l, t, r_, b = row["box"]
             l, t = max(0, l), max(0, t)
             r_, b = min(W, r_), min(H, b)
             row["box"] = [l, t, r_, b]
