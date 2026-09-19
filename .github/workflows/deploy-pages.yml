@@ -7,12 +7,14 @@ on:
   push:
     branches: [main]
     # Redeploy only when the site or the data it actually publishes changes. The
-    # build runs `bun run export-data`, which reads exactly `data/tree.jsonl` (the
-    # cross-stitched 4-book tree), so that -- not all of data/ -- is the data
-    # trigger. Name-crop images live in books/*/5_names/ but are gitignored (never
+    # build runs `bun run export-data`, which reads `data/tree_bio.jsonl` (the
+    # cross-stitched 4-book tree with bio fields folded on; bio stage 5), falling
+    # back to `data/tree.jsonl`. Watch both so a data change on either triggers a
+    # deploy. Name-crop images live in books/*/5_names/ but are gitignored (never
     # committed; the runner regenerates none), so there's no crop path to watch.
     paths:
       - "web-app/**"
+      - "data/tree_bio.jsonl"
       - "data/tree.jsonl"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
