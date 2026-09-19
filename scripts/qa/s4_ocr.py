@@ -54,15 +54,49 @@ def load_blocks(book: str, books_dir: str) -> list[dict]:
     return blocks
 
 
-def agreement(paddle: list[str], vision: list[str]) -> list[str]:
-    """Prepopulate the verified text: take a line where both readers agree, else blank."""
+import re
+
+_COUNT = "一二三四五六七八九十两"
+_SONS_START = re.compile(rf"生子[{_COUNT}]*名")
+
+
+def analyze(paddle: list[str], vision: list[str]) -> dict:
+    """Per-block review aids.
+
+    - ``prefill``: the Verified box default = Claude's (vision) full read, joined by \\n.
+    - ``diff``: per column-index, True where paddle[i] != vision[i] (aligned by index) so
+      the UI can highlight conflicting columns to draw the eye.
+    - ``name_idx``: the vision column index of the person's own name (line 2, after the
+      子之X header) so it can be emphasized.
+    - ``son_idxs``: vision column indices of the sons -- the columns after a ``生子…名``
+      marker up to a ``生女`` / new clause -- the stitch-critical fields to emphasize.
+    """
     n = max(len(paddle), len(vision))
-    out = []
+    diff = []
     for i in range(n):
         p = paddle[i] if i < len(paddle) else ""
         v = vision[i] if i < len(vision) else ""
-        out.append(p if p and p == v else "")
-    return out
+        diff.append(p != v)
+
+    # name = the 2nd vision column (line 1 is the 子之X header)
+    name_idx = 1 if len(vision) > 1 else None
+
+    # sons = vision columns after 生子…名, until 生女 / a new clause word
+    son_idxs = []
+    start = next((i for i, c in enumerate(vision) if _SONS_START.search(c)), None)
+    if start is not None:
+        for i in range(start + 1, len(vision)):
+            c = vision[i]
+            if re.search("生女", c) or re.match("[配继殁歿葬享寿卒]", c):
+                break
+            son_idxs.append(i)
+
+    return {
+        "prefill": "\n".join(vision),
+        "diff": diff,
+        "name_idx": name_idx,
+        "son_idxs": son_idxs,
+    }
 
 
 def verified_path(book: str, data_dir: str) -> str:
@@ -114,22 +148,32 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .cell.paddle .lab {{ color:var(--paddle); }}
   .cell.vision .lab {{ color:var(--vision); }}
   .cell.verified .lab {{ color:var(--ok); }}
-  img.crop {{ max-height:220px; border:1px solid var(--line); border-radius:6px;
+  img.crop {{ max-height:230px; border:1px solid var(--line); border-radius:6px;
               background:#fff; }}
-  /* vertical, right-to-left: columns run right->left, chars top->bottom, mirroring the scan */
-  .vtext {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-            font-size:19px; line-height:1.35; min-height:160px; max-height:230px;
-            padding:6px 8px; border:1px solid var(--line); border-radius:6px;
-            background:#fff; overflow:auto; }}
-  textarea.vtext {{ font-family:inherit; resize:both; min-width:120px; color:var(--ok); }}
+  /* vertical, right-to-left: columns run right->left, chars top->bottom, mirroring the scan.
+     Paddle/Claude panels are a flex row of per-column spans (so single columns can be
+     highlighted); the Verified panel is one textarea. */
+  .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-end; gap:2px;
+             min-height:160px; max-height:250px; padding:6px 8px; border:1px solid var(--line);
+             border-radius:6px; background:#fff; overflow:auto; }}
+  .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
+           font-size:19px; line-height:1.35; padding:1px 2px; border-radius:3px; }}
+  .vcol.diff {{ background:#ffe9d6; }}          /* column where the two readers differ */
+  .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}   /* stitch-critical son column */
+  .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }} /* the person's own name */
+  textarea.vtext {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
+            font-family:inherit; font-size:19px; line-height:1.35; resize:both;
+            min-width:130px; min-height:160px; max-height:250px; color:var(--ok);
+            padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }}
   .saved {{ color:var(--ok); font-size:12px; }}
+  .legend b {{ font-weight:600; }}
 </style></head><body>
 <header>
   <strong>Bio OCR QA · {book}</strong>
   <span class="prog" id="prog"></span>
   <button onclick="jumpNext('todo')">Next unreviewed →</button>
   <button onclick="jumpNext('disagree')">Next disagreement →</button>
-  <span class="prog">Each panel reads top→bottom, right→left (like the book). Blue=Paddle · amber=Claude · green=your verified. Ctrl+Enter saves.</span>
+  <span class="prog legend">Reads top→bottom, right→left. <span style="background:#ffe9d6">orange col</span>=readers differ · <b style="color:#c0392b">red box</b>=son · <b style="color:var(--ok)">green box</b>=name. Verified defaults to Claude. Ctrl+Enter saves.</span>
 </header>
 <div id="list"></div>
 <script>
@@ -138,6 +182,21 @@ let BLOCKS = [];
 let VERIFIED = {{}};
 
 function colsToText(cols) {{ return cols.join("\\n"); }}
+
+// Render a reader's columns as per-column spans (row-reversed = right-to-left), tagging
+// columns that differ from the other reader (diff), plus the son / name columns.
+function panel(cols, b, whichReader) {{
+  const nameI = b.name_idx, sons = new Set(b.son_idxs || []);
+  const spans = cols.map((c, i) => {{
+    const cls = ["vcol"];
+    if (b.diff[i]) cls.push("diff");
+    // son/name indices are computed on the vision (Claude) columns; highlight there
+    if (whichReader === "vision" && sons.has(i)) cls.push("son");
+    if (whichReader === "vision" && i === nameI) cls.push("name");
+    return `<span class="${{cls.join(" ")}}">${{escapeHtml(c)}}</span>`;
+  }});
+  return `<div class="vpanel">${{spans.join("") || "—"}}</div>`;
+}}
 
 function render() {{
   const list = document.getElementById("list");
@@ -152,7 +211,8 @@ function render() {{
     el.id = "b_" + b.id;
     el.dataset.todo = isDone ? "0" : "1";
     el.dataset.disagree = disagree ? "1" : "0";
-    const verifiedText = VERIFIED[b.id] !== undefined ? VERIFIED[b.id] : colsToText(b.agree);
+    // Verified defaults to Claude's read (b.prefill); a saved edit overrides it.
+    const verifiedText = VERIFIED[b.id] !== undefined ? VERIFIED[b.id] : b.prefill;
     el.innerHTML = `
       <div class="hdr">
         <span class="bid">${{b.id}}</span>
@@ -162,11 +222,9 @@ function render() {{
       <div class="cols">
         <div class="cell"><span class="lab">crop</span>
           <img class="crop" loading="lazy" src="/img/${{b.id}}"></div>
-        <div class="cell paddle"><span class="lab">Paddle</span>
-          <div class="vtext">${{escapeHtml(colsToText(b.paddle)) || "—"}}</div></div>
-        <div class="cell vision"><span class="lab">Claude</span>
-          <div class="vtext">${{escapeHtml(colsToText(b.vision)) || "—"}}</div></div>
-        <div class="cell verified"><span class="lab">Verified (edit · Ctrl+Enter)</span>
+        <div class="cell paddle"><span class="lab">Paddle</span>${{panel(b.paddle, b, "paddle")}}</div>
+        <div class="cell vision"><span class="lab">Claude</span>${{panel(b.vision, b, "vision")}}</div>
+        <div class="cell verified"><span class="lab">Verified (defaults to Claude · Ctrl+Enter)</span>
           <textarea class="vtext" id="ta_${{b.id}}"
             onkeydown="if(event.ctrlKey&&event.key==='Enter'){{save('${{b.id}}');event.preventDefault();}}"
           >${{escapeHtml(verifiedText)}}</textarea></div>
@@ -243,7 +301,7 @@ class Handler(BaseHTTPRequestHandler):
             html = PAGE.format(book=self.book, book_json=json.dumps(self.book))
             return self._send(200, html, "text/html; charset=utf-8")
         if self.path == "/data":
-            payload = [dict(b, agree=agreement(b["paddle"], b["vision"])) for b in self.blocks]
+            payload = [dict(b, **analyze(b["paddle"], b["vision"])) for b in self.blocks]
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":
             return self._send(200, json.dumps(load_verified(self.book, self.data_dir),
