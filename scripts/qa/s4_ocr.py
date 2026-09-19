@@ -71,12 +71,12 @@ def analyze(paddle: list[str], vision: list[str]) -> dict:
     - ``son_idxs``: vision column indices of the sons -- the columns after a ``生子…名``
       marker up to a ``生女`` / new clause -- the stitch-critical fields to emphasize.
     """
-    n = max(len(paddle), len(vision))
-    diff = []
-    for i in range(n):
-        p = paddle[i] if i < len(paddle) else ""
-        v = vision[i] if i < len(vision) else ""
-        diff.append(p != v)
+    # Content-aware diff: a vision column is "matched" if the SAME text appears anywhere
+    # in the paddle columns (and vice versa). This tolerates the two readers splitting
+    # columns slightly differently, so only genuinely different text is flagged --
+    # `diff[i]` is per VISION column (the panel the reviewer edits from).
+    pset = set(paddle)
+    diff = [v not in pset for v in vision]
 
     # name = the 2nd vision column (line 1 is the 子之X header)
     name_idx = 1 if len(vision) > 1 else None
@@ -127,70 +127,75 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   :root {{ --bg:#faf9f7; --fg:#1a1a1a; --muted:#8a8a8a; --line:#ddd; --ok:#0a7f3f;
            --paddle:#1558b0; --vision:#8a5a00; --card:#fff; }}
   * {{ box-sizing:border-box; }}
-  body {{ margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }}
-  header {{ position:sticky; top:0; background:var(--card); border-bottom:1px solid var(--line);
-            padding:10px 16px; display:flex; gap:16px; align-items:center; z-index:10; }}
+  html,body {{ height:100%; }}
+  body {{ margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg);
+          display:flex; flex-direction:column; }}
+  header {{ background:var(--card); border-bottom:1px solid var(--line);
+            padding:8px 16px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; }}
+  header .bid {{ font-weight:600; font-size:15px; }}
   header .prog {{ color:var(--muted); }}
-  header button {{ font:inherit; padding:4px 10px; border:1px solid var(--line);
-                   border-radius:6px; background:var(--bg); cursor:pointer; }}
-  #list {{ padding:16px; display:flex; flex-direction:column; gap:22px; }}
-  .block {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
-            padding:12px 14px; }}
-  .block.done {{ border-color:var(--ok); }}
-  .block.disagree .hdr .warn {{ color:#c0392b; }}
-  .hdr {{ display:flex; gap:12px; align-items:baseline; margin-bottom:8px; }}
-  .hdr .bid {{ font-weight:600; }}
-  .hdr .warn {{ color:var(--muted); font-size:12px; }}
-  .cols {{ display:flex; gap:14px; align-items:flex-start; overflow-x:auto; }}
-  .cell {{ display:flex; flex-direction:column; gap:4px; }}
-  .cell .lab {{ font-size:11px; text-transform:uppercase; letter-spacing:.04em;
-                color:var(--muted); }}
+  header .status.done {{ color:var(--ok); }}
+  header .status.todo {{ color:#c0392b; }}
+  .keys {{ color:var(--muted); font-size:12px; margin-left:auto; }}
+  .keys kbd {{ background:var(--bg); border:1px solid var(--line); border-radius:4px;
+               padding:0 4px; font:inherit; }}
+  .legend {{ color:var(--muted); font-size:12px; }}
+  .legend b {{ font-weight:600; }}
+  #stage {{ flex:1; padding:16px; overflow:hidden; }}
+  .cols {{ display:flex; gap:14px; align-items:stretch; height:100%; }}
+  .cell {{ display:flex; flex-direction:column; gap:5px; height:100%; min-width:0; }}
+  .cell.crop {{ flex:0 0 auto; }}
+  .cell.paddle, .cell.vision, .cell.verified {{ flex:1 1 0; min-width:0; }}
+  .cell .lab {{ font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }}
   .cell.paddle .lab {{ color:var(--paddle); }}
   .cell.vision .lab {{ color:var(--vision); }}
   .cell.verified .lab {{ color:var(--ok); }}
-  img.crop {{ max-height:230px; border:1px solid var(--line); border-radius:6px;
-              background:#fff; }}
-  /* vertical, right-to-left: columns run right->left, chars top->bottom, mirroring the scan.
-     Paddle/Claude panels are a flex row of per-column spans (so single columns can be
-     highlighted); the Verified panel is one textarea. */
-  .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-end; gap:2px;
-             min-height:160px; max-height:250px; padding:6px 8px; border:1px solid var(--line);
-             border-radius:6px; background:#fff; overflow:auto; }}
+  img.crop {{ max-height:82vh; max-width:300px; border:1px solid var(--line); border-radius:6px;
+              background:#fff; object-fit:contain; }}
+  /* vertical, right-to-left: columns run right->left, chars top->bottom (mirrors the scan).
+     align-items:flex-start so columns size to their own text height, not stretched. */
+  .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-end;
+             align-items:flex-start; gap:3px; flex:1; min-height:0; padding:8px;
+             border:1px solid var(--line); border-radius:6px; background:#fff; overflow:auto; }}
   .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-           font-size:19px; line-height:1.35; padding:1px 2px; border-radius:3px; }}
-  .vcol.diff {{ background:#ffe9d6; }}          /* column where the two readers differ */
-  .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}   /* stitch-critical son column */
-  .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }} /* the person's own name */
+           font-size:21px; line-height:1.4; padding:1px 2px; border-radius:3px; }}
+  .vcol.diff {{ background:#ffe9d6; }}
+  .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}
+  .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }}
   textarea.vtext {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-            font-family:inherit; font-size:19px; line-height:1.35; resize:both;
-            min-width:130px; min-height:160px; max-height:250px; color:var(--ok);
-            padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:#fff; }}
-  .saved {{ color:var(--ok); font-size:12px; }}
-  .legend b {{ font-weight:600; }}
+            font-family:inherit; font-size:22px; line-height:1.4; resize:none; width:100%;
+            flex:1; min-height:0; color:var(--ok); padding:8px; border:1px solid var(--line);
+            border-radius:6px; background:#fff; }}
+  textarea.vtext:focus {{ outline:2px solid var(--ok); border-color:var(--ok); }}
 </style></head><body>
 <header>
-  <strong>Bio OCR QA · {book}</strong>
+  <span class="bid" id="bid">…</span>
+  <span class="prog" id="pos"></span>
+  <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <button onclick="jumpNext('todo')">Next unreviewed →</button>
-  <button onclick="jumpNext('disagree')">Next disagreement →</button>
-  <span class="prog legend">Reads top→bottom, right→left. <span style="background:#ffe9d6">orange col</span>=readers differ · <b style="color:#c0392b">red box</b>=son · <b style="color:var(--ok)">green box</b>=name. Verified defaults to Claude. Ctrl+Enter saves.</span>
+  <span class="legend"><span style="background:#ffe9d6">orange</span>=differ · <b style="color:#c0392b">red</b>=son · <b style="color:var(--ok)">green</b>=name</span>
+  <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> prev/next · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> prev/next to-review · <kbd>e</kbd> edit · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
-<div id="list"></div>
+<div id="stage"><div class="cols" id="cols"></div></div>
 <script>
-const BOOK = {book_json};
 let BLOCKS = [];
 let VERIFIED = {{}};
+let CUR = 0;
 
+function escapeHtml(s) {{ return (s||"").replace(/[&<>]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c])); }}
 function colsToText(cols) {{ return cols.join("\\n"); }}
+function isDone(b) {{ return VERIFIED[b.id] !== undefined; }}
+function isDisagree(b) {{ return colsToText(b.paddle) !== colsToText(b.vision); }}
+function needsReview(b) {{ return !isDone(b) || isDisagree(b); }}
 
-// Render a reader's columns as per-column spans (row-reversed = right-to-left), tagging
-// columns that differ from the other reader (diff), plus the son / name columns.
+// Highlight a column as "differ" if its text is absent from the OTHER reader's columns
+// (content membership, tolerant of column-split drift). son/name boxes only on Claude.
 function panel(cols, b, whichReader) {{
   const nameI = b.name_idx, sons = new Set(b.son_idxs || []);
+  const other = new Set(whichReader === "vision" ? b.paddle : b.vision);
   const spans = cols.map((c, i) => {{
     const cls = ["vcol"];
-    if (b.diff[i]) cls.push("diff");
-    // son/name indices are computed on the vision (Claude) columns; highlight there
+    if (!other.has(c)) cls.push("diff");
     if (whichReader === "vision" && sons.has(i)) cls.push("son");
     if (whichReader === "vision" && i === nameI) cls.push("name");
     return `<span class="${{cls.join(" ")}}">${{escapeHtml(c)}}</span>`;
@@ -198,72 +203,59 @@ function panel(cols, b, whichReader) {{
   return `<div class="vpanel">${{spans.join("") || "—"}}</div>`;
 }}
 
-function render() {{
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-  let done = 0;
-  for (const b of BLOCKS) {{
-    const isDone = VERIFIED[b.id] !== undefined;
-    if (isDone) done++;
-    const disagree = colsToText(b.paddle) !== colsToText(b.vision);
-    const el = document.createElement("div");
-    el.className = "block" + (isDone ? " done" : "") + (disagree ? " disagree" : "");
-    el.id = "b_" + b.id;
-    el.dataset.todo = isDone ? "0" : "1";
-    el.dataset.disagree = disagree ? "1" : "0";
-    // Verified defaults to Claude's read (b.prefill); a saved edit overrides it.
-    const verifiedText = VERIFIED[b.id] !== undefined ? VERIFIED[b.id] : b.prefill;
-    el.innerHTML = `
-      <div class="hdr">
-        <span class="bid">${{b.id}}</span>
-        <span class="warn">gen ${{b.generation}} ${{disagree ? "· ⚠ readers differ" : "· readers agree"}}</span>
-        <span class="saved" id="saved_${{b.id}}">${{isDone ? "✓ verified" : ""}}</span>
-      </div>
-      <div class="cols">
-        <div class="cell"><span class="lab">crop</span>
-          <img class="crop" loading="lazy" src="/img/${{b.id}}"></div>
-        <div class="cell paddle"><span class="lab">Paddle</span>${{panel(b.paddle, b, "paddle")}}</div>
-        <div class="cell vision"><span class="lab">Claude</span>${{panel(b.vision, b, "vision")}}</div>
-        <div class="cell verified"><span class="lab">Verified (defaults to Claude · Ctrl+Enter)</span>
-          <textarea class="vtext" id="ta_${{b.id}}"
-            onkeydown="if(event.ctrlKey&&event.key==='Enter'){{save('${{b.id}}');event.preventDefault();}}"
-          >${{escapeHtml(verifiedText)}}</textarea></div>
-      </div>`;
-    list.appendChild(el);
-  }}
-  document.getElementById("prog").textContent =
-    `${{done}} / ${{BLOCKS.length}} verified`;
+function renderCurrent() {{
+  const b = BLOCKS[CUR];
+  const done = isDone(b), disagree = isDisagree(b);
+  const verifiedText = done ? VERIFIED[b.id] : b.prefill;
+  document.getElementById("bid").textContent = b.id;
+  document.getElementById("pos").textContent = `${{CUR + 1}} / ${{BLOCKS.length}} · gen ${{b.generation}}`;
+  const st = document.getElementById("status");
+  st.textContent = done ? "✓ verified" : (disagree ? "⚠ readers differ" : "· unreviewed");
+  st.className = "status " + (done ? "done" : "todo");
+  document.getElementById("prog").textContent = `(${{Object.keys(VERIFIED).length}} verified)`;
+  document.getElementById("cols").innerHTML = `
+    <div class="cell crop"><span class="lab">crop</span><img class="crop" src="/img/${{b.id}}"></div>
+    <div class="cell paddle"><span class="lab">Paddle</span>${{panel(b.paddle, b, "paddle")}}</div>
+    <div class="cell vision"><span class="lab">Claude</span>${{panel(b.vision, b, "vision")}}</div>
+    <div class="cell verified"><span class="lab">Verified — defaults to Claude</span>
+      <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>`;
 }}
 
-function escapeHtml(s) {{ return (s||"").replace(/[&<>]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c])); }}
-
-async function save(id) {{
-  const ta = document.getElementById("ta_" + id);
-  const r = await fetch("/save", {{ method:"POST",
-    headers:{{"Content-Type":"application/json"}},
-    body: JSON.stringify({{ id, text: ta.value }}) }});
-  if (r.ok) {{
-    VERIFIED[id] = ta.value;
-    const el = document.getElementById("b_" + id);
-    el.classList.add("done"); el.dataset.todo = "0";
-    document.getElementById("saved_" + id).textContent = "✓ verified";
-    document.getElementById("prog").textContent =
-      `${{Object.keys(VERIFIED).length}} / ${{BLOCKS.length}} verified`;
+function go(delta) {{
+  CUR = (CUR + delta + BLOCKS.length) % BLOCKS.length;
+  renderCurrent();
+}}
+function goReview(delta) {{
+  for (let step = 1; step <= BLOCKS.length; step++) {{
+    const i = (CUR + delta * step + BLOCKS.length * step) % BLOCKS.length;
+    if (needsReview(BLOCKS[i])) {{ CUR = i; renderCurrent(); return; }}
   }}
 }}
+function focusEdit() {{ const ta = document.getElementById("ta"); if (ta) {{ ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length); }} }}
 
-function jumpNext(kind) {{
-  const attr = kind === "disagree" ? "disagree" : "todo";
-  const y = window.scrollY;
-  for (const el of document.querySelectorAll(".block")) {{
-    if (el.dataset[attr] === "1" && el.getBoundingClientRect().top > 10) {{
-      el.scrollIntoView({{behavior:"smooth", block:"start"}}); return;
-    }}
-  }}
-  // wrap to first
-  const first = [...document.querySelectorAll(".block")].find(el => el.dataset[attr] === "1");
-  if (first) first.scrollIntoView({{behavior:"smooth", block:"start"}});
+async function save() {{
+  const b = BLOCKS[CUR];
+  const ta = document.getElementById("ta");
+  const r = await fetch("/save", {{ method:"POST", headers:{{"Content-Type":"application/json"}},
+    body: JSON.stringify({{ id: b.id, text: ta.value }}) }});
+  if (r.ok) {{ VERIFIED[b.id] = ta.value; ta.blur(); go(1); }}
 }}
+
+document.addEventListener("keydown", (e) => {{
+  // Ctrl+Enter saves+advances from anywhere (incl. inside the textarea)
+  if (e.ctrlKey && e.key === "Enter") {{ e.preventDefault(); save(); return; }}
+  // Shift+arrows navigate even while typing (plain arrows stay as the text cursor)
+  if (e.shiftKey) {{
+    if (e.key === "ArrowRight") {{ e.preventDefault(); go(1); return; }}
+    if (e.key === "ArrowLeft")  {{ e.preventDefault(); go(-1); return; }}
+    if (e.key === "ArrowDown")  {{ e.preventDefault(); goReview(1); return; }}
+    if (e.key === "ArrowUp")    {{ e.preventDefault(); goReview(-1); return; }}
+  }}
+  const editing = document.activeElement && document.activeElement.id === "ta";
+  if (!editing && (e.key === "e" || e.key === "Enter")) {{ e.preventDefault(); focusEdit(); }}
+  if (e.key === "Escape") {{ const ta = document.getElementById("ta"); if (ta) ta.blur(); }}
+}});
 
 async function boot() {{
   const [blocks, verified] = await Promise.all([
@@ -271,7 +263,7 @@ async function boot() {{
     fetch("/verified").then(r => r.json()),
   ]);
   BLOCKS = blocks; VERIFIED = verified;
-  render();
+  renderCurrent();
 }}
 boot();
 </script></body></html>
