@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SEG_DIR = os.path.join("bio", "3_segment")
@@ -41,61 +42,78 @@ def load_blocks(book: str, books_dir: str) -> list[dict]:
             if not line:
                 continue
             r = json.loads(line)
-            paddle = (r.get("raw", {}).get("paddle", {}).get("columns")) or []
-            vtext = (r.get("raw", {}).get("vision", {}).get("text")) or ""
-            vision = [ln for ln in vtext.split("\n") if ln.strip()]
+            raw = r.get("raw", {})
+            paddle = (raw.get("paddle", {}).get("columns")) or []
+            vision = _lines((raw.get("vision", {}).get("text")) or "")
+            gemini = _lines((raw.get("gemini", {}).get("text")) or "")
+            # Mistral: markdown is the flat transcription; strip its leading "# " / "|" noise.
+            mtext = (raw.get("mistral", {}).get("markdown")) or ""
+            mistral = _lines(re.sub(r"^[#>|\-\s]+", "", mtext, flags=re.M))
             blocks.append({
                 "id": r["id"],
                 "section": r.get("id", "").rsplit("_", 2)[0],
                 "generation": r.get("generation"),
                 "paddle": paddle,
                 "vision": vision,
+                "gemini": gemini,
+                "mistral": mistral,
             })
     return blocks
 
 
-import re
+def _lines(text: str) -> list[str]:
+    return [ln.strip() for ln in text.split("\n") if ln.strip()]
+
 
 _COUNT = "一二三四五六七八九十两"
 _SONS_START = re.compile(rf"生子[{_COUNT}]*名")
 
 
-def analyze(paddle: list[str], vision: list[str]) -> dict:
-    """Per-block review aids.
+def detect_fields(cols: list[str]) -> dict:
+    """Best-effort field detection over one reader's columns (column indices).
 
-    - ``prefill``: the Verified box default = Claude's (vision) full read, joined by \\n.
-    - ``diff``: per column-index, True where paddle[i] != vision[i] (aligned by index) so
-      the UI can highlight conflicting columns to draw the eye.
-    - ``name_idx``: the vision column index of the person's own name (line 2, after the
-      子之X header) so it can be emphasized.
-    - ``son_idxs``: vision column indices of the sons -- the columns after a ``生子…名``
-      marker up to a ``生女`` / new clause -- the stitch-critical fields to emphasize.
+    Returns ``{father_idx, name_idx, son_idxs}`` -- the columns to emphasize:
+    - father header = column 0 (the horizontal ``子之X`` caption)
+    - own name      = column 1 (the person's given name)
+    - sons          = columns after a ``生子…名`` marker, up to ``生女`` / a new clause
+    All are best-effort; the reviewer can correct them per column in the UI.
     """
-    # Content-aware diff: a vision column is "matched" if the SAME text appears anywhere
-    # in the paddle columns (and vice versa). This tolerates the two readers splitting
-    # columns slightly differently, so only genuinely different text is flagged --
-    # `diff[i]` is per VISION column (the panel the reviewer edits from).
-    pset = set(paddle)
-    diff = [v not in pset for v in vision]
-
-    # name = the 2nd vision column (line 1 is the 子之X header)
-    name_idx = 1 if len(vision) > 1 else None
-
-    # sons = vision columns after 生子…名, until 生女 / a new clause word
+    father_idx = 0 if cols else None
+    name_idx = 1 if len(cols) > 1 else None
     son_idxs = []
-    start = next((i for i, c in enumerate(vision) if _SONS_START.search(c)), None)
+    start = next((i for i, c in enumerate(cols) if _SONS_START.search(c)), None)
     if start is not None:
-        for i in range(start + 1, len(vision)):
-            c = vision[i]
+        for i in range(start + 1, len(cols)):
+            c = cols[i]
             if re.search("生女", c) or re.match("[配继殁歿葬享寿卒]", c):
                 break
             son_idxs.append(i)
+    return {"father_idx": father_idx, "name_idx": name_idx, "son_idxs": son_idxs}
 
+
+def analyze(block: dict) -> dict:
+    """Per-block review aids across all readers.
+
+    - ``prefill``: the Verified box default = Claude's (vision) full read, joined by \\n.
+    - ``diff``: per vision column, True where its text appears in no Paddle column.
+    - ``fields``: ``{reader: {father_idx, name_idx, son_idxs}}`` for every reader present,
+      so each row can emphasize its own detected name/father/sons. The Verified row uses
+      the vision fields as its default (the reviewer can reassign per column).
+    """
+    vision = block.get("vision", [])
+    paddle = block.get("paddle", [])
+    pset = set(paddle)
+    diff = [v not in pset for v in vision]
+    fields = {rd: detect_fields(block.get(rd, []))
+              for rd in ("vision", "gemini", "mistral", "paddle")}
     return {
         "prefill": "\n".join(vision),
         "diff": diff,
-        "name_idx": name_idx,
-        "son_idxs": son_idxs,
+        "fields": fields,
+        # convenience: vision fields drive the Verified row's default highlights
+        "name_idx": fields["vision"]["name_idx"],
+        "father_idx": fields["vision"]["father_idx"],
+        "son_idxs": fields["vision"]["son_idxs"],
     }
 
 
@@ -119,16 +137,45 @@ def save_verified(book: str, data_dir: str, bid: str, text: str) -> None:
         json.dump(cur, fh, ensure_ascii=False, indent=1)
 
 
+def fields_path(book: str, data_dir: str) -> str:
+    """Reviewer's per-block field-type overrides for Verified columns."""
+    return os.path.join(data_dir, f"{book}_bio_fields.json")
+
+
+def load_fields(book: str, data_dir: str) -> dict:
+    p = fields_path(book, data_dir)
+    return json.load(open(p)) if os.path.exists(p) else {}
+
+
+def save_fields(book: str, data_dir: str, bid: str, fields: dict) -> None:
+    """Persist ``{slot_index: 'father'|'name'|'son'|None}`` for one block."""
+    p = fields_path(book, data_dir)
+    cur = load_fields(book, data_dir)
+    clean = {k: v for k, v in (fields or {}).items() if v}   # drop cleared (None) slots
+    if clean:
+        cur[bid] = clean
+    else:
+        cur.pop(bid, None)
+    with open(p, "w") as fh:
+        json.dump(cur, fh, ensure_ascii=False, indent=1)
+
+
 # --- HTML -------------------------------------------------------------------------
 
 PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <title>Bio OCR QA — {book}</title>
 <style>
   :root {{ --bg:#faf9f7; --fg:#1a1a1a; --muted:#8a8a8a; --line:#ddd; --ok:#0a7f3f;
-           --paddle:#1558b0; --vision:#8a5a00; --card:#fff; }}
+           --paddle:#1558b0; --vision:#8a5a00; --card:#fff;
+           /* field colors: father header (blue underline), own name (green), sons (red) */
+           --father:#1558b0; --name:#0a7f3f; --son:#c0392b; }}
   * {{ box-sizing:border-box; }}
   html,body {{ height:100%; }}
-  body {{ margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg);
+  /* Match the website's bio font stack (PingFang SC etc.) -- renders CJK closer to the
+     printed characters than bare system-ui, which falls back to a blockier CJK face. */
+  :root {{ --font-cjk: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial,
+           "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }}
+  body {{ margin:0; font:14px/1.5 var(--font-cjk); background:var(--bg); color:var(--fg);
           display:flex; flex-direction:column; }}
   header {{ background:var(--card); border-bottom:1px solid var(--line);
             padding:8px 16px; display:flex; gap:14px; align-items:center; flex-wrap:wrap; }}
@@ -165,31 +212,73 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
      so the three rows are structurally identical and cannot misalign. Slot width is set
      per-block from the scan's rendered pixel width (--slot). */
   .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
-           font-size:30px; line-height:1.45; padding:1px 0; border-radius:3px;
-           flex:0 0 var(--slot,40px); width:var(--slot,40px); text-align:center; }}
+           /* CJK face first for the pure-Chinese columns -- same as the website's bio text. */
+           font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",var(--font-cjk);
+           /* text 50% larger than the crop-matching size (FONT_PX=30) for readability;
+              the scan crop height still uses FONT_PX, so the image is unchanged. */
+           font-size:45px; line-height:1.45; padding:1px 0; border-radius:3px;
+           /* Slot width from the scan (--slot), but never narrower than the glyph so the
+              larger font can't clip; every row uses this rule so they stay column-aligned. */
+           flex:0 0 max(var(--slot,40px), 1.1em); width:max(var(--slot,40px), 1.1em);
+           text-align:center; }}
   .vcol.gap {{ background:repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 4px,#fafafa 4px,#fafafa 8px); }}
   .vcol.diff {{ background:#ffe9d6; }}
-  .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}
-  .vcol.name {{ box-shadow: inset 0 0 0 2px var(--ok); }}
+  /* Field emphasis: father = blue underline, own name = green bold, sons = red bold.
+     Applied to the glyphs so the same field reads down every reader row + Verified. */
+  .vcol.f-father {{ color:var(--father); text-decoration:underline; text-underline-offset:3px;
+                    text-decoration-thickness:2px; }}
+  /* Father header prints HORIZONTALLY (子之X) in the book -- render it left-to-right,
+     top-aligned, so it reads like the scan rather than stacked vertically. It keeps the
+     same slot width so the rest of the columns stay aligned. */
+  .vcol.horiz {{ writing-mode:horizontal-tb; text-orientation:mixed; white-space:nowrap;
+                 align-self:flex-start; overflow:visible;
+                 /* size to the horizontal text, not the vertical slot width, so 子之X
+                    isn't clipped; it's the rightmost column so growing left is harmless. */
+                 flex:0 0 auto; width:auto; min-width:var(--slot,40px); }}
+  .vcol.edit.horiz {{ writing-mode:horizontal-tb; }}
+  .vcol.f-name {{ color:var(--name); font-weight:800; }}
+  .vcol.f-son  {{ color:var(--son);  font-weight:800; }}
   /* Verified columns are the same slot, but editable. */
-  .vcol.edit {{ color:var(--ok); cursor:text; min-height:2em; }}
+  .vcol.edit {{ cursor:text; min-height:2em; }}
   .vcol.edit:focus {{ outline:2px solid var(--ok); background:#f0faf3; }}
+  /* field markers on the Verified row also show a small colored top border so the
+     assignment is visible even before you read the glyph. */
+  .vcol.edit.f-father {{ border-top:3px solid var(--father); }}
+  .vcol.edit.f-name   {{ border-top:3px solid var(--name); }}
+  .vcol.edit.f-son    {{ border-top:3px solid var(--son); }}
   .cell.verified .vpanel {{ min-height:40vh; }}
+  .cell.gemini .lab {{ color:#6d28d9; }}
+  .cell.mistral .lab {{ color:#b45309; }}
+  .fieldbar {{ font-size:12px; color:var(--muted); }}
+  .fieldbar b {{ font-weight:700; }}
 </style></head><body>
 <header>
   <span class="bid" id="bid">…</span>
   <span class="prog" id="pos"></span>
   <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <span class="legend"><span style="background:#ffe9d6">orange</span>=differ · <b style="color:#c0392b">red</b>=son · <b style="color:var(--ok)">green</b>=name</span>
-  <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> prev/next · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> prev/next to-review · <kbd>e</kbd> edit · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
+  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="background:#ffe9d6">orange</span>=differ</span>
+  <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> block · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> to-review · <kbd>e</kbd> edit · <kbd>←/→</kbd> col · <kbd>f</kbd>/<kbd>n</kbd>/<kbd>s</kbd>/<kbd>x</kbd> set father/name/son/none · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
 <div id="stage"><div class="rows" id="rows"></div></div>
 <script>
+const BOOK = {book_json};
 let BLOCKS = [];
+// (crop height comes from the scan's true aspect ratio, set on image load)
 let VERIFIED = {{}};
+let FIELDS = {{}};       // per-block override of Verified column field types: {{bid: {{slotIdx: 'father'|'name'|'son'|null}}}}
 let CUR = 0;
-const FONT_PX = 30;   // OCR glyph size; the crop is scaled so its glyphs match this
+const READERS = ["vision", "gemini", "mistral", "paddle"];
+const READER_LABEL = {{vision:"Claude", gemini:"Gemini", mistral:"Mistral", paddle:"Paddle"}};
+
+// The field type for one column of a reader, from that reader's detected fields.
+function fieldClassFor(fields, i) {{
+  if (!fields) return null;
+  if (i === fields.father_idx) return "father";
+  if (i === fields.name_idx) return "name";
+  if ((fields.son_idxs || []).includes(i)) return "son";
+  return null;
+}}
 
 function escapeHtml(s) {{ return (s||"").replace(/[&<>]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c])); }}
 function colsToText(cols) {{ return cols.join("\\n"); }}
@@ -221,13 +310,17 @@ function alignToClaude(vision, paddle) {{
 function slotRow(cells) {{
   const spans = cells.map(c => {{
     if (c.text == null) return `<span class="vcol gap"></span>`;
-    return `<span class="${{["vcol", ...c.cls].join(" ")}}">${{escapeHtml(c.text)}}</span>`;
+    // The father header renders horizontally (see .vcol.horiz).
+    const cls = c.cls.includes("f-father") ? [...c.cls, "horiz"] : c.cls;
+    return `<span class="${{["vcol", ...cls].join(" ")}}">${{escapeHtml(c.text)}}</span>`;
   }});
   return `<div class="vpanel">${{spans.join("") || "—"}}</div>`;
 }}
 
 function renderCurrent() {{
   const b = BLOCKS[CUR];
+  // Remember where we are so a page reload returns to this block (per book).
+  try {{ localStorage.setItem("qa_cur_" + BOOK, b.id); }} catch (e) {{}}
   const done = isDone(b), disagree = isDisagree(b);
   const verifiedText = done ? VERIFIED[b.id] : b.prefill;
   document.getElementById("bid").textContent = b.id;
@@ -236,59 +329,117 @@ function renderCurrent() {{
   st.textContent = done ? "✓ verified" : (disagree ? "⚠ readers differ" : "· unreviewed");
   st.className = "status " + (done ? "done" : "todo");
   document.getElementById("prog").textContent = `(${{Object.keys(VERIFIED).length}} verified)`;
-  // Scale the crop so a scanned glyph ~= FONT_PX: displayed height = FONT_PX * (chars in
-  // the tallest OCR column) * line-height, since the scan's columns hold ~the same glyphs.
-  const maxChars = Math.max(1, ...b.paddle.map(c => c.length), ...b.vision.map(c => c.length));
-  const cropH = Math.round(FONT_PX * 1.45 * maxChars) + 18;  // +padding
+  // The crop's height follows its TRUE aspect ratio (set on load below), not an OCR
+  // column-length estimate -- a reader that merges text into one long column would
+  // otherwise inflate the height and leave a blank band under the scan.
 
-  // Align Paddle onto Claude's slots so columns line up row-to-row (gaps where a reader
-  // is missing a column). Build the two slotted rows with diff/son/name flags.
-  const {{ slots, paddleAt }} = alignToClaude(b.vision, b.paddle);
-  const sons = new Set(b.son_idxs || []), nameI = b.name_idx;
-  const claudeCells = slots.map((v, i) => {{
-    if (v == null) return {{ text: null, cls: [] }};      // slot Paddle-only -> gap in Claude
-    const cls = [];
-    if (paddleAt[i] !== v) cls.push("diff");              // Paddle here differs / is missing
-    if (sons.has(i)) cls.push("son");
-    if (i === nameI) cls.push("name");
-    return {{ text: v, cls }};
-  }});
-  const paddleCells = slots.map((v, i) => {{
-    const p = paddleAt[i];
-    if (p == null) return {{ text: null, cls: [] }};       // gap: Paddle missing this column
-    return {{ text: p, cls: p !== v ? ["diff"] : [] }};
-  }});
+  // Every reader is aligned onto Claude's (vision) slot order so columns line up row-to-row.
+  // Claude defines the slots; each other reader's columns are placed at the matching slot
+  // (gap where absent), extras appended. Field highlights come from each reader's own
+  // detected fields, so the same field reads down every row.
+  // Build the slot list: Claude (vision) defines slots 0..n; each other reader's columns
+  // that match no Claude slot are appended as trailing extra slots (null in `slots`) so no
+  // reader's text is ever dropped.
+  const vision = b.vision || [];
+  let slots = vision.slice();
+  for (const rd of READERS) {{
+    if (rd === "vision") continue;
+    const matched = new Set();
+    const vcount = {{}};
+    slots.forEach(s => {{ if (s != null) vcount[s] = (vcount[s]||0)+1; }});
+    const seen = {{}};
+    for (const c of (b[rd] || [])) {{
+      seen[c] = (seen[c]||0)+1;
+      if (seen[c] > (vcount[c]||0)) slots.push(null);   // extra column -> new trailing slot
+    }}
+  }}
+  // For each reader, greedily place its columns onto the slot texts (gap where absent).
+  function readerRow(rd) {{
+    const cols = (b[rd] || []).slice();
+    const used = new Array(cols.length).fill(false);
+    const out = slots.map(s => {{
+      if (s == null) return null;
+      const j = cols.findIndex((c, k) => !used[k] && c === s);
+      if (j >= 0) {{ used[j] = true; return cols[j]; }}
+      return null;
+    }});
+    // drop leftover (unmatched) reader columns into the trailing null slots, in order
+    let leftover = cols.filter((c, k) => !used[k]);
+    for (let i = 0; i < out.length && leftover.length; i++) {{
+      if (slots[i] == null && out[i] == null) out[i] = leftover.shift();
+    }}
+    return out;
+  }}
+  const rowText = {{}};
+  for (const rd of READERS) rowText[rd] = (rd === "vision") ? slots.slice() : readerRow(rd);
 
-  // Verified: same slots as Claude, but each column is editable. Defaults to Claude's
-  // text per slot (saved edits override). Gap slots start empty. Structurally identical
-  // to the Claude/Paddle rows, so it aligns to them by construction.
-  const savedCols = VERIFIED[b.id] !== undefined ? VERIFIED[b.id].split("\\n") : null;
-  const verifiedCells = slots.map((v, i) => {{
-    const text = savedCols ? (savedCols[i] ?? "") : (v == null ? "" : v);
-    return text;
-  }});
-  const verifiedRow = verifiedCells.map((t, i) =>
-    `<span class="vcol edit" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(t)}}</span>`
-  ).join("");
+  // Field class per (reader, slot): use that reader's detected fields, indexed by the
+  // reader's OWN column position (find where this slot's text sits in the reader's columns).
+  function readerFieldCls(rd, slotText) {{
+    const f = (b.fields || {{}})[rd];
+    if (!f || slotText == null) return null;
+    const idx = (b[rd] || []).indexOf(slotText);
+    return idx < 0 ? null : fieldClassFor(f, idx);
+  }}
 
   const nSlots = slots.length;
+  // Build each reader row's cells, with diff (vs Claude) + field highlight.
+  const readerCellRows = {{}};
+  for (const rd of READERS) {{
+    readerCellRows[rd] = slots.map((s, i) => {{
+      const t = rowText[rd][i];
+      if (t == null) return {{ text: null, cls: [] }};
+      const cls = [];
+      if (rd !== "vision" && t !== s) cls.push("diff");    // differs from Claude here
+      const fc = readerFieldCls(rd, t);
+      if (fc) cls.push("f-" + fc);
+      return {{ text: t, cls }};
+    }});
+  }}
+
+  // Verified: same slots as Claude, editable. Field type per slot defaults to Claude's
+  // detected field, overridable via FIELDS[bid][slot] (reviewer's f/n/s/x keys).
+  const savedCols = VERIFIED[b.id] !== undefined ? VERIFIED[b.id].split("\\n") : null;
+  const ov = FIELDS[b.id] || {{}};
+  const vfields = (b.fields || {{}}).vision || {{}};
+  function verifiedFieldCls(i) {{
+    if (i in ov) return ov[i];                 // reviewer override (may be null = cleared)
+    return fieldClassFor(vfields, i);
+  }}
+  const verifiedRow = slots.map((s, i) => {{
+    const text = savedCols ? (savedCols[i] ?? "") : (s == null ? "" : s);
+    const fc = verifiedFieldCls(i);
+    const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
+    if (fc === "father") cls.push("horiz");   // father header reads horizontally
+    return `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
+  }}).join("");
+
+  const readerRowsHtml = READERS.map(rd =>
+    `<div class="cell ${{rd}}"><span class="lab">${{READER_LABEL[rd]}}</span>${{slotRow(readerCellRows[rd])}}</div>`
+  ).join("");
+
   const rows = document.getElementById("rows");
   rows.innerHTML = `
     <div class="cell crop"><span class="lab">Original (scan)</span>
-      <img class="crop" id="cropimg" style="height:${{cropH}}px" src="/img/${{b.id}}"></div>
-    <div class="cell verified"><span class="lab">Verified — click a column to edit · ←/→ move · Ctrl+Enter save</span>
+      <img class="crop" id="cropimg" src="/img/${{b.id}}"></div>
+    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
-    <div class="cell vision"><span class="lab">Claude</span>${{slotRow(claudeCells)}}</div>
-    <div class="cell paddle"><span class="lab">Paddle</span>${{slotRow(paddleCells)}}</div>`;
+    ${{readerRowsHtml}}`;
   // Once the scan renders, size each column slot to the scan's per-column pixel width
   // (rendered crop width / number of slots) so every text row spans the scan's width and
   // shares its right edge. Panel padding (8px each side) subtracted.
   const img = document.getElementById("cropimg");
   const applySlot = () => {{
+    // Height = the scan's TRUE aspect at the rendered width (no blank band). Scale up
+    // narrow scans a bit for legibility, but never past the natural size or a screen cap.
     const w = img.getBoundingClientRect().width;
+    if (img.naturalWidth > 0 && w > 0) {{
+      const natH = w * img.naturalHeight / img.naturalWidth;
+      img.style.height = Math.round(Math.min(natH, window.innerHeight * 0.5)) + "px";
+    }}
     if (w > 0 && nSlots > 0) rows.style.setProperty("--slot", ((w - 16) / nSlots) + "px");
   }};
-  if (img.complete) applySlot(); else img.onload = applySlot;
+  if (img.complete && img.naturalWidth) applySlot(); else img.onload = applySlot;
 }}
 
 // Read the Verified row back as \\n-joined columns (slot order == Claude slot order).
@@ -345,16 +496,44 @@ document.addEventListener("keydown", (e) => {{
   // to the LEFT (higher index), ← to the right (lower index).
   if (editing && e.key === "ArrowRight") {{ e.preventDefault(); focusCol(curCol() + 1); return; }}
   if (editing && e.key === "ArrowLeft")  {{ e.preventDefault(); focusCol(curCol() - 1); return; }}
+  // f/n/s/x: (re)assign the focused Verified column's FIELD type (father/name/son/none).
+  // These fire while a column is focused; the column is contenteditable but these single
+  // letters aren't Chinese text, so we intercept them as commands, not input.
+  if (editing && "fnsx".includes(e.key)) {{
+    e.preventDefault();
+    const map = {{f:"father", n:"name", s:"son", x:null}};
+    setField(curCol(), map[e.key]);
+    return;
+  }}
   if (!editing && (e.key === "e" || e.key === "Enter")) {{ e.preventDefault(); focusCol(0); }}
   if (e.key === "Escape" && document.activeElement) document.activeElement.blur();
 }});
 
+// Override the field type of one Verified slot, persist it, and restyle in place.
+async function setField(i, type) {{
+  if (i < 0) return;
+  const b = BLOCKS[CUR];
+  FIELDS[b.id] = FIELDS[b.id] || {{}};
+  FIELDS[b.id][i] = type;                       // null = explicitly "none"
+  const el = document.querySelector(`#vrow .vcol.edit[data-i="${{i}}"]`);
+  if (el) {{ el.classList.remove("f-father","f-name","f-son");
+            if (type) el.classList.add("f-" + type); }}
+  await fetch("/fields", {{ method:"POST", headers:{{"Content-Type":"application/json"}},
+    body: JSON.stringify({{ id: b.id, fields: FIELDS[b.id] }}) }});
+}}
+
 async function boot() {{
-  const [blocks, verified] = await Promise.all([
+  const [blocks, verified, fields] = await Promise.all([
     fetch("/data").then(r => r.json()),
     fetch("/verified").then(r => r.json()),
+    fetch("/fields").then(r => r.json()),
   ]);
-  BLOCKS = blocks; VERIFIED = verified;
+  BLOCKS = blocks; VERIFIED = verified; FIELDS = fields || {{}};
+  // Restore the last-viewed block for this book (by id, robust to reordering).
+  try {{
+    const last = localStorage.getItem("qa_cur_" + BOOK);
+    if (last) {{ const i = BLOCKS.findIndex(b => b.id === last); if (i >= 0) CUR = i; }}
+  }} catch (e) {{}}
   renderCurrent();
 }}
 boot();
@@ -385,10 +564,13 @@ class Handler(BaseHTTPRequestHandler):
             html = PAGE.format(book=self.book, book_json=json.dumps(self.book))
             return self._send(200, html, "text/html; charset=utf-8")
         if self.path == "/data":
-            payload = [dict(b, **analyze(b["paddle"], b["vision"])) for b in self.blocks]
+            payload = [dict(b, **analyze(b)) for b in self.blocks]
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":
             return self._send(200, json.dumps(load_verified(self.book, self.data_dir),
+                                              ensure_ascii=False))
+        if self.path == "/fields":
+            return self._send(200, json.dumps(load_fields(self.book, self.data_dir),
                                               ensure_ascii=False))
         if self.path.startswith("/img/"):
             bid = self.path[len("/img/"):]
@@ -400,12 +582,15 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(404, "not found", "text/plain")
 
     def do_POST(self):
-        if self.path != "/save":
-            return self._send(404, "{}")
         n = int(self.headers.get("Content-Length", 0))
         data = json.loads(self.rfile.read(n) or b"{}")
-        save_verified(self.book, self.data_dir, data["id"], data.get("text", ""))
-        return self._send(200, json.dumps({"ok": True}))
+        if self.path == "/save":
+            save_verified(self.book, self.data_dir, data["id"], data.get("text", ""))
+            return self._send(200, json.dumps({"ok": True}))
+        if self.path == "/fields":
+            save_fields(self.book, self.data_dir, data["id"], data.get("fields", {}))
+            return self._send(200, json.dumps({"ok": True}))
+        return self._send(404, "{}")
 
 
 def main(argv=None):
