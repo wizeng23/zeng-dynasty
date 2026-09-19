@@ -156,14 +156,14 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
               align-self:flex-end; }}
   /* vertical, right-to-left: columns run right->left, chars top->bottom (mirrors the scan). */
   .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-start;
-             align-items:flex-start; gap:3px; padding:8px; border:1px solid var(--line);
+             align-items:flex-start; gap:0; padding:8px; border:1px solid var(--line);
              border-radius:6px; background:#fff; overflow-x:auto; }}
   /* OCR glyphs sized to roughly match the scanned characters for column-by-column compare. */
   /* Fixed per-column slot width so Claude & Paddle rows line up column-for-column
      (a missing column shows as an empty .gap slot of the same width). */
   .vcol {{ writing-mode:vertical-rl; text-orientation:upright; white-space:pre;
            font-size:30px; line-height:1.45; padding:1px 0; border-radius:3px;
-           flex:0 0 40px; width:40px; text-align:center; }}
+           flex:0 0 var(--slot,40px); width:var(--slot,40px); text-align:center; }}
   .vcol.gap {{ background:repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 4px,#fafafa 4px,#fafafa 8px); }}
   .vcol.diff {{ background:#ffe9d6; }}
   .vcol.son {{ box-shadow: inset 0 0 0 2px #c0392b; }}
@@ -257,13 +257,25 @@ function renderCurrent() {{
     return {{ text: p, cls: p !== v ? ["diff"] : [] }};
   }});
 
-  document.getElementById("rows").innerHTML = `
+  const nSlots = slots.length;
+  const rows = document.getElementById("rows");
+  rows.innerHTML = `
     <div class="cell crop"><span class="lab">Original (scan)</span>
-      <img class="crop" style="height:${{cropH}}px" src="/img/${{b.id}}"></div>
+      <img class="crop" id="cropimg" style="height:${{cropH}}px" src="/img/${{b.id}}"></div>
     <div class="cell verified"><span class="lab">Verified — defaults to Claude (e=edit · Ctrl+Enter=save)</span>
       <textarea class="vtext" id="ta">${{escapeHtml(verifiedText)}}</textarea></div>
     <div class="cell vision"><span class="lab">Claude</span>${{slotRow(claudeCells)}}</div>
     <div class="cell paddle"><span class="lab">Paddle</span>${{slotRow(paddleCells)}}</div>`;
+  // Once the scan renders, size each OCR column slot to the scan's per-column pixel width
+  // (rendered crop width / number of slots) so the text rows span the same width and line
+  // up column-for-column with the image. The 8px panel padding is subtracted so the inner
+  // slots match the crop's content width.
+  const img = document.getElementById("cropimg");
+  const applySlot = () => {{
+    const w = img.getBoundingClientRect().width;
+    if (w > 0 && nSlots > 0) rows.style.setProperty("--slot", ((w - 16) / nSlots) + "px");
+  }};
+  if (img.complete) applySlot(); else img.onload = applySlot;
 }}
 
 function go(delta) {{
