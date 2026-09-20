@@ -571,7 +571,7 @@ function renderCurrent() {{
     <div class="cell crop"><span class="lab">Original (scan)</span>
       <img class="crop" id="cropimg" src="/img/${{b.id}}"></div>
     ${{graphHtml}}
-    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Ctrl+Enter save</span>
+    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     ${{readerRowsHtml}}`;
   // Once the scan renders, size each column slot to the scan's per-column pixel width
@@ -636,6 +636,55 @@ function setVerifiedCols(cols) {{
   }}).join("");
 }}
 
+// The EFFECTIVE field type of each current Verified column (override else auto-detect),
+// as an explicit index->type map. Used before a structural edit so labels move with the
+// columns (auto-detected indices would otherwise go stale after a splice).
+function effectiveFields(nCols) {{
+  const b = BLOCKS[CUR];
+  const ov = FIELDS[b.id] || {{}};
+  const vf = (b.fields || {{}}).vision || {{}};
+  const out = {{}};
+  for (let i = 0; i < nCols; i++) {{
+    let t = null;
+    if (i in ov) t = ov[i] === "none" ? null : ov[i];
+    else if (i === vf.father_idx) t = "father";
+    else if (i === vf.name_idx) t = "name";
+    else if ((vf.son_idxs || []).includes(i)) t = "son";
+    if (t) out[i] = t;
+  }}
+  return out;
+}}
+
+// Persist the block's field overrides (as an index->type map, "none" allowed) and set
+// them live so a re-render keeps them.
+async function persistFields(map) {{
+  const b = BLOCKS[CUR];
+  FIELDS[b.id] = map;
+  await fetch("/fields", {{ method:"POST", headers:{{"Content-Type":"application/json"}},
+    body: JSON.stringify({{ id: b.id, fields: map }}) }});
+}}
+
+// Insert a BLANK column before index `at` (shifts the rest later); or delete column `at`
+// (shifts the rest back). Field labels move with their columns. Text edits are saved too.
+async function spliceCol(at, mode) {{
+  const cols = currentVerifiedCols();
+  const eff = effectiveFields(cols.length);
+  const newFields = {{}};
+  if (mode === "insert") {{
+    cols.splice(at, 0, "");
+    for (const k in eff) {{ const i = +k; newFields[i >= at ? i + 1 : i] = eff[k]; }}
+  }} else {{ // delete
+    if (!cols.length) return;
+    cols.splice(at, 1);
+    for (const k in eff) {{ const i = +k; if (i === at) continue;
+                            newFields[i > at ? i - 1 : i] = eff[k]; }}
+  }}
+  setVerifiedCols(cols);
+  await persistFields(newFields);
+  await saveText(false);                 // persist shifted text WITHOUT advancing the block
+  focusCol(mode === "insert" ? at : Math.min(at, cols.length - 1));
+}}
+
 // Read the Verified row back as \\n-joined columns (slot order == Claude slot order).
 function verifiedText() {{
   return [...document.querySelectorAll("#vrow .vcol.edit")]
@@ -666,16 +715,27 @@ function curCol() {{
   return el && el.classList && el.classList.contains("edit") ? +el.dataset.i : -1;
 }}
 
-async function save() {{
+async function saveText(advance) {{
   const b = BLOCKS[CUR];
   const text = verifiedText();
   const r = await fetch("/save", {{ method:"POST", headers:{{"Content-Type":"application/json"}},
     body: JSON.stringify({{ id: b.id, text }}) }});
-  if (r.ok) {{ VERIFIED[b.id] = text; if (document.activeElement) document.activeElement.blur(); go(1); }}
+  if (r.ok) {{
+    VERIFIED[b.id] = text;
+    if (advance) {{ if (document.activeElement) document.activeElement.blur(); go(1); }}
+  }}
 }}
+async function save() {{ await saveText(true); }}   // Ctrl+Enter: save + next block
 
 document.addEventListener("keydown", (e) => {{
   if (e.ctrlKey && e.key === "Enter") {{ e.preventDefault(); save(); return; }}
+  // Alt+Enter / Alt+Backspace: insert a blank column before / delete the focused column
+  // (shifts the rest + moves field labels). Only while a Verified column is focused.
+  if (e.altKey && curCol() >= 0 && (e.key === "Enter" || e.key === "Backspace")) {{
+    e.preventDefault();
+    spliceCol(curCol(), e.key === "Enter" ? "insert" : "delete");
+    return;
+  }}
   // Shift+arrows: navigate BLOCKS (prev/next, and up/down = prev/next to-review)
   if (e.shiftKey) {{
     if (e.key === "ArrowRight") {{ e.preventDefault(); go(1); return; }}
