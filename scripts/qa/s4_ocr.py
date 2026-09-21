@@ -288,6 +288,18 @@ def _stored_slice_pieces(book: str, books_dir: str, bid: str):
 # alone is the reliable signal; strict 生子N名 missed ~47 blocks.
 _SONS_START = re.compile("生子")
 
+# Variant-glyph normalization: readers spell the SAME character different ways (Gemini favors
+# 歿 for 殁 U+6B81 -- the form the book uses). Normalize to the canonical (right-hand) form so
+# a pure variant difference is auto-corrected in the prefill and never counts as a real
+# reader disagreement. Extend this map as more variant pairs turn up.
+_VARIANT_NORM = {"歿": "殁"}   # {variant: canonical}
+
+
+def norm_variants(s: str) -> str:
+    if not s:
+        return s
+    return "".join(_VARIANT_NORM.get(c, c) for c in s)
+
 
 def detect_fields(cols: list[str]) -> dict:
     """Best-effort field detection over one reader's columns (column indices).
@@ -631,6 +643,12 @@ function slotRow(cells) {{
   return `<div class="vpanel">${{spans.join("") || "—"}}</div>`;
 }}
 
+// Variant-glyph normalization (mirror of the backend _VARIANT_NORM): the same character
+// spelled differently by a reader (Gemini writes 歿 for 殁). Normalize for BOTH display and
+// diffing so a pure variant difference is auto-corrected and never boxed.
+const VARIANT_NORM = {{ "歿": "殁" }};
+function normVar(s) {{ return (s||"").replace(/./g, c => VARIANT_NORM[c] || c); }}
+
 // Per-character diff markup between two column strings (Claude vs Gemini). Position-aligned;
 // a char present in THIS string but differing from (or missing in) the OTHER is boxed.
 function charDiffHtml(mine, other) {{
@@ -824,7 +842,9 @@ function renderCurrent() {{
   }}
   // For Claude/Gemini rows, box the SPECIFIC characters where the two differ (position-wise),
   // so a column-level disagreement points to the exact glyph. Paddle is compared to neither.
-  const flat = (rd) => (sr[rd]||[]).map(t => (t||"").replace(/\\s/g,""));
+  // Normalize variant glyphs (歿->殁) for both display and diffing so a pure variant spelling
+  // is auto-corrected and never boxed.
+  const flat = (rd) => (sr[rd]||[]).map(t => normVar((t||"").replace(/\\s/g,"")));
   const gCols = flat("sgemini"), vCols = flat("svision");
   const sliceRowsHtml = SLICE_READERS.filter(rd => (sr[rd]||[]).length).map(rd => {{
     const texts = sr[rd];
@@ -832,10 +852,11 @@ function renderCurrent() {{
       const cls = [];
       const fc = sliceFieldCls(texts, i);
       if (fc) cls.push("f-" + fc);
-      const cell = {{ text: (t === "" ? null : t), cls }};
-      // char-diff markup: Gemini vs Claude only (the trusted pair)
-      if (rd === "sgemini" && t) cell.html = charDiffHtml((t||"").replace(/\\s/g,""), vCols[i]);
-      else if (rd === "svision" && t) cell.html = charDiffHtml((t||"").replace(/\\s/g,""), gCols[i]);
+      const norm = t ? normVar((t||"").replace(/\\s/g,"")) : t;
+      const cell = {{ text: (norm === "" ? null : norm), cls }};
+      // char-diff markup: Gemini vs Claude only (the trusted pair), on normalized text
+      if (rd === "sgemini" && norm) cell.html = charDiffHtml(norm, vCols[i]);
+      else if (rd === "svision" && norm) cell.html = charDiffHtml(norm, gCols[i]);
       return cell;
     }});
     return `<div class="cell sliceread ${{rd}}"><span class="lab">${{SLICE_LABEL[rd]}}</span>${{slotRow(cells)}}</div>`;
@@ -1357,7 +1378,9 @@ class Handler(BaseHTTPRequestHandler):
                 #   "paddle" = Gemini+Claude AGREE but Paddle differs (LOW priority, muted)
                 #   ""       = all present readers agree
                 def _flat(v):
-                    return "" if v in (None, "?ERR", "?EMPTY") else re.sub(r"\s+", "", v)
+                    if v in (None, "?ERR", "?EMPTY"):
+                        return ""
+                    return norm_variants(re.sub(r"\s+", "", v))   # 歿->殁 etc.
                 sg = [_flat(t) for t in sr.get("sgemini", [])]
                 sv = [_flat(t) for t in sr.get("svision", [])]
                 sp = [_flat(t) for t in sr.get("spaddle", [])]
