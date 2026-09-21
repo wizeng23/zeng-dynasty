@@ -74,25 +74,68 @@ def _ink(a: np.ndarray) -> np.ndarray:
     return (255.0 - a) / 255.0
 
 
-def trim_rules(img: Image.Image, band_frac: float = 0.18, margin: int = 8) -> tuple[Image.Image, int]:
+RULE_SPAN_FRAC = 0.80      # a RULE row's ink must SPAN >= this fraction of the full width
+                           # (leftmost..rightmost inked x). The father caption is only ~right
+                           # 40% wide, so it is never a rule even when its ink touches the top.
+RULE_FILL_FRAC = 0.55      # AND, within that span, >= this fraction of pixels must be inked --
+                           # a rule is a near-solid (or dense dashed) bar, whereas a full-width
+                           # ROW OF TEXT spans wide but has big gaps between characters.
+RULE_BRIDGE = 14           # rule rows within this many px are one (dashed/smeared) rule band
+
+
+def _rule_rows(ink: np.ndarray, W: int) -> np.ndarray:
+    """Boolean per row: True where the ink is a RULE line -- it SPANS nearly the whole width
+    AND is densely filled across that span. Full-width span rejects the father caption; the
+    fill test rejects a wide row of separate text characters (which has inter-char gaps)."""
+    mask = ink > 0.3
+    any_ink = mask.any(axis=1)
+    left = np.where(any_ink, np.argmax(mask, axis=1), 0)
+    right = np.where(any_ink, W - 1 - np.argmax(mask[:, ::-1], axis=1), -1)
+    span = np.where(any_ink, (right - left + 1) / float(W), 0.0)
+    rowsum = mask.sum(axis=1).astype(float)
+    width_px = np.where(any_ink, right - left + 1, 1)
+    fill = rowsum / width_px                       # inked fraction WITHIN the ink span
+    return (span >= RULE_SPAN_FRAC) & (fill >= RULE_FILL_FRAC)
+
+
+def trim_rules(img: Image.Image, band_frac: float = 0.18, margin: int = 10) -> tuple[Image.Image, int]:
     """Remove horizontal RULE lines (+ blank margin) from top and bottom.
 
-    Rule lines are wide dark horizontal runs (>=RULE_DARK_FRAC of the width). They can sit
-    behind a blank margin and can be split into a couple of thin sub-bands. So we look in
-    the top ``band_frac`` of the crop and cut BELOW the LAST rule row found there; likewise
-    cut ABOVE the FIRST rule row in the bottom band. Returns (trimmed, top_offset).
+    A rule line is a horizontal bar spanning nearly the FULL width (RULE_SPAN_FRAC). On ADF
+    scans it is often faint/dashed and smeared across several rows, so we bridge nearby rule
+    rows (RULE_BRIDGE) into one band and cut past the INNERMOST band in each edge region.
+    Because the test is full-width SPAN (not ink density), the ~400px-wide father caption is
+    never mistaken for a rule even when its ink touches the top edge. Returns (trimmed, top_off).
     """
     a = _gray(img)
     ink = _ink(a)
     H, W = a.shape
-    rowfrac = (ink > 0.3).mean(axis=1)
-    is_rule = rowfrac >= RULE_DARK_FRAC
-
+    is_rule = _rule_rows(ink, W)
     band = max(1, int(H * band_frac))
-    top_rules = np.where(is_rule[:band])[0]
-    top = (int(top_rules[-1]) + 1 + margin) if len(top_rules) else 0
-    bot_rules = np.where(is_rule[H - band:])[0]
-    bot = (H - band + int(bot_rules[0]) - margin) if len(bot_rules) else H
+
+    # TOP: cut below the LOWEST (innermost) rule row in the top band, bridging dashed remnants.
+    top = 0
+    tr = np.where(is_rule[:band])[0]
+    if len(tr):
+        low = int(tr[-1])
+        r = low
+        while r + 1 < H and (is_rule[r + 1] or (r + 1 - low) <= RULE_BRIDGE):
+            r += 1
+            if is_rule[r]:
+                low = r
+        top = low + 1 + margin
+
+    # BOTTOM: cut above the HIGHEST (innermost) rule row in the bottom band.
+    bot = H
+    br = np.where(is_rule[H - band:])[0]
+    if len(br):
+        high = H - band + int(br[0])
+        r = high
+        while r - 1 >= 0 and (is_rule[r - 1] or (high - (r - 1)) <= RULE_BRIDGE):
+            r -= 1
+            if is_rule[r]:
+                high = r
+        bot = high - margin
 
     # then skip any remaining blank margin inward to the first/last text row
     rowink = ink.sum(axis=1)
@@ -220,13 +263,36 @@ def estimate_chars(piece: Image.Image) -> int:
 
 # --- assemble ----------------------------------------------------------------------
 
+def _rightmost_ink_x(trimmed: Image.Image) -> int:
+    """The rightmost x with real ink (skips right-side scan whitespace/margin). Returns W-1
+    if the whole right edge is inked. Used to anchor the father/name region to the text band
+    instead of the physical right edge."""
+    a = _gray(trimmed)
+    ink = _ink(a)
+    colink = ink.sum(axis=0)
+    peak = colink.max() or 1
+    inked = np.where(colink > GAP_INK_FRAC * peak)[0]
+    return int(inked[-1]) if len(inked) else trimmed.width - 1
+
+
 def slice_block(img: Image.Image) -> list[Piece]:
-    """Full geometric slice of one person-block crop -> [father, name, col1, col2, ...]."""
+    """Full geometric slice of one person-block crop -> [father, name, col1, col2, ...].
+
+    The right region (father header + name) is anchored to the rightmost INK column, not the
+    physical right edge -- so right-side scan whitespace doesn't shift the father/name window
+    or leak body columns into it.
+    """
     trimmed, _ = trim_rules(img)
-    W = trimmed.width
-    right = trimmed.crop((W - RIGHT_STRIP_W, 0, W, trimmed.height))
-    body = trimmed.crop((0, 0, W - RIGHT_STRIP_W, trimmed.height))
+    r_edge = _rightmost_ink_x(trimmed) + 1        # one past the last inked column
+    right_x0 = max(0, r_edge - RIGHT_STRIP_W)     # 400px window anchored at the ink band
+    right = trimmed.crop((right_x0, 0, r_edge, trimmed.height))
+    body = trimmed.crop((0, 0, right_x0, trimmed.height))
     father, name = split_father_name(right)
+    # father/name boxes come back right-strip-local -> shift to ABSOLUTE trimmed-crop coords so
+    # every stored box is in one frame (no downstream translation guesswork). cols are already
+    # body-local = absolute (body starts at x=0).
+    for p in (father, name):
+        p.box = [p.box[0] + right_x0, p.box[1], p.box[2] + right_x0, p.box[3]]
     cols = slice_columns(body)
     pieces = [father, name, *cols]
     for p in pieces:

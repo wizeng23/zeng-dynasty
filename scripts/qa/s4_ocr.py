@@ -242,17 +242,18 @@ def slice_overlay(book: str, books_dir: str, bid: str):
     right_x0 = Wt - S.RIGHT_STRIP_W          # x offset of the right strip in trimmed coords
 
     def _translate(stored_pieces):
-        """Map STORED piece boxes (father/name are right-strip-local; cols are body-local)
-        into one trimmed-full-crop frame -- so the overlay matches the strips that were
-        ACTUALLY ocr'd, even if slice geometry has since changed."""
+        """Map STORED piece boxes into one trimmed-full-crop frame so the overlay matches the
+        strips that were ACTUALLY ocr'd. NEW slices store father/name in ABSOLUTE coords; OLD
+        slices stored them right-strip-local (x within [0, RIGHT_STRIP_W]). Detect the old
+        format by x1 <= RIGHT_STRIP_W and shift those by right_x0; leave absolute boxes as-is."""
         out = []
         for p in stored_pieces:
             box = p.get("box")
             if not box:
                 continue
             x0, y0, x1, y1 = box
-            if p["kind"] in ("father", "name"):
-                x0 += right_x0; x1 += right_x0
+            if p["kind"] in ("father", "name") and x1 <= S.RIGHT_STRIP_W + 1:
+                x0 += right_x0; x1 += right_x0     # old relative-frame box
             out.append({"kind": p["kind"], "box": [x0, y0, x1, y1]})
         return out
 
@@ -262,14 +263,8 @@ def slice_overlay(book: str, books_dir: str, bid: str):
     if stored:
         pieces = _translate(stored)
     else:
-        father, name = S.split_father_name(trimmed.crop((right_x0, 0, Wt, trimmed.height)))
-        cols = S.slice_columns(trimmed.crop((0, 0, right_x0, trimmed.height)))
-        pieces = []
-        for p in (father, name):
-            x0, y0, x1, y1 = p.box
-            pieces.append({"kind": p.kind, "box": [x0 + right_x0, y0, x1 + right_x0, y1]})
-        for p in cols:
-            pieces.append({"kind": p.kind, "box": list(p.box)})
+        # live recompute -- slice_block now returns ABSOLUTE trimmed-crop boxes, so just map.
+        pieces = [{"kind": p.kind, "box": list(p.box)} for p in S.slice_block(img)]
     buf = io.BytesIO(); trimmed.save(buf, format="PNG")
     return buf.getvalue(), {"w": trimmed.width, "h": trimmed.height, "pieces": pieces}
 
