@@ -291,7 +291,8 @@ _SONS_START = re.compile("生子")
 # Variant-glyph normalization: readers spell the SAME character different ways (Gemini favors
 # 歿 for 殁 U+6B81 -- the form the book uses). Normalize to the canonical form EVERYWHERE (safe
 # -- same character) so a pure variant difference never counts as a disagreement. Extend freely.
-_VARIANT_NORM = {"歿": "殁"}   # {variant: canonical}
+_VARIANT_NORM = {"歿": "殁",    # {variant: canonical}
+                 "緒": "绪"}    # traditional 緒 (U+7DD2) -> simplified 绪 (U+7EEA), same char
 
 
 def norm_variants(s: str) -> str:
@@ -669,7 +670,7 @@ function slotRow(cells) {{
 // Variant-glyph normalization (mirror of the backend _VARIANT_NORM): the same character
 // spelled differently by a reader (Gemini writes 歿 for 殁). Normalize for BOTH display and
 // diffing so a pure variant difference is auto-corrected and never boxed.
-const VARIANT_NORM = {{ "歿": "殁" }};
+const VARIANT_NORM = {{ "歿": "殁", "緒": "绪" }};
 function normVar(s) {{ return (s||"").replace(/./g, c => VARIANT_NORM[c] || c); }}
 
 // Per-character diff markup between two column strings (Claude vs Gemini). Position-aligned;
