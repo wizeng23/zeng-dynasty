@@ -505,8 +505,27 @@ def paddle_book(book: str, books_dir: str = "books", sections: list[str] | None 
         with open(os.path.join(out_base, f"{stem}.jsonl"), "w") as fh:
             for rec in recs:
                 fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
-    logger.info("DONE %s: %d blocks sliced across %d sections", book, n, len(by_stem))
-    return {"book": book, "blocks": n, "sections": len(by_stem)}
+    missing = _missing_blocks(book, books_dir, rows)
+    if missing:
+        logger.error("INCOMPLETE %s: %d/%d index blocks missing from output: %s",
+                     book, len(missing), len(rows), missing[:20])
+    logger.info("DONE %s: %d blocks sliced across %d sections (%d missing)",
+                book, n, len(by_stem), len(missing))
+    return {"book": book, "blocks": n, "sections": len(by_stem), "missing": missing}
+
+
+def _missing_blocks(book: str, books_dir: str, rows: list[dict]) -> list[str]:
+    """Index block ids that did NOT end up in the 4_slice output -- catches silently dropped
+    blocks (a threaded worker that raised, a clobbered rewrite). Empty list = complete."""
+    out_base = os.path.join(books_dir, book, "bio", SLICE_DIR)
+    written = set()
+    if os.path.isdir(out_base):
+        for f in os.listdir(out_base):
+            if f.endswith(".jsonl") and not f.endswith(".vision.jsonl"):
+                for line in open(os.path.join(out_base, f)):
+                    if line.strip():
+                        written.add(json.loads(line)["id"])
+    return [r["id"] for r in rows if r["id"] not in written]
 
 
 # --- overnight run: Paddle + Gemini per strip, parallel, single writer ------------
@@ -625,16 +644,26 @@ def read_book(book: str, books_dir: str = "books", sections: list[str] | None = 
             logger.info("  ...%d/%d blocks read", done_n[0], len(todo))
         return bid
 
+    failed = []
     with ThreadPoolExecutor(max_workers=workers) as ex:
-        futs = [ex.submit(work, r) for r in todo]
-        for f in as_completed(futs):
+        fut2id = {ex.submit(work, r): r["id"] for r in todo}
+        for f in as_completed(fut2id):
             try:
                 f.result()
             except Exception as e:                       # noqa: BLE001
-                logger.error("block failed: %s", e)
+                failed.append(fut2id[f])
+                logger.error("block failed %s: %s", fut2id[f], e)
 
-    logger.info("DONE %s: %d blocks across %d sections", book, len(rows), len(stems))
-    return {"book": book, "blocks": len(rows), "read": len(todo), "sections": len(stems)}
+    # Completeness guard: report any index block NOT in the output so silent drops (a worker
+    # that raised, a clobbered rewrite) are visible instead of vanishing.
+    missing = _missing_blocks(book, books_dir, rows)
+    if missing:
+        logger.error("INCOMPLETE %s: %d/%d index blocks missing from output: %s",
+                     book, len(missing), len(rows), missing[:20])
+    logger.info("DONE %s: %d blocks across %d sections (%d failed, %d missing)",
+                book, len(rows), len(stems), len(failed), len(missing))
+    return {"book": book, "blocks": len(rows), "read": len(todo), "sections": len(stems),
+            "failed": failed, "missing": missing}
 
 
 # --- Claude-vision sidecar: merge subagent reads without touching {stem}.jsonl ----

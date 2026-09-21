@@ -103,6 +103,17 @@ faint/clipped; Gemini recovers it, Paddle often misreads the tiny header.
   son/name labels shift with columns on delete/insert/split; Verified prefill now uses the
   Gemini SLICE reading for blocks that have it (fallback to whole-crop Claude).
 
+## Silent-drop bug + completeness guard (2026-09-21)
+- 2 book3 blocks (251_260_2_0, 285_291_3_0) were MISSING from 4_slice (book3 621/623 not 623).
+  Cause: read_book's ThreadPoolExecutor caught a per-block exception, logged it, and DROPPED
+  the block -- it vanished from output with no easy detection. (They slice fine now; an edge
+  case in the older slice_columns geometry on those two blocks.)
+- FIX: added _missing_blocks completeness guard to BOTH read_book and paddle_book -- they now
+  log "INCOMPLETE ... missing: [...]" and return {"missing":[...]} so drops are visible.
+- TO RECOVER the 2 book3 blocks: slice+Gemini just them (paid, tiny):
+  `--book book3 --read-all --sections 251_260 285_291` re-does only those sections (skips done),
+  OR a targeted 2-block run. Do with William's OK (paid).
+
 ## Prompt tweak (2026-09-21): scan-noise instruction
 - Added to BOTH _STRIP_PROMPT and _FATHER_PROMPT (Gemini): "Ignore ink smears and very faint
   characters caused by document scanning." (v1 ADF scans have smears models hallucinate into chars.)
