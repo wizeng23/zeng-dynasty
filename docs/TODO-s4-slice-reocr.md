@@ -103,6 +103,15 @@ faint/clipped; Gemini recovers it, Paddle often misreads the tiny header.
   son/name labels shift with columns on delete/insert/split; Verified prefill now uses the
   Gemini SLICE reading for blocks that have it (fallback to whole-crop Claude).
 
+## Column-width fix (2026-09-21) -- MUST re-slice book4 before its LLM run
+- slice_columns now: widen each column to >= COL_MINW_FRAC(0.6) x median column width (so a
+  narrow column can't clip a char's thin extending strokes) + COL_PAD(40)px padding each side,
+  clamped to body bounds. Fixed the clipped 时 William flagged.
+- QA overlay recomputes geometry live so it already shows the new boxes. BUT the strip PNGs on
+  disk (book3 AND book4) were cut with the OLD narrow logic. book3 is already OCR'd (leave it;
+  re-slice only if re-OCRing). book4 is NOT OCR'd yet -> RE-SLICE book4 (`--paddle-all` again)
+  BEFORE running Gemini/vision on it, so the models read the padded strips.
+
 ## Book 4 plan (2026-09-21) -- SLICE FIRST, review, THEN LLMs (William's gate)
 - Slicing decoupled from LLM reads: run `--paddle-all` (free, local: geometry + Paddle +
   strip PNGs) BEFORE any paid reader. Book 4 paddle-slice running now (standalone process).
