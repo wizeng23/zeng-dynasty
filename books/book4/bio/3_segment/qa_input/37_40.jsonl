@@ -1,0 +1,6 @@
+{"section": "37_40", "stem": "36_36", "id": "37_40_0_0", "band": 0, "generation": 2, "box": [10481, 47, 12412, 1066], "expected_per_gen": [4, 2, 0, 0, 0], "detected_per_gen": [4, 2, 0, 0, 0], "gate_passed": true}
+{"section": "37_40", "stem": "36_36", "id": "37_40_0_1", "band": 0, "generation": 2, "box": [9165, 51, 9808, 717], "expected_per_gen": [4, 2, 0, 0, 0], "detected_per_gen": [4, 2, 0, 0, 0], "gate_passed": true}
+{"section": "37_40", "stem": "36_36", "id": "37_40_0_2", "band": 0, "generation": 2, "box": [5423, 48, 8815, 1062], "expected_per_gen": [4, 2, 0, 0, 0], "detected_per_gen": [4, 2, 0, 0, 0], "gate_passed": true}
+{"section": "37_40", "stem": "36_36", "id": "37_40_0_3", "band": 0, "generation": 2, "box": [2109, 42, 5120, 1066], "expected_per_gen": [4, 2, 0, 0, 0], "detected_per_gen": [4, 2, 0, 0, 0], "gate_passed": true}
+{"section": "37_40", "stem": "36_36", "id": "37_40_1_0", "band": 1, "generation": 3, "box": [7802, 1082, 8822, 2172], "expected_per_gen": [4, 2, 0, 0, 0], "detected_per_gen": [4, 2, 0, 0, 0], "gate_passed": true}
+{"section": "37_40", "stem": "36_36", "id": "37_40_1_1", "band": 1, "generation": 3, "box": [4079, 1082, 5120, 2184], "expected_per_gen": [4, 2, 0, 0, 0], "detected_per_gen": [4, 2, 0, 0, 0], "gate_passed": true}

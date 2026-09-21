@@ -1,0 +1,2 @@
+{"section": "106_106", "stem": "105_105", "id": "106_106_0_0", "band": 0, "generation": 2, "box": [1079, 38, 2488, 1093], "expected_per_gen": [1, 1, 0, 0, 0], "detected_per_gen": [1, 1, 0, 0, 0], "gate_passed": true}
+{"section": "106_106", "stem": "105_105", "id": "106_106_1_0", "band": 1, "generation": 3, "box": [1658, 1093, 2496, 2223], "expected_per_gen": [1, 1, 0, 0, 0], "detected_per_gen": [1, 1, 0, 0, 0], "gate_passed": true}

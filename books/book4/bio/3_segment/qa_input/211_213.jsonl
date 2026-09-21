@@ -1,0 +1,8 @@
+{"section": "211_213", "stem": "210_210", "id": "211_213_0_0", "band": 0, "generation": 2, "box": [6374, 33, 9110, 1111], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_0_1", "band": 0, "generation": 2, "box": [3196, 38, 6028, 1111], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_0_2", "band": 0, "generation": 2, "box": [413, 35, 3197, 1111], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_1_0", "band": 1, "generation": 3, "box": [8054, 1111, 9109, 2248], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_1_1", "band": 1, "generation": 3, "box": [6693, 1111, 7753, 2248], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_1_2", "band": 1, "generation": 3, "box": [4974, 1111, 6045, 2248], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_1_3", "band": 1, "generation": 3, "box": [2333, 1111, 3212, 2248], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}
+{"section": "211_213", "stem": "210_210", "id": "211_213_1_4", "band": 1, "generation": 3, "box": [1177, 1111, 2046, 2248], "expected_per_gen": [3, 5, 0, 0, 0], "detected_per_gen": [3, 5, 0, 0, 0], "gate_passed": true}

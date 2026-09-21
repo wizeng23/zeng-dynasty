@@ -187,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         q = parse_qs(parsed.query)
         if parsed.path == "/":
-            self._send(200, PAGE, "text/html; charset=utf-8")
+            self._send(200, PAGE.replace("__BOOK__", BOOK), "text/html; charset=utf-8")
         elif parsed.path == "/list":
             out = [{"stem": s, "edited": os.path.exists(_approved_path(BOOK, s))}
                    for s in _section_stems(BOOK)]
@@ -269,6 +269,7 @@ PAGE = r"""<!doctype html><meta charset=utf-8>
 <div class=hint>Boxes are person blocks per generation-band (blue dashed = rules). Fills screen height; ←/→ pan ~3/4 screen (starts at right edge = eldest). Drag box to move, corner to resize, 'a'+click to add (snaps to the band you click in), Del to remove. Image is downscaled for speed; boxes save at full resolution. Save advances to the next section.</div>
 <div id=view><div id=wrap><img id=g><svg id=ov></svg></div></div>
 <script>
+const BOOK="__BOOK__";
 let stem="",data=null,dw=0,dh=0,scale=6,sel=null,mode="select",nextId=0,drag=null;
 let vx=0,vy=0,vz=1;
 const view=document.getElementById('view'),wrap=document.getElementById('wrap'),
@@ -287,7 +288,11 @@ function panScreen(dir){vx-=dir*view.clientWidth*0.75;applyView();}
 async function loadList(){
   const j=await(await fetch('/list')).json();
   stemSel.innerHTML=j.sections.map(s=>`<option value="${s.stem}">${s.stem}${s.edited?' ✓':''}</option>`).join('');
-  loadSection(j.sections[0].stem);
+  // Restore the last-viewed section across reloads (per book); else start at the first.
+  let start=j.sections[0].stem;
+  try{const last=localStorage.getItem('s3edit_stem_'+BOOK);
+      if(last && j.sections.some(s=>s.stem===last)) start=last;}catch(e){}
+  loadSection(start);
 }
 // full-res -> display px
 function d(v){return v/scale;}
@@ -298,6 +303,14 @@ function layout(){
 }
 async function loadSection(s){
   stem=s;stemSel.value=s;sel=null;setMode('select');
+  try{localStorage.setItem('s3edit_stem_'+BOOK,s);}catch(e){}   // remember for reload
+  // Clear the OLD image + boxes IMMEDIATELY so the blank state signals "loading" and the
+  // content reappearing signals "done" (the fetch + big image take a while).
+  data={bands:[],boxes:[],generations:[],expected:[]};
+  ov.innerHTML='';                 // drop old box/rule overlay
+  gimg.removeAttribute('src');     // drop old image (canvas goes blank)
+  gateEl.innerHTML='<span class=g-bad>loading '+s+'…</span>';
+  render();
   data=await(await fetch('/section?stem='+s)).json();
   dw=data.dw;dh=data.dh;scale=data.scale;
   nextId=Math.max(0,...data.boxes.map(b=>+b.id.split('_').pop()||0))+1;
@@ -374,8 +387,17 @@ async function reseed(){if(!confirm('Re-seed from detection? discards manual edi
     body:JSON.stringify({stem})})).json();
   data.bands=j.bands;data.boxes=j.boxes;sel=null;render();updateGate();}
 stemSel.addEventListener('change',()=>loadSection(stemSel.value));
+// Jump to the prev/next section in the dropdown (Shift+←/→).
+function gotoSection(delta){
+  const i=stemSel.selectedIndex, n=stemSel.options.length;
+  const j=Math.min(n-1,Math.max(0,i+delta));
+  if(j!==i)loadSection(stemSel.options[j].value);
+}
 window.addEventListener('keydown',ev=>{
   if(ev.target.tagName==='SELECT')return;
+  // Shift+←/→: previous / next section.
+  if(ev.shiftKey&&ev.key==='ArrowRight'){ev.preventDefault();gotoSection(1);return;}
+  if(ev.shiftKey&&ev.key==='ArrowLeft'){ev.preventDefault();gotoSection(-1);return;}
   if(ev.key==='a')setMode('add');else if(ev.key==='s'){ev.preventDefault();save();}
   else if(ev.key==='f')fitView();else if(ev.key==='Delete'||ev.key==='Backspace')delSel();
   else if(ev.key==='ArrowRight'){ev.preventDefault();panScreen(1);}   // reveal content to the right
