@@ -700,6 +700,31 @@ report-only, nothing consumes it.
 
 ---
 
+## Era 20 — Human-reviewed Book-3 bio OCR wired into stitching (2026-09-21)
+
+William hand-reviewed Book 3's bio father/name/son OCR in the QA tool, producing two review
+layers: `data/book3_bio_verified.json` (full verified transcription per block) and
+`data/book3_bio_fields.json` (per-piece role overrides). Nothing consumed them yet — `s5_link`
+still read the old `4_ocr`. New **`src/bio/s5_build_bio.py`** turns the two layers into the
+`{name, father_char, sons}` records `s5_link` expects, at `books/book3/bio/5_records/`;
+`s5_link` gained `--ocr-dir` (default `4_ocr`) to read the reviewed source.
+
+Son-column detection took several code-review-caught fixes (a wrong son poisons the exact-
+ordered stitch worse than a missing one): anchor the son run only on a real `生子<numeral>`
+header, not any `生子` substring (a birth clause `生子道光辛丑…` false-triggered, fabricating a
+son from a date fragment and skipping the true header); end the run at a hard terminator
+(`生女`/bare `女…`/life-event) and honor the printed count against free-prose spillover, but keep
+one extra past-count name before a terminator since the printed count is sometimes low
+(`生子一名` yet two real sons); and drop pure-status/kinship/daughter notes (`长夭`, `双桃承嗣`,
+`门女子`, `半昭汉名下承嗣`) while substring-extracting names from annotated columns and keeping
+clean 2-char names regardless of generation char. 691 sons, zero status/daughter leaks.
+
+Result vs the old `4_ocr` path: link **619/623** (was 615/620), exact-name **490→561**; strict
+bio-stitch **10→13** merges, roots **→40**, **879** bios folded, **0** integrity errors. Book 4
+stays on `4_ocr` until its review lands.
+
+---
+
 ## Pipeline status (snapshot)
 
 Two pipelines: v0 (old glass scans, `src/v0/`) reached OCR for books 1–2; the v1

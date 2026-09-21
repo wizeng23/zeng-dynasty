@@ -6,32 +6,23 @@
       "matched": 20,
       "blocks": 20,
       "how": {
-        "exact": 19,
-        "fuzzy": 1
+        "exact": 20
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
     },
     "18_63": {
       "stem": "10_17",
-      "matched": 111,
-      "blocks": 114,
+      "matched": 115,
+      "blocks": 115,
       "how": {
-        "exact": 95,
-        "fuzzy": 15,
-        "positional": 1
+        "exact": 100,
+        "fuzzy": 11,
+        "positional": 4
       },
-      "unmatched_blocks": [
-        "18_63_4_25",
-        "18_63_4_28",
-        "18_63_4_38"
-      ],
+      "unmatched_blocks": [],
       "unmatched_nodes": [
-        54,
-        426,
-        433,
-        436,
-        447
+        60
       ]
     },
     "66_77": {
@@ -39,8 +30,8 @@
       "matched": 33,
       "blocks": 33,
       "how": {
-        "exact": 25,
-        "fuzzy": 8
+        "exact": 28,
+        "fuzzy": 5
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -48,14 +39,16 @@
     "85_133": {
       "stem": "78_84",
       "matched": 113,
-      "blocks": 115,
+      "blocks": 117,
       "how": {
-        "positional": 5,
-        "exact": 100,
-        "fuzzy": 8
+        "exact": 106,
+        "fuzzy": 6,
+        "positional": 1
       },
       "unmatched_blocks": [
-        "85_133_1_9",
+        "85_133_1_5",
+        "85_133_1_6",
+        "85_133_1_10",
         "85_133_2_12"
       ],
       "unmatched_nodes": []
@@ -65,14 +58,13 @@
       "matched": 79,
       "blocks": 79,
       "how": {
-        "exact": 68,
-        "fuzzy": 10,
-        "sons": 1
+        "exact": 77,
+        "fuzzy": 2
       },
       "unmatched_blocks": [],
       "unmatched_nodes": [
-        86,
-        332
+        88,
+        322
       ]
     },
     "183_185": {
@@ -80,8 +72,8 @@
       "matched": 12,
       "blocks": 12,
       "how": {
-        "exact": 9,
-        "fuzzy": 3
+        "exact": 11,
+        "fuzzy": 1
       },
       "unmatched_blocks": [],
       "unmatched_nodes": [
@@ -93,8 +85,8 @@
       "matched": 41,
       "blocks": 41,
       "how": {
-        "exact": 34,
-        "fuzzy": 7
+        "exact": 39,
+        "fuzzy": 2
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -104,9 +96,9 @@
       "matched": 37,
       "blocks": 37,
       "how": {
-        "exact": 33,
-        "sons": 2,
-        "fuzzy": 2
+        "exact": 35,
+        "positional": 1,
+        "fuzzy": 1
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -116,10 +108,9 @@
       "matched": 67,
       "blocks": 67,
       "how": {
-        "exact": 55,
-        "fuzzy": 10,
-        "sons": 1,
-        "positional": 1
+        "exact": 59,
+        "fuzzy": 7,
+        "sons": 1
       },
       "unmatched_blocks": [],
       "unmatched_nodes": [
@@ -142,8 +133,8 @@
       "matched": 22,
       "blocks": 22,
       "how": {
-        "exact": 15,
-        "fuzzy": 5,
+        "exact": 17,
+        "fuzzy": 3,
         "sons": 2
       },
       "unmatched_blocks": [],
@@ -154,8 +145,8 @@
       "matched": 31,
       "blocks": 31,
       "how": {
-        "sons": 11,
-        "positional": 20
+        "exact": 29,
+        "fuzzy": 2
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -165,9 +156,8 @@
       "matched": 19,
       "blocks": 19,
       "how": {
-        "fuzzy": 3,
+        "fuzzy": 4,
         "exact": 14,
-        "sons": 1,
         "positional": 1
       },
       "unmatched_blocks": [],
@@ -178,8 +168,8 @@
       "matched": 9,
       "blocks": 9,
       "how": {
-        "exact": 7,
-        "fuzzy": 2
+        "exact": 8,
+        "fuzzy": 1
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -189,8 +179,8 @@
       "matched": 19,
       "blocks": 19,
       "how": {
-        "exact": 14,
-        "fuzzy": 4,
+        "exact": 16,
+        "fuzzy": 2,
         "positional": 1
       },
       "unmatched_blocks": [],
@@ -198,11 +188,11 @@
     }
   },
   "totals": {
-    "exact": 490,
-    "fuzzy": 78,
-    "matched": 615,
-    "blocks": 620,
-    "positional": 29,
-    "sons": 18
+    "exact": 561,
+    "matched": 619,
+    "blocks": 623,
+    "fuzzy": 47,
+    "positional": 8,
+    "sons": 3
   }
 }

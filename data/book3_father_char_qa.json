@@ -1,14 +1,13 @@
 {
   "book": "book3",
-  "checked": 615,
-  "clean": 436,
-  "flagged": 179,
+  "checked": 619,
+  "clean": 441,
+  "flagged": 178,
   "root_or_missing_father": 0,
   "problem_kinds": {
     "name_mismatch": 141,
-    "order_mismatch": 45,
+    "order_mismatch": 43,
     "order_unknown": 8,
-    "no_header": 3,
     "order_multigraph": 3,
     "non_son_head": 3,
     "header_short": 2
@@ -33,10 +32,10 @@
           "id": 80,
           "name": "广钦",
           "prov": "78_84_8",
-          "header": "子四塘",
+          "header": "子长埠",
           "problems": [
-            "order_mismatch:四(=3)!=idx1",
-            "name_mismatch:塘!=垶"
+            "order_mismatch:长(=0)!=idx1",
+            "name_mismatch:埠!=垶"
           ]
         },
         {
@@ -87,49 +86,6 @@
       ]
     },
     {
-      "father_id": 4,
-      "father_name": "传煊",
-      "father_prov": "78_84_0",
-      "children_flagged": [
-        {
-          "id": 25,
-          "name": "纪坽",
-          "prov": "78_84_2",
-          "header": "子长",
-          "problems": [
-            "header_short:子长"
-          ]
-        },
-        {
-          "id": 26,
-          "name": "纪墉",
-          "prov": "78_84_4",
-          "header": "",
-          "problems": [
-            "no_header"
-          ]
-        },
-        {
-          "id": 27,
-          "name": "纪壎",
-          "prov": "78_84_3",
-          "header": "",
-          "problems": [
-            "no_header"
-          ]
-        },
-        {
-          "id": 28,
-          "name": "纪垶",
-          "prov": "78_84_1",
-          "header": "",
-          "problems": [
-            "no_header"
-          ]
-        }
-      ]
-    },
-    {
       "father_id": 38,
       "father_name": "纪埌",
       "father_prov": "186_187_2",
@@ -165,7 +121,7 @@
         },
         {
           "id": 112,
-          "name": "广濍",
+          "name": "广⿰钅葱",
           "prov": "186_187_9",
           "header": "子四垠",
           "problems": [
@@ -219,7 +175,7 @@
     },
     {
       "father_id": 86,
-      "father_name": "厂鈷",
+      "father_name": "广鈷",
       "father_prov": "134_138_5",
       "children_flagged": [
         {
@@ -654,9 +610,10 @@
           "id": 192,
           "name": "昭沧",
           "prov": "134_138_19",
-          "header": "子次锴",
+          "header": "子长镒",
           "problems": [
-            "name_mismatch:锴!=鍢"
+            "order_mismatch:长(=0)!=idx1",
+            "name_mismatch:镒!=鍢"
           ]
         },
         {
@@ -803,9 +760,9 @@
           "id": 379,
           "name": "宪理",
           "prov": "261_262_16",
-          "header": "子次瑞",
+          "header": "子长瑞",
           "problems": [
-            "order_mismatch:次(=1)!=idx2",
+            "order_mismatch:长(=0)!=idx2",
             "name_mismatch:瑞!=泮"
           ]
         }
@@ -871,31 +828,6 @@
       ]
     },
     {
-      "father_id": 29,
-      "father_name": "纪埂",
-      "father_prov": "134_138_2",
-      "children_flagged": [
-        {
-          "id": 87,
-          "name": "广錩",
-          "prov": "134_138_8",
-          "header": "子之埂",
-          "problems": [
-            "order_mismatch:之(=0)!=idx1"
-          ]
-        },
-        {
-          "id": 88,
-          "name": "广铤",
-          "prov": "134_138_9",
-          "header": "子二埂",
-          "problems": [
-            "order_mismatch:二(=1)!=idx2"
-          ]
-        }
-      ]
-    },
-    {
       "father_id": 31,
       "father_name": "纪墭",
       "father_prov": "134_138_1",
@@ -904,9 +836,8 @@
           "id": 90,
           "name": "广䤾",
           "prov": "134_138_6",
-          "header": "子次垍",
+          "header": "子长垍",
           "problems": [
-            "order_mismatch:次(=1)!=idx0",
             "name_mismatch:垍!=墭"
           ]
         },
@@ -914,9 +845,8 @@
           "id": 91,
           "name": "广镒",
           "prov": "134_138_4",
-          "header": "子之垍",
+          "header": "子次垍",
           "problems": [
-            "order_mismatch:之(=0)!=idx1",
             "name_mismatch:垍!=墭"
           ]
         }
@@ -940,10 +870,34 @@
           "id": 105,
           "name": "广坮",
           "prov": "217_220_12",
-          "header": "子四壕",
+          "header": "子次填",
           "problems": [
-            "order_mismatch:四(=3)!=idx1",
-            "name_mismatch:壕!=埴"
+            "name_mismatch:填!=埴"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 39,
+      "father_name": "纪庄",
+      "father_prov": "202_203_1",
+      "children_flagged": [
+        {
+          "id": 115,
+          "name": "广⿰钅泰",
+          "prov": "202_203_6",
+          "header": "子四庄",
+          "problems": [
+            "order_mismatch:四(=3)!=idx2"
+          ]
+        },
+        {
+          "id": 116,
+          "name": "广𨫟",
+          "prov": "202_203_7",
+          "header": "子三庄",
+          "problems": [
+            "order_mismatch:三(=2)!=idx3"
           ]
         }
       ]
@@ -1041,10 +995,9 @@
           "id": 190,
           "name": "昭漋",
           "prov": "134_138_21",
-          "header": "子长镒",
+          "header": "子次锴",
           "problems": [
-            "order_mismatch:长(=0)!=idx1",
-            "name_mismatch:镒!=錩"
+            "name_mismatch:锴!=錩"
           ]
         }
       ]
@@ -1101,7 +1054,7 @@
     },
     {
       "father_id": 112,
-      "father_name": "广濍",
+      "father_name": "广⿰钅葱",
       "father_prov": "186_187_9",
       "children_flagged": [
         {
@@ -1110,7 +1063,7 @@
           "prov": "186_187_17",
           "header": "子长镥",
           "problems": [
-            "name_mismatch:镥!=濍"
+            "name_mismatch:镥!=葱"
           ]
         },
         {
@@ -1119,7 +1072,7 @@
           "prov": "186_187_18",
           "header": "子次镥",
           "problems": [
-            "name_mismatch:镥!=濍"
+            "name_mismatch:镥!=葱"
           ]
         }
       ]
@@ -1183,19 +1136,20 @@
           "id": 233,
           "name": "昭荣",
           "prov": "261_262_7",
-          "header": "子继坤",
+          "header": "子次铨",
           "problems": [
-            "order_unknown:继",
-            "name_mismatch:坤!=鉎"
+            "order_mismatch:次(=1)!=idx0",
+            "name_mismatch:铨!=鉎"
           ]
         },
         {
           "id": 234,
           "name": "昭贵",
           "prov": "261_262_9",
-          "header": "子次铨",
+          "header": "子继坤",
           "problems": [
-            "name_mismatch:铨!=鉎"
+            "order_unknown:继",
+            "name_mismatch:坤!=鉎"
           ]
         }
       ]
@@ -1226,32 +1180,6 @@
       ]
     },
     {
-      "father_id": 193,
-      "father_name": "昭洋",
-      "father_prov": "134_138_20",
-      "children_flagged": [
-        {
-          "id": 322,
-          "name": "宪楻",
-          "prov": "134_138_37",
-          "header": "子三湛",
-          "problems": [
-            "order_mismatch:三(=2)!=idx0",
-            "name_mismatch:湛!=洋"
-          ]
-        },
-        {
-          "id": 323,
-          "name": "宪楼",
-          "prov": "134_138_39",
-          "header": "子之洋",
-          "problems": [
-            "order_mismatch:之(=0)!=idx1"
-          ]
-        }
-      ]
-    },
-    {
       "father_id": 227,
       "father_name": "昭湻",
       "father_prov": "249_250_6",
@@ -1272,6 +1200,32 @@
           "header": "子次湢",
           "problems": [
             "name_mismatch:湢!=湻"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 232,
+      "father_name": "昭瑞",
+      "father_prov": "261_262_11",
+      "children_flagged": [
+        {
+          "id": 380,
+          "name": "宪明",
+          "prov": "261_262_13",
+          "header": "子次瑞",
+          "problems": [
+            "order_mismatch:次(=1)!=idx0"
+          ]
+        },
+        {
+          "id": 381,
+          "name": "宪荣",
+          "prov": "261_262_19",
+          "header": "子之荣",
+          "problems": [
+            "order_mismatch:之(=0)!=idx1",
+            "name_mismatch:荣!=瑞"
           ]
         }
       ]
@@ -1522,6 +1476,22 @@
       ]
     },
     {
+      "father_id": 4,
+      "father_name": "传煊",
+      "father_prov": "78_84_0",
+      "children_flagged": [
+        {
+          "id": 25,
+          "name": "纪坽",
+          "prov": "78_84_2",
+          "header": "子长",
+          "problems": [
+            "header_short:子长"
+          ]
+        }
+      ]
+    },
+    {
       "father_id": 10,
       "father_name": "传煐",
       "father_prov": "249_250_0",
@@ -1533,6 +1503,72 @@
           "header": "子长烇",
           "problems": [
             "name_mismatch:烇!=煐"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 16,
+      "father_name": "纪菖",
+      "father_prov": "10_17_3",
+      "children_flagged": [
+        {
+          "id": 54,
+          "name": "广链",
+          "prov": "10_17_21",
+          "header": "子三苏",
+          "problems": [
+            "order_mismatch:三(=2)!=idx3",
+            "name_mismatch:苏!=菖"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 18,
+      "father_name": "纪苏",
+      "father_prov": "10_17_2",
+      "children_flagged": [
+        {
+          "id": 59,
+          "name": "广特",
+          "prov": "10_17_11",
+          "header": "子之万",
+          "problems": [
+            "order_mismatch:之(=0)!=idx2",
+            "name_mismatch:万!=苏"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 22,
+      "father_name": "纪均",
+      "father_prov": "64_65_1",
+      "children_flagged": [
+        {
+          "id": 67,
+          "name": "广鈊",
+          "prov": "64_65_4",
+          "header": "子长童",
+          "problems": [
+            "name_mismatch:童!=均"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 24,
+      "father_name": "纪童",
+      "father_prov": "64_65_3",
+      "children_flagged": [
+        {
+          "id": 70,
+          "name": "广釗",
+          "prov": "64_65_6",
+          "header": "子之均",
+          "problems": [
+            "name_mismatch:均!=童"
           ]
         }
       ]
@@ -1562,26 +1598,9 @@
           "id": 89,
           "name": "广鍢",
           "prov": "134_138_7",
-          "header": "子长垍",
+          "header": "子之垍",
           "problems": [
             "name_mismatch:垍!=坮"
-          ]
-        }
-      ]
-    },
-    {
-      "father_id": 34,
-      "father_name": "纪壕",
-      "father_prov": "217_220_1",
-      "children_flagged": [
-        {
-          "id": 100,
-          "name": "广⿰金㚅",
-          "prov": "217_220_8",
-          "header": "子次填",
-          "problems": [
-            "order_mismatch:次(=1)!=idx3",
-            "name_mismatch:填!=壕"
           ]
         }
       ]
@@ -1878,18 +1897,17 @@
       ]
     },
     {
-      "father_id": 195,
-      "father_name": "昭湛",
-      "father_prov": "134_138_16",
+      "father_id": 193,
+      "father_name": "昭洋",
+      "father_prov": "134_138_20",
       "children_flagged": [
         {
-          "id": 326,
-          "name": "宪栗",
-          "prov": "134_138_35",
-          "header": "子四渊",
+          "id": 323,
+          "name": "宪楼",
+          "prov": "134_138_39",
+          "header": "子之洋",
           "problems": [
-            "order_mismatch:四(=3)!=idx2",
-            "name_mismatch:渊!=湛"
+            "order_mismatch:之(=0)!=idx1"
           ]
         }
       ]
@@ -2023,18 +2041,17 @@
       ]
     },
     {
-      "father_id": 232,
-      "father_name": "昭瑞",
-      "father_prov": "261_262_11",
+      "father_id": 233,
+      "father_name": "昭荣",
+      "father_prov": "261_262_7",
       "children_flagged": [
         {
-          "id": 381,
-          "name": "宪荣",
-          "prov": "261_262_19",
+          "id": 382,
+          "name": "宪保",
+          "prov": "261_262_15",
           "header": "子长贵",
           "problems": [
-            "order_mismatch:长(=0)!=idx1",
-            "name_mismatch:贵!=瑞"
+            "name_mismatch:贵!=荣"
           ]
         }
       ]
@@ -2096,10 +2113,9 @@
           "id": 439,
           "name": "庆根",
           "prov": "10_17_91",
-          "header": "子五梓",
+          "header": "子长均",
           "problems": [
-            "order_mismatch:五(=4)!=idx1",
-            "name_mismatch:梓!=均"
+            "order_mismatch:长(=0)!=idx1"
           ]
         }
       ]
@@ -2169,22 +2185,6 @@
       ]
     },
     {
-      "father_id": 343,
-      "father_name": "宪柜",
-      "father_prov": "217_220_28",
-      "children_flagged": [
-        {
-          "id": 563,
-          "name": "庆煏",
-          "prov": "217_220_49",
-          "header": "子之机",
-          "problems": [
-            "name_mismatch:机!=柜"
-          ]
-        }
-      ]
-    },
-    {
       "father_id": 348,
       "father_name": "宪甫",
       "father_prov": "217_220_36",
@@ -2193,16 +2193,16 @@
           "id": 575,
           "name": "庆炳",
           "prov": "217_220_58",
-          "header": "子之柜",
+          "header": "子之机",
           "problems": [
-            "name_mismatch:柜!=甫"
+            "name_mismatch:机!=甫"
           ]
         }
       ]
     },
     {
       "father_id": 351,
-      "father_name": "宪銼",
+      "father_name": "宪鉎",
       "father_prov": "186_187_24",
       "children_flagged": [
         {
@@ -2211,7 +2211,7 @@
           "prov": "186_187_40",
           "header": "子之銓",
           "problems": [
-            "name_mismatch:銓!=銼"
+            "name_mismatch:銓!=鉎"
           ]
         }
       ]

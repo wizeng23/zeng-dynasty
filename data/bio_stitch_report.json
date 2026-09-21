@@ -1,6 +1,6 @@
 {
-  "merged": 10,
-  "unstitched": 42,
+  "merged": 13,
+  "unstitched": 39,
   "merges": [
     {
       "child_root_prov": "b4:0_0_0",
@@ -22,6 +22,19 @@
       "sons": [
         "繁倍",
         "繁芳"
+      ],
+      "matched_reader": "vision"
+    },
+    {
+      "child_root_prov": "b4:69_69_0",
+      "child_root_id": 20,
+      "canonical_prov": "b3:64_65_25",
+      "canonical_id": 2584,
+      "name": "庆伟",
+      "sons": [
+        "繁坊",
+        "繁勋",
+        "繁胜"
       ],
       "matched_reader": "vision"
     },
@@ -49,6 +62,18 @@
       "matched_reader": "vision"
     },
     {
+      "child_root_prov": "b4:107_107_0",
+      "child_root_id": 29,
+      "canonical_prov": "b3:78_84_106",
+      "canonical_id": 2542,
+      "name": "庆鑫",
+      "sons": [
+        "繁史",
+        "繁龙"
+      ],
+      "matched_reader": "vision"
+    },
+    {
       "child_root_prov": "b4:120_120_0",
       "child_root_id": 31,
       "canonical_prov": "b3:78_84_110",
@@ -56,6 +81,19 @@
       "name": "庆根",
       "sons": [
         "繁有"
+      ],
+      "matched_reader": "vision"
+    },
+    {
+      "child_root_prov": "b4:130_130_0",
+      "child_root_id": 35,
+      "canonical_prov": "b3:78_84_104",
+      "canonical_id": 2555,
+      "name": "庆寿",
+      "sons": [
+        "繁方",
+        "繁晟",
+        "繁晨"
       ],
       "matched_reader": "vision"
     },
@@ -245,7 +283,7 @@
         "繁灯",
         "繁煌"
       ],
-      "candidate_count": 2
+      "candidate_count": 0
     },
     {
       "root_prov": "b4:36_36_1",
@@ -309,17 +347,6 @@
       "name": "庆龙",
       "graph_children": [
         "繁波"
-      ],
-      "candidate_count": 0
-    },
-    {
-      "root_prov": "b4:69_69_0",
-      "root_id": 20,
-      "name": "庆伟",
-      "graph_children": [
-        "繁坊",
-        "繁勋",
-        "繁胜"
       ],
       "candidate_count": 0
     },
@@ -392,16 +419,6 @@
       "candidate_count": 0
     },
     {
-      "root_prov": "b4:107_107_0",
-      "root_id": 29,
-      "name": "庆鑫",
-      "graph_children": [
-        "繁史",
-        "繁龙"
-      ],
-      "candidate_count": 0
-    },
-    {
       "root_prov": "b4:116_116_0/210_210_0",
       "root_id": 30,
       "name": "庆炎",
@@ -444,17 +461,6 @@
         "繁辉",
         "繁有",
         "繁林"
-      ],
-      "candidate_count": 0
-    },
-    {
-      "root_prov": "b4:130_130_0",
-      "root_id": 35,
-      "name": "庆寿",
-      "graph_children": [
-        "繁方",
-        "繁晟",
-        "繁晨"
       ],
       "candidate_count": 0
     },

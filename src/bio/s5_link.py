@@ -54,9 +54,9 @@ def section_to_stem(book: str, books_dir: str) -> dict[str, str]:
     return {r["section"]: r["stem"] for r in rows}
 
 
-def load_bio_sections(book: str, books_dir: str) -> dict[str, list[dict]]:
+def load_bio_sections(book: str, books_dir: str, ocr_dir: str = "4_ocr") -> dict[str, list[dict]]:
     out = {}
-    for f in glob.glob(os.path.join(books_dir, book, "bio", "4_ocr", "*.jsonl")):
+    for f in glob.glob(os.path.join(books_dir, book, "bio", ocr_dir, "*.jsonl")):
         sec = os.path.basename(f)[:-6]
         out[sec] = [json.loads(l) for l in open(f) if l.strip()]
     return out
@@ -141,7 +141,8 @@ def make_bio_field(blk: dict) -> dict:
     }
 
 
-def link_book(book: str, books_dir: str = "books", data_dir: str = "data") -> dict:
+def link_book(book: str, books_dir: str = "books", data_dir: str = "data",
+              ocr_dir: str = "4_ocr") -> dict:
     tree = load_tree(os.path.join(data_dir, f"{book}_stitched.jsonl"))
     by_id = {n["id"]: n for n in tree}
     # node -> set of children names (for the sons signal)
@@ -155,7 +156,7 @@ def link_book(book: str, books_dir: str = "books", data_dir: str = "data") -> di
             tb[s][n["generation"]].append(n)
 
     sec2stem = section_to_stem(book, books_dir)
-    bio = load_bio_sections(book, books_dir)
+    bio = load_bio_sections(book, books_dir, ocr_dir)
 
     linked_by_node: dict[int, dict] = {}
     report = {"book": book, "sections": {}, "totals": collections.Counter()}
@@ -207,6 +208,9 @@ def _parse_args(argv=None):
     p.add_argument("--book", required=True)
     p.add_argument("--books-dir", default="books")
     p.add_argument("--data-dir", default="data")
+    p.add_argument("--ocr-dir", default="4_ocr",
+                   help="per-section source dir under books/{book}/bio/ (e.g. 5_records "
+                        "for human-reviewed records from s5_build_bio)")
     p.add_argument("--log-level", default="INFO")
     return p.parse_args(argv)
 
@@ -214,7 +218,7 @@ def _parse_args(argv=None):
 def main(argv=None):
     a = _parse_args(argv)
     logging.basicConfig(level=a.log_level, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    link_book(a.book, a.books_dir, a.data_dir)
+    link_book(a.book, a.books_dir, a.data_dir, a.ocr_dir)
 
 
 if __name__ == "__main__":
