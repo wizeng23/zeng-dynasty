@@ -535,6 +535,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
      different field (father/name/son/none) than Claude did. Dashed magenta outline,
      distinct from the orange text-diff background. */
   .vcol.fdiff {{ outline:2px dashed #b5179e; outline-offset:-2px; }}     /* Gemini vs Claude */
+  .vcol.fdiff-mr {{ outline:2px dashed #0d9488; outline-offset:-2px; }}   /* misread pair, auto-resolved (teal) */
   .vcol.fdiff-lo {{ outline:1px dotted #b8b8b8; outline-offset:-1px; }}   /* Paddle-only (muted) */
   /* Per-CHARACTER diff box: the exact glyph where Gemini and Claude slice reads differ. */
   .cdiff {{ outline:2px solid #b5179e; outline-offset:1px; border-radius:3px;
@@ -602,7 +603,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   <span class="prog" id="pos"></span>
   <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta dash</span>=Gemini↔Claude differ · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only differs</span>
+  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta</span>=Gemini↔Claude conflict · <span style="outline:2px dashed #0d9488;padding:0 3px">teal</span>=auto-resolved misread (夭/天,究/宪) · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only</span>
   <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> block · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> to-review · <kbd>e</kbd> edit · <kbd>←/→</kbd> col · <kbd>f</kbd>/<kbd>n</kbd>/<kbd>s</kbd>/<kbd>x</kbd> set father/name/son/none · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
 <div id="stage"><div class="rows" id="rows"></div></div>
@@ -830,9 +831,11 @@ function renderCurrent() {{
     const fc = verifiedFieldCls(i);
     const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
     if (fc === "father") cls.push("horiz");   // father header reads horizontally
-    // Disagreement dash: strong for Gemini-vs-Claude (fdiff), muted for Paddle-only (pdiff-lo)
-    // so the noisy/often-wrong Paddle reader doesn't distract from the pair to trust.
+    // Disagreement dash: magenta for a genuine Gemini-vs-Claude conflict (fdiff); teal for an
+    // auto-resolved misread pair (夭/天, 究/宪 -- likely fine, fdiff-mr); muted gray for
+    // Paddle-only (fdiff-lo, the noisy reader).
     if (sliceDiff[i] === "gc") cls.push("fdiff");
+    else if (sliceDiff[i] === "misread") cls.push("fdiff-mr");
     else if (sliceDiff[i] === "paddle") cls.push("fdiff-lo");
     verifiedRow += `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
   }}
@@ -1413,7 +1416,11 @@ class Handler(BaseHTTPRequestHandler):
                     p = sp[i] if i < len(sp) else ""
                     gc = g and v and g != v            # gemini vs claude both present & differ
                     if gc:
-                        slice_diff.append("gc")
+                        # If the ONLY differences are known misread pairs (夭/天, 究/宪) we auto-
+                        # resolve them -> flag as "misread" (softer color, likely fine) instead of
+                        # "gc" (a genuine unresolved Gemini/Claude conflict needing attention).
+                        resolved = (resolve_misreads(g, v) == resolve_misreads(v, g))
+                        slice_diff.append("misread" if resolved else "gc")
                     elif p and ((g and p != g) or (v and p != v)):
                         slice_diff.append("paddle")    # only paddle is the odd one out
                     else:
