@@ -237,22 +237,55 @@ def slice_overlay(book: str, books_dir: str, bid: str):
     if not os.path.exists(fp):
         return None, None
     img = Image.open(fp).convert("RGB")
-    trimmed, _top = S.trim_rules(img)
+    trimmed, _top = S.trim_rules(img)      # deterministic; matches the stored boxes' frame
     Wt = trimmed.width
     right_x0 = Wt - S.RIGHT_STRIP_W          # x offset of the right strip in trimmed coords
-    father, name = S.split_father_name(trimmed.crop((right_x0, 0, Wt, trimmed.height)))
-    body = trimmed.crop((0, 0, right_x0, trimmed.height))
-    cols = S.slice_columns(body)
-    pieces = []
-    # father/name boxes are right-strip-local -> shift x by right_x0
-    for p in (father, name):
-        x0, y0, x1, y1 = p.box
-        pieces.append({"kind": p.kind, "box": [x0 + right_x0, y0, x1 + right_x0, y1]})
-    # col boxes are body-local (body starts at x=0) -> already trimmed-full-crop x
-    for p in cols:
-        pieces.append({"kind": p.kind, "box": list(p.box)})
+
+    def _translate(stored_pieces):
+        """Map STORED piece boxes (father/name are right-strip-local; cols are body-local)
+        into one trimmed-full-crop frame -- so the overlay matches the strips that were
+        ACTUALLY ocr'd, even if slice geometry has since changed."""
+        out = []
+        for p in stored_pieces:
+            box = p.get("box")
+            if not box:
+                continue
+            x0, y0, x1, y1 = box
+            if p["kind"] in ("father", "name"):
+                x0 += right_x0; x1 += right_x0
+            out.append({"kind": p["kind"], "box": [x0, y0, x1, y1]})
+        return out
+
+    # Prefer the STORED slice (the boxes the OCR'd strips came from); fall back to a live
+    # recompute only when this block has no stored record yet.
+    stored = _stored_slice_pieces(book, books_dir, bid)
+    if stored:
+        pieces = _translate(stored)
+    else:
+        father, name = S.split_father_name(trimmed.crop((right_x0, 0, Wt, trimmed.height)))
+        cols = S.slice_columns(trimmed.crop((0, 0, right_x0, trimmed.height)))
+        pieces = []
+        for p in (father, name):
+            x0, y0, x1, y1 = p.box
+            pieces.append({"kind": p.kind, "box": [x0 + right_x0, y0, x1 + right_x0, y1]})
+        for p in cols:
+            pieces.append({"kind": p.kind, "box": list(p.box)})
     buf = io.BytesIO(); trimmed.save(buf, format="PNG")
     return buf.getvalue(), {"w": trimmed.width, "h": trimmed.height, "pieces": pieces}
+
+
+def _stored_slice_pieces(book: str, books_dir: str, bid: str):
+    """The stored pieces (with boxes) for one block from 4_slice/{stem}.jsonl, or [] if none."""
+    stem = bid.rsplit("_", 2)[0]
+    path = os.path.join(books_dir, book, SLICE_DIR, f"{stem}.jsonl")
+    if not os.path.exists(path):
+        return []
+    for line in open(path):
+        if line.strip():
+            r = json.loads(line)
+            if r["id"] == bid:
+                return r.get("pieces", [])
+    return []
 
 
 # The sons marker is just the substring 生子 -- the book doesn't always write the count or
@@ -775,7 +808,7 @@ function renderCurrent() {{
         <div class="striplayer" id="striplayer"></div>
       </div></div>
     ${{graphHtml}}
-    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
+    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="addLeftCol()" class="splitbtn">+ left col</button> · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     ${{sliceBlock}}
     ${{readerRowsHtml}}`;
@@ -929,6 +962,15 @@ async function spliceCol(at, mode) {{
   setVerifiedCols(cols);
   await saveText(false);                 // persist shifted text WITHOUT advancing the block
   focusCol(mode === "insert" ? at : Math.min(at, cols.length - 1));
+}}
+
+// Append a blank column at the LEFTMOST position (= end of the RTL slot order, highest index).
+// The scan reads right-to-left, so the far-left is the last column -- clicking blank space
+// there has no target, hence this button (and Alt+Shift+Enter). Focuses the new column.
+async function addLeftCol() {{
+  const n = currentVerifiedCols().length;
+  await spliceCol(n, "insert");
+  focusCol(n);
 }}
 
 // Build a COMPLETE field map over [0,nCols): labeled columns keep their type, every other
