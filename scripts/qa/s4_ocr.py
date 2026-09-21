@@ -367,6 +367,41 @@ def load_fields(book: str, data_dir: str) -> dict:
     return json.load(open(p)) if os.path.exists(p) else {}
 
 
+def load_prior_names(book: str, data_dir: str) -> dict:
+    """William's earlier NAME-ONLY verification, snapshotted before the full-verify reset.
+    {bid: {"father","name","sons":[...]}} extracted from {book}_bio_verified_names.json using
+    {book}_bio_fields_names.json overrides (else auto-detect). {} if no snapshot exists."""
+    vp = os.path.join(data_dir, f"{book}_bio_verified_names.json")
+    fp = os.path.join(data_dir, f"{book}_bio_fields_names.json")
+    if not os.path.exists(vp):
+        return {}
+    verified = json.load(open(vp))
+    fields = json.load(open(fp)) if os.path.exists(fp) else {}
+    out = {}
+    for bid, text in verified.items():
+        cols = text.split("\n")
+        ov = fields.get(bid) or {}
+        det = detect_fields(cols)
+        # explicit override wins; "none" suppresses. father/name = single, sons = set.
+        def pick(kind, auto_idx):
+            # a column is `kind` if overridden to it, or (no override) auto-detected as it
+            idxs = [int(k) for k, v in ov.items() if v == kind]
+            if idxs:
+                return idxs
+            if kind == "son":
+                return [i for i in (auto_idx or []) if str(i) not in ov]
+            return [auto_idx] if (auto_idx is not None and str(auto_idx) not in ov) else []
+        f_idx = pick("father", det["father_idx"])
+        n_idx = pick("name", det["name_idx"])
+        s_idx = pick("son", det["son_idxs"])
+        out[bid] = {
+            "father": cols[f_idx[0]] if f_idx and f_idx[0] < len(cols) else "",
+            "name": cols[n_idx[0]] if n_idx and n_idx[0] < len(cols) else "",
+            "sons": [cols[i] for i in s_idx if i < len(cols) and cols[i].strip()],
+        }
+    return out
+
+
 def save_fields(book: str, data_dir: str, bid: str, fields: dict) -> None:
     """Persist ``{slot_index: 'father'|'name'|'son'|'none'}`` for one block.
 
@@ -497,6 +532,11 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
             padding:8px 10px; border:1px solid var(--line); border-radius:6px;
             background:#f7f9ff; }}
   .gchip {{ display:inline-flex; gap:6px; align-items:baseline; }}
+  /* Prior verified box: William's name-only QA, kept separate so full-verify never stomps it.
+     A field chip gets a dashed magenta outline when it DIFFERS from the slice readers. */
+  .cell.prior .lab {{ color:#7a5c00; }}
+  .cell.prior .gline {{ background:#fffdf5; border-color:#e6d9a8; }}
+  .gchip.pdiff {{ outline:2px dashed #b5179e; outline-offset:2px; border-radius:4px; }}
   .glab {{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; }}
   .gval {{ font-family:"PingFang SC","Hiragino Sans GB",var(--font-cjk); font-size:26px;
            user-select:text; }}  /* normal selection: drag/double-click to grab one char */
@@ -725,14 +765,18 @@ function renderCurrent() {{
   // Default columns = saved (verified) else prefill (=Gemini slice). Length covers all of
   // them so nothing is dropped on reload.
   const nVerified = baseCols.length;
+  // Per-column 3-way slice disagreement (gemini vs claude vs paddle): dash any column where
+  // they don't all agree. baseCols == the Gemini slice columns for unverified blocks, so
+  // sliceDiff[i] aligns to column i. This is the FULL-TEXT verification signal.
+  const sliceDiff = (!savedCols && b.sliceDiff) ? b.sliceDiff : [];
   let verifiedRow = "";
   for (let i = 0; i < nVerified; i++) {{
     const text = baseCols[i] ?? "";
     const fc = verifiedFieldCls(i);
     const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
     if (fc === "father") cls.push("horiz");   // father header reads horizontally
-    // Dash the Verified column if Claude & Gemini disagree on this field type.
-    if (fc && disagreeField[fc]) cls.push("fdiff");
+    // Dash the Verified column when the 3 slice readers disagree on it.
+    if (sliceDiff[i]) cls.push("fdiff");
     verifiedRow += `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
   }}
 
@@ -795,6 +839,40 @@ function renderCurrent() {{
       `</div></div>`;
   }}
 
+  // PRIOR VERIFIED (William's earlier name-only QA, snapshotted). Shows his verified
+  // father/name/sons so the full-verify pass never stomps them. Each field is highlighted
+  // if it DISAGREES with the slice readers: father/name compared directly to the Gemini/Claude
+  // slice father/name; sons compared as a NAME SET (slice columns don't align by index).
+  let priorHtml = "";
+  const pn = b.priorNames;
+  if (pn && (pn.father || pn.name || (pn.sons && pn.sons.length))) {{
+    const sf = (r,i) => {{ const a=(b.sliceReads||{{}})[r]||[]; return (a[i]||"").replace(/\\s/g,""); }};
+    // slice father/name = piece 0 / 1 of gemini (fallback claude); son set from gemini slice.
+    const gcols = ((b.sliceReads||{{}}).sgemini||[]).map(t=>(t||"").replace(/\\s/g,""));
+    const vcols = ((b.sliceReads||{{}}).svision||[]).map(t=>(t||"").replace(/\\s/g,""));
+    const sliceFather = [gcols[0], vcols[0]].filter(Boolean);
+    const sliceName   = [gcols[1], vcols[1]].filter(Boolean);
+    const sonSet = (cols) => {{ const s=cols.findIndex(c=>c.includes("生子"));
+      const out=[]; if(s>=0){{for(let k=s+1;k<cols.length;k++){{if(/生女|^[配继殁歿葬享寿卒]/.test(cols[k]))break; if(cols[k])out.push(cols[k]);}}}} return out; }};
+    const sliceSons = new Set([...sonSet(gcols), ...sonSet(vcols)]);
+    // Flag if the prior value differs from ANY present slice reader (surfaces every conflict,
+    // even when one reader agrees with the prior and another doesn't).
+    const disF = pn.father && sliceFather.length && sliceFather.some(x=>x!==pn.father);
+    const disN = pn.name && sliceName.length && sliceName.some(x=>x!==pn.name);
+    const priorSonSet = new Set(pn.sons||[]);
+    const disS = (pn.sons&&pn.sons.length) && sliceSons.size &&
+                 (pn.sons.some(s=>!sliceSons.has(s)) || [...sliceSons].some(s=>!priorSonSet.has(s)));
+    const chip = (label,val,color,dis) => val
+      ? `<span class="gchip ${{dis?'pdiff':''}}"><span class="glab" style="color:${{color}}">${{label}}</span>`+
+        `<span class="gval">${{escapeHtml(val)}}</span></span>` : "";
+    const sonsStr = (pn.sons||[]).map(escapeHtml).join("、");
+    priorHtml = `<div class="cell prior"><span class="lab">Your prior verified (names) — dashed = differs from slice readers</span>
+      <div class="gline">${{chip("father",pn.father,"var(--father)",disF)}}`+
+      `${{chip("name",pn.name,"var(--name)",disN)}}`+
+      `${{sonsStr?`<span class="gchip ${{disS?'pdiff':''}}"><span class="glab" style="color:var(--son)">sons</span><span class="gval">${{sonsStr}}</span></span>`:""}}`+
+      `</div></div>`;
+  }}
+
   const rows = document.getElementById("rows");
   rows.innerHTML = `
     <div class="cell crop"><span class="lab">Original (scan)${{b.hasSlice ? ` · <label class="sliceToggle"><input type="checkbox" id="stripToggle" checked>strip outlines</label>` : ``}}</span>
@@ -803,6 +881,7 @@ function renderCurrent() {{
         <div class="striplayer" id="striplayer"></div>
       </div></div>
     ${{graphHtml}}
+    ${{priorHtml}}
     <div class="cell verified"><span class="lab">Verified — click a column (or the empty space left of it to add one) · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     ${{sliceBlock}}
@@ -1165,6 +1244,7 @@ class Handler(BaseHTTPRequestHandler):
             # while the server runs -- e.g. a recovery run -- show up without a restart.
             cur_slice_ids = slice_ids(self.book, self.books_dir)
             cur_slice_reads = load_slice_reads(self.book, self.books_dir)
+            prior = load_prior_names(self.book, self.data_dir)   # William's name-only QA (snapshot)
             payload = []
             for b in self.blocks:
                 ab = dict(b, **analyze(b))          # ab now carries per-reader `fields`
@@ -1172,12 +1252,22 @@ class Handler(BaseHTTPRequestHandler):
                 ab["hasSlice"] = b["id"] in cur_slice_ids  # strip-overlay available?
                 sr = cur_slice_reads.get(b["id"], {})
                 ab["sliceReads"] = sr                # NEW per-strip readings
-                # Prefill the Verified box from the BEST reader: the Gemini SLICE reading (it
-                # fixes column order/merge and reads glyphs well). Fall back to the old
-                # whole-crop Claude read when a block has no Gemini slice yet.
-                sg = [re.sub(r"\s+", "", t) for t in sr.get("sgemini", []) if t and t != "?ERR"]
-                if sg:
-                    ab["prefill"] = "\n".join(sg)
+                ab["priorNames"] = prior.get(b["id"])   # {father,name,sons} or None
+                # Verified prefill = the Gemini SLICE reading (best raw OCR); per-column
+                # 3-way disagreement flag = gemini vs claude vs paddle SLICE readers differ.
+                def _flat(v):
+                    return "" if v in (None, "?ERR", "?EMPTY") else re.sub(r"\s+", "", v)
+                sg = [_flat(t) for t in sr.get("sgemini", [])]
+                sv = [_flat(t) for t in sr.get("svision", [])]
+                sp = [_flat(t) for t in sr.get("spaddle", [])]
+                n = len(sg)
+                slice_diff = []
+                for i in range(n):
+                    present = [r[i] for r in (sg, sv, sp) if i < len(r) and r[i] != ""]
+                    slice_diff.append(len(set(present)) > 1)   # >1 distinct => disagree
+                ab["sliceDiff"] = slice_diff
+                if any(sg):
+                    ab["prefill"] = "\n".join(t for t in sg)
                 payload.append(ab)
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":
