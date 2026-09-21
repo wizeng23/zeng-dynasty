@@ -26,6 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SEG_DIR = os.path.join("bio", "3_segment")
 OCR_DIR = os.path.join("bio", "4_ocr")
+SLICE_DIR = os.path.join("bio", "4_slice")
 
 
 # --- graph reference (what the tree says a block should be) ------------------------
@@ -156,8 +157,104 @@ def _lines(text: str) -> list[str]:
     return [ln.strip() for ln in text.split("\n") if ln.strip()]
 
 
-_COUNT = "一二三四五六七八九十两"
-_SONS_START = re.compile(rf"生子[{_COUNT}]*名")
+def slice_ids(book: str, books_dir: str) -> set:
+    """Block ids that have slice records (so the QA page knows whether to offer the overlay)."""
+    sdir = os.path.join(books_dir, book, SLICE_DIR)
+    ids = set()
+    if not os.path.isdir(sdir):
+        return ids
+    for f in os.listdir(sdir):
+        if not f.endswith(".jsonl") or f.endswith(".vision.jsonl"):
+            continue
+        for line in open(os.path.join(sdir, f)):
+            if line.strip():
+                ids.add(json.loads(line)["id"])
+    return ids
+
+
+def load_slice_reads(book: str, books_dir: str) -> dict:
+    """{block_id: {reader: [texts by piece idx]}} from bio/4_slice, for the NEW slice-based
+    readings shown above the whole-crop readers. Readers: 'spaddle','sgemini','svision'
+    (s = sliced). Paddle/Gemini live in {stem}.jsonl pieces; vision in {stem}.vision.jsonl.
+    A reader is omitted for a block if it has no non-empty text (so the UI can skip it).
+    ?ERR/?EMPTY are treated as empty. {} if the slice stage hasn't run."""
+    sdir = os.path.join(books_dir, book, SLICE_DIR)
+    out: dict[str, dict] = {}
+    if not os.path.isdir(sdir):
+        return out
+
+    def clean(v):
+        return "" if v in (None, "?ERR", "?EMPTY") else v
+
+    for f in os.listdir(sdir):
+        if not f.endswith(".jsonl") or f.endswith(".vision.jsonl"):
+            continue
+        for line in open(os.path.join(sdir, f)):
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            pieces = r.get("pieces", [])
+            spaddle = [clean(p.get("paddle")) for p in pieces]
+            sgemini = [clean(p.get("gemini")) for p in pieces]
+            rd = {}
+            if any(spaddle):
+                rd["spaddle"] = spaddle
+            if any(sgemini):
+                rd["sgemini"] = sgemini
+            out[r["id"]] = rd
+    # fold in vision sidecars
+    for f in os.listdir(sdir):
+        if not f.endswith(".vision.jsonl"):
+            continue
+        for line in open(os.path.join(sdir, f)):
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            texts = [clean(t) for t in r.get("vision", [])]
+            if any(texts):
+                out.setdefault(r["id"], {})["svision"] = texts
+    return out
+
+
+def slice_overlay(book: str, books_dir: str, bid: str):
+    """Recompute the geometric slice for one block into a SINGLE coordinate frame that
+    matches the TRIMMED crop, so the QA page can draw strip outlines that line up exactly.
+
+    The stored 4_slice boxes are in mixed local frames (father/name are right-strip-local;
+    cols are body-local; y excludes the trimmed top margin). Rather than reconstruct those
+    offsets, we re-run s4_slice.slice_block + trim_rules here (cheap, local) and translate
+    every piece box into trimmed-full-crop pixels. Returns (trimmed_png_bytes, meta) where
+    meta = {"w","h","pieces":[{"kind","box":[x0,y0,x1,y1]}]}. box coords are in trimmed px.
+    """
+    import io
+    from PIL import Image
+    from src.bio import s4_slice as S
+    fp = os.path.join(books_dir, book, SEG_DIR, f"{bid}.png")
+    if not os.path.exists(fp):
+        return None, None
+    img = Image.open(fp).convert("RGB")
+    trimmed, _top = S.trim_rules(img)
+    Wt = trimmed.width
+    right_x0 = Wt - S.RIGHT_STRIP_W          # x offset of the right strip in trimmed coords
+    father, name = S.split_father_name(trimmed.crop((right_x0, 0, Wt, trimmed.height)))
+    body = trimmed.crop((0, 0, right_x0, trimmed.height))
+    cols = S.slice_columns(body)
+    pieces = []
+    # father/name boxes are right-strip-local -> shift x by right_x0
+    for p in (father, name):
+        x0, y0, x1, y1 = p.box
+        pieces.append({"kind": p.kind, "box": [x0 + right_x0, y0, x1 + right_x0, y1]})
+    # col boxes are body-local (body starts at x=0) -> already trimmed-full-crop x
+    for p in cols:
+        pieces.append({"kind": p.kind, "box": list(p.box)})
+    buf = io.BytesIO(); trimmed.save(buf, format="PNG")
+    return buf.getvalue(), {"w": trimmed.width, "h": trimmed.height, "pieces": pieces}
+
+
+# The sons marker is just the substring 生子 -- the book doesn't always write the count or
+# the 名 suffix (生子一 / 生子三 / 生子奇 / 生子一殁 / 生子N名 all occur). Anchoring on 生子
+# alone is the reliable signal; strict 生子N名 missed ~47 blocks.
+_SONS_START = re.compile("生子")
 
 
 def detect_fields(cols: list[str]) -> dict:
@@ -166,7 +263,7 @@ def detect_fields(cols: list[str]) -> dict:
     Returns ``{father_idx, name_idx, son_idxs}`` -- the columns to emphasize:
     - father header = column 0 (the horizontal ``子之X`` caption)
     - own name      = column 1 (the person's given name)
-    - sons          = columns after a ``生子…名`` marker, up to ``生女`` / a new clause
+    - sons          = columns after a ``生子`` marker, up to ``生女`` / a new clause
     All are best-effort; the reviewer can correct them per column in the UI.
     """
     father_idx = 0 if cols else None
@@ -296,7 +393,22 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
      (height = FONT_PX * chars-in-tallest-column). Natural aspect, right-aligned (RTL). */
   img.crop {{ max-width:100%; border:1px solid var(--line); border-radius:6px;
               background:#fff; object-fit:contain; object-position:right top;
-              align-self:flex-end; }}
+              align-self:flex-end; display:block; }}
+  /* Strip-outline overlay: a positioned wrapper the exact rendered size of the crop, with
+     one thin box per slice piece. Kept a 1px HAIRLINE so a slightly-misaligned strip edge
+     never sits on top of a glyph; colors match the field palette but are only the border. */
+  .cropwrap {{ position:relative; align-self:flex-end; max-width:100%; line-height:0; }}
+  .cropwrap .striplayer {{ position:absolute; inset:0; pointer-events:none; }}
+  .cropwrap .strip {{ position:absolute; border:1px solid; border-radius:2px;
+                      box-sizing:border-box; }}
+  .cropwrap .strip.father {{ border-color:rgba(21,88,176,.85); }}   /* blue */
+  .cropwrap .strip.name   {{ border-color:rgba(10,127,63,.85); }}   /* green */
+  .cropwrap .strip.col    {{ border-color:rgba(192,57,43,.6); }}    /* red, lighter */
+  .cropwrap .strip .stag {{ position:absolute; top:-1px; left:-1px; font:9px/1 var(--font-cjk);
+                            background:rgba(255,255,255,.8); color:var(--muted); padding:0 2px;
+                            border-radius:2px; }}
+  .sliceToggle {{ font-size:11px; color:var(--muted); cursor:pointer; user-select:none; }}
+  .sliceToggle input {{ vertical-align:middle; margin:0 3px 0 0; }}
   /* vertical, right-to-left: columns run right->left, chars top->bottom (mirrors the scan). */
   .vpanel {{ display:flex; flex-direction:row-reverse; justify-content:flex-start;
              align-items:flex-start; gap:0; padding:8px; border:1px solid var(--line);
@@ -355,7 +467,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .gchip {{ display:inline-flex; gap:6px; align-items:baseline; }}
   .glab {{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; }}
   .gval {{ font-family:"PingFang SC","Hiragino Sans GB",var(--font-cjk); font-size:26px;
-           user-select:all; }}   /* click selects the whole value for easy copy */
+           user-select:text; }}  /* normal selection: drag/double-click to grab one char */
   .gtag {{ font-size:11px; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:8px; }}
   .gtag.ok {{ background:#e6f6ec; color:var(--ok); }}
   .gtag.guess {{ background:#fdeecf; color:#8a5a00; }}
@@ -363,6 +475,18 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .cell.mistral .lab {{ color:#b45309; }}
   .fieldbar {{ font-size:12px; color:var(--muted); }}
   .fieldbar b {{ font-weight:700; }}
+  .splitbtn {{ font:inherit; font-size:12px; padding:1px 8px; border:1px solid var(--line);
+               border-radius:10px; background:#eef4ff; color:#1558b0; cursor:pointer; }}
+  .splitbtn:hover {{ background:#dce8ff; }}
+  /* NEW per-strip slice readings: a lightly-tinted group above the whole-crop readers. */
+  .slicegroup {{ display:flex; flex-direction:column; gap:8px; padding:8px;
+                 border:1px dashed #9ca3af; border-radius:8px; background:#f6f7fb; }}
+  .slicehdr {{ font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+               color:#6b7280; font-weight:700; }}
+  .cell.sliceread .lab {{ color:#3730a3; }}
+  .cell.sliceread.spaddle .lab {{ color:var(--paddle); }}
+  .cell.sliceread.sgemini .lab {{ color:#6d28d9; }}
+  .cell.sliceread.svision .lab {{ color:var(--vision); }}
 </style></head><body>
 <header>
   <span class="bid" id="bid">…</span>
@@ -526,6 +650,21 @@ function renderCurrent() {{
     if (i in ov) return ov[i] === "none" ? null : ov[i];
     return fieldClassFor(vfields, i);
   }}
+  // Which FIELD TYPES do Claude & Gemini disagree on (father/name/son)? Compare the TEXT
+  // each reader detected for that field; if it differs (or one is missing), the Verified
+  // column(s) carrying that field get a dashed outline so the reviewer sees the conflict.
+  const gfields = (b.fields || {{}}).gemini || {{}};
+  function fieldTexts(rd, fld) {{
+    const f=(b.fields||{{}})[rd]||{{}}, cols=b[rd]||[];
+    if (fld==="father") return f.father_idx!=null ? [cols[f.father_idx]] : [];
+    if (fld==="name")   return f.name_idx!=null ? [cols[f.name_idx]] : [];
+    return (f.son_idxs||[]).map(i=>cols[i]);   // son: the set of son columns
+  }}
+  const disagreeField = {{}};   // {{father:bool,name:bool,son:bool}}
+  for (const fld of ["father","name","son"]) {{
+    const c=fieldTexts("vision",fld).join("|"), g=fieldTexts("gemini",fld).join("|");
+    disagreeField[fld] = (c !== g);
+  }}
   // The Verified row must show EVERY saved column, even if the reader-derived `slots` are
   // fewer (readers split columns differently than the reviewer did). Length = max(slots,
   // saved) so a saved edit is never truncated/dropped on reload. Unsaved blocks default to
@@ -538,12 +677,48 @@ function renderCurrent() {{
     const fc = verifiedFieldCls(i);
     const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
     if (fc === "father") cls.push("horiz");   // father header reads horizontally
+    // Dash the Verified column if Claude & Gemini disagree on this field type.
+    if (fc && disagreeField[fc]) cls.push("fdiff");
     verifiedRow += `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
   }}
 
   const readerRowsHtml = READERS.map(rd =>
     `<div class="cell ${{rd}}"><span class="lab">${{READER_LABEL[rd]}}</span>${{slotRow(readerCellRows[rd])}}</div>`
   ).join("");
+
+  // NEW: per-strip slice readings (each reader's father/name/col strips, in RTL order as
+  // sliced). Shown ABOVE the whole-crop reader rows. A reader with no data is skipped.
+  // Field classes come from the slice structure itself: piece 0 = father, piece 1 = name,
+  // pieces after a 生子 marker = sons. Rendered with the same fixed-width vertical slots.
+  const SLICE_READERS = ["svision", "sgemini", "spaddle"];
+  const SLICE_LABEL = {{svision:"Claude ▸ slice", sgemini:"Gemini ▸ slice", spaddle:"Paddle ▸ slice"}};
+  const sr = b.sliceReads || {{}};
+  function sliceFieldCls(texts, i) {{
+    if (i === 0) return "father";
+    if (i === 1) return "name";
+    // sons: pieces after the first piece containing 生子, until 生女/配/继/殁/葬
+    let start = texts.findIndex(t => (t||"").includes("生子"));
+    if (start >= 0 && i > start) {{
+      for (let k = start + 1; k <= i; k++) {{
+        if (/生女|^[配继殁歿葬享寿卒]/.test(texts[k]||"")) return null;
+      }}
+      return "son";
+    }}
+    return null;
+  }}
+  const sliceRowsHtml = SLICE_READERS.filter(rd => (sr[rd]||[]).length).map(rd => {{
+    const texts = sr[rd];
+    const cells = texts.map((t, i) => {{
+      const cls = [];
+      const fc = sliceFieldCls(texts, i);
+      if (fc) cls.push("f-" + fc);
+      return {{ text: (t === "" ? null : t), cls }};
+    }});
+    return `<div class="cell sliceread ${{rd}}"><span class="lab">${{SLICE_LABEL[rd]}}</span>${{slotRow(cells)}}</div>`;
+  }}).join("");
+  const sliceBlock = sliceRowsHtml
+    ? `<div class="slicegroup"><div class="slicehdr">NEW — per-strip slice readings (geometric column slicing)</div>${{sliceRowsHtml}}</div>`
+    : "";
 
   // Graph reference: what the tree says this block's person is (name/father/sons), by
   // position in its subgraph generation. A flat, copyable line -- the truth to copy over
@@ -568,11 +743,15 @@ function renderCurrent() {{
 
   const rows = document.getElementById("rows");
   rows.innerHTML = `
-    <div class="cell crop"><span class="lab">Original (scan)</span>
-      <img class="crop" id="cropimg" src="/img/${{b.id}}"></div>
+    <div class="cell crop"><span class="lab">Original (scan)${{b.hasSlice ? ` · <label class="sliceToggle"><input type="checkbox" id="stripToggle" checked>strip outlines</label>` : ``}}</span>
+      <div class="cropwrap" id="cropwrap">
+        <img class="crop" id="cropimg" src="${{b.hasSlice ? `/slice/${{b.id}}` : `/img/${{b.id}}`}}">
+        <div class="striplayer" id="striplayer"></div>
+      </div></div>
     ${{graphHtml}}
-    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · Ctrl+Enter save</span>
+    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
+    ${{sliceBlock}}
     ${{readerRowsHtml}}`;
   // Once the scan renders, size each column slot to the scan's per-column pixel width
   // (rendered crop width / number of slots) so every text row spans the scan's width and
@@ -587,8 +766,45 @@ function renderCurrent() {{
       img.style.height = Math.round(Math.min(natH, window.innerHeight * 0.5)) + "px";
     }}
     if (w > 0 && nSlots > 0) rows.style.setProperty("--slot", ((w - 16) / nSlots) + "px");
+    drawStrips();
   }};
+
+  // Strip outlines: fetch the piece boxes (trimmed-crop px) once, then position a thin box
+  // per piece scaled to the image's CURRENT rendered size. Redrawn on load/resize/toggle.
+  let stripMeta = null;
+  const layer = document.getElementById("striplayer");
+  function drawStrips() {{
+    if (!layer) return;
+    layer.innerHTML = "";
+    const show = document.getElementById("stripToggle");
+    if (!b.hasSlice || (show && !show.checked) || !stripMeta) return;
+    const rect = img.getBoundingClientRect();
+    const rw = rect.width, rh = img.offsetHeight;      // rendered px
+    if (!rw || !rh || !stripMeta.w || !stripMeta.h) return;
+    const sx = rw / stripMeta.w, sy = rh / stripMeta.h;
+    for (const p of stripMeta.pieces) {{
+      const [x0, y0, x1, y1] = p.box;
+      const d = document.createElement("div");
+      d.className = "strip " + p.kind;
+      d.style.left   = (x0 * sx) + "px";
+      d.style.top    = (y0 * sy) + "px";
+      d.style.width  = ((x1 - x0) * sx) + "px";
+      d.style.height = ((y1 - y0) * sy) + "px";
+      if (p.kind !== "col") {{
+        const t = document.createElement("span"); t.className = "stag"; t.textContent = p.kind;
+        d.appendChild(t);
+      }}
+      layer.appendChild(d);
+    }}
+  }}
+  if (b.hasSlice) {{
+    fetch(`/slicebox/${{b.id}}`).then(r => r.json()).then(m => {{ stripMeta = m; drawStrips(); }})
+      .catch(() => {{}});
+    const tg = document.getElementById("stripToggle");
+    if (tg) tg.addEventListener("change", drawStrips);
+  }}
   if (img.complete && img.naturalWidth) applySlot(); else img.onload = applySlot;
+  window.addEventListener("resize", drawStrips);
 
   // Paste of MULTI-LINE text (e.g. a whole reader's transcription copied in) must land as
   // SEPARATE columns, not a blob in one cell -- otherwise field-labeling hits the whole
@@ -685,6 +901,32 @@ async function spliceCol(at, mode) {{
   focusCol(mode === "insert" ? at : Math.min(at, cols.length - 1));
 }}
 
+// Split EVERY Verified column longer than MAXCH (=7, the printed page's column height)
+// into consecutive MAXCH-char chunks; everything after shifts. A field label stays with
+// the FIRST chunk of the column it was on (the name/son sits at the column start), and
+// all labels are remapped to their new column indices.
+const MAXCH = 7;
+async function splitLongCols() {{
+  const cols = currentVerifiedCols();
+  const eff = effectiveFields(cols.length);
+  const out = [];
+  const newFields = {{}};
+  cols.forEach((c, i) => {{
+    const chars = [...c];                         // codepoint-aware (rare glyphs = 1)
+    const firstNew = out.length;                  // where this column's first chunk lands
+    if (chars.length <= MAXCH) {{
+      out.push(c);
+    }} else {{
+      for (let s = 0; s < chars.length; s += MAXCH) out.push(chars.slice(s, s + MAXCH).join(""));
+    }}
+    if (eff[i]) newFields[firstNew] = eff[i];     // label follows to the first chunk
+  }});
+  if (out.length === cols.length) return;         // nothing over-long
+  setVerifiedCols(out);
+  await persistFields(newFields);
+  await saveText(false);                          // persist without advancing
+}}
+
 // Read the Verified row back as \\n-joined columns (slot order == Claude slot order).
 function verifiedText() {{
   return [...document.querySelectorAll("#vrow .vcol.edit")]
@@ -729,6 +971,10 @@ async function save() {{ await saveText(true); }}   // Ctrl+Enter: save + next b
 
 document.addEventListener("keydown", (e) => {{
   if (e.ctrlKey && e.key === "Enter") {{ e.preventDefault(); save(); return; }}
+  // Alt+s: split all Verified columns longer than 7 chars (whole-block; works regardless
+  // of focus). Use e.code (physical key) because on macOS Alt+letter emits a composed
+  // char (Option+s = ß), so e.key would not be "s".
+  if (e.altKey && e.code === "KeyS") {{ e.preventDefault(); splitLongCols(); return; }}
   // Alt+Enter / Alt+Backspace: insert a blank column before / delete the focused column
   // (shifts the rest + moves field labels). Only while a Verified column is focused.
   if (e.altKey && curCol() >= 0 && (e.key === "Enter" || e.key === "Backspace")) {{
@@ -805,6 +1051,8 @@ class Handler(BaseHTTPRequestHandler):
     data_dir = "data"
     blocks: list[dict] = []
     graph_idx: dict = {}   # (stem,gen)->nodes index for the graph reference
+    slice_ids: set = set() # block ids that have geometric-slice records (overlay available)
+    slice_reads: dict = {} # {id: {reader: [texts]}} NEW per-strip slice readings
 
     def log_message(self, format, *args):  # quiet
         pass
@@ -828,6 +1076,8 @@ class Handler(BaseHTTPRequestHandler):
             for b in self.blocks:
                 ab = dict(b, **analyze(b))          # ab now carries per-reader `fields`
                 ab["graph"] = graph_ref(self.graph_idx, ab, verified.get(b["id"]))
+                ab["hasSlice"] = b["id"] in self.slice_ids  # strip-overlay available?
+                ab["sliceReads"] = self.slice_reads.get(b["id"], {})  # NEW per-strip readings
                 payload.append(ab)
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":
@@ -843,6 +1093,18 @@ class Handler(BaseHTTPRequestHandler):
                 with open(fp, "rb") as fh:
                     return self._send(200, fh.read(), "image/png")
             return self._send(404, b"", "image/png")
+        if self.path.startswith("/slice/"):          # trimmed crop that the overlay aligns to
+            bid = self.path[len("/slice/"):]
+            png, _meta = slice_overlay(self.book, self.books_dir, bid)
+            if png is not None:
+                return self._send(200, png, "image/png")
+            return self._send(404, b"", "image/png")
+        if self.path.startswith("/slicebox/"):       # strip outline boxes in trimmed-crop px
+            bid = self.path[len("/slicebox/"):]
+            _png, meta = slice_overlay(self.book, self.books_dir, bid)
+            if meta is not None:
+                return self._send(200, json.dumps(meta, ensure_ascii=False))
+            return self._send(404, json.dumps({"pieces": []}))
         return self._send(404, "not found", "text/plain")
 
     def do_POST(self):
@@ -870,6 +1132,8 @@ def main(argv=None):
     Handler.data_dir = args.data_dir
     Handler.blocks = load_blocks(args.book, args.books_dir)
     Handler.graph_idx = build_graph_index(args.book, args.books_dir, args.data_dir)
+    Handler.slice_ids = slice_ids(args.book, args.books_dir)
+    Handler.slice_reads = load_slice_reads(args.book, args.books_dir)
     done = len(load_verified(args.book, args.data_dir))
     print(f"Loaded {len(Handler.blocks)} blocks for {args.book} ({done} already verified).")
     print(f"Open  http://localhost:{args.port}/")

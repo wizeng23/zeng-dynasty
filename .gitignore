@@ -245,6 +245,9 @@ books/*/v0/names/
 books/*/v0/original/
 # Bio sub-pipeline generated images (src/bio/); JSON sidecars stay tracked.
 books/*/bio/*/*.png
+# 4_slice strip PNGs are nested one level deeper (4_slice/strips/{id}/*.png) and are
+# regenerable from src/bio/s4_slice.slice_block, so ignore them too; the .jsonl reads stay.
+books/*/bio/**/*.png
 !books/*/1_pages/corners.json
 !books/*/1_pages/corners_review.json
 !books/*/2_classify/page_types.json
