@@ -503,6 +503,9 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
      distinct from the orange text-diff background. */
   .vcol.fdiff {{ outline:2px dashed #b5179e; outline-offset:-2px; }}     /* Gemini vs Claude */
   .vcol.fdiff-lo {{ outline:1px dotted #b8b8b8; outline-offset:-1px; }}   /* Paddle-only (muted) */
+  /* Per-CHARACTER diff box: the exact glyph where Gemini and Claude slice reads differ. */
+  .cdiff {{ outline:2px solid #b5179e; outline-offset:1px; border-radius:3px;
+            background:#fbeaf5; }}
   /* Field emphasis: father = blue underline, own name = green bold, sons = red bold.
      Applied to the glyphs so the same field reads down every reader row + Verified. */
   .vcol.f-father {{ color:var(--father); text-decoration:underline; text-underline-offset:3px;
@@ -618,12 +621,24 @@ function alignToClaude(vision, paddle) {{
 // `cells` is an array of {{text, cls[]}} (null text => an empty gap slot).
 function slotRow(cells) {{
   const spans = cells.map(c => {{
-    if (c.text == null) return `<span class="vcol gap"></span>`;
+    if (c.text == null && c.html == null) return `<span class="vcol gap"></span>`;
     // The father header renders horizontally (see .vcol.horiz).
     const cls = c.cls.includes("f-father") ? [...c.cls, "horiz"] : c.cls;
-    return `<span class="${{["vcol", ...cls].join(" ")}}">${{escapeHtml(c.text)}}</span>`;
+    // c.html (pre-built, e.g. per-char diff markup) wins over plain c.text.
+    const inner = (c.html != null) ? c.html : escapeHtml(c.text);
+    return `<span class="${{["vcol", ...cls].join(" ")}}">${{inner}}</span>`;
   }});
   return `<div class="vpanel">${{spans.join("") || "—"}}</div>`;
+}}
+
+// Per-character diff markup between two column strings (Claude vs Gemini). Position-aligned;
+// a char present in THIS string but differing from (or missing in) the OTHER is boxed.
+function charDiffHtml(mine, other) {{
+  const a = [...(mine||"")], b = [...(other||"")];
+  return a.map((ch,i) => {{
+    const diff = (i >= b.length) || (b[i] !== ch);
+    return diff ? `<span class="cdiff">${{escapeHtml(ch)}}</span>` : escapeHtml(ch);
+  }}).join("");
 }}
 
 function renderCurrent() {{
@@ -807,13 +822,21 @@ function renderCurrent() {{
     }}
     return null;
   }}
+  // For Claude/Gemini rows, box the SPECIFIC characters where the two differ (position-wise),
+  // so a column-level disagreement points to the exact glyph. Paddle is compared to neither.
+  const flat = (rd) => (sr[rd]||[]).map(t => (t||"").replace(/\\s/g,""));
+  const gCols = flat("sgemini"), vCols = flat("svision");
   const sliceRowsHtml = SLICE_READERS.filter(rd => (sr[rd]||[]).length).map(rd => {{
     const texts = sr[rd];
     const cells = texts.map((t, i) => {{
       const cls = [];
       const fc = sliceFieldCls(texts, i);
       if (fc) cls.push("f-" + fc);
-      return {{ text: (t === "" ? null : t), cls }};
+      const cell = {{ text: (t === "" ? null : t), cls }};
+      // char-diff markup: Gemini vs Claude only (the trusted pair)
+      if (rd === "sgemini" && t) cell.html = charDiffHtml((t||"").replace(/\\s/g,""), vCols[i]);
+      else if (rd === "svision" && t) cell.html = charDiffHtml((t||"").replace(/\\s/g,""), gCols[i]);
+      return cell;
     }});
     return `<div class="cell sliceread ${{rd}}"><span class="lab">${{SLICE_LABEL[rd]}}</span>${{slotRow(cells)}}</div>`;
   }}).join("");
