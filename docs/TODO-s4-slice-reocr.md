@@ -103,6 +103,13 @@ faint/clipped; Gemini recovers it, Paddle often misreads the tiny header.
   son/name labels shift with columns on delete/insert/split; Verified prefill now uses the
   Gemini SLICE reading for blocks that have it (fallback to whole-crop Claude).
 
+## Prompt tweak (2026-09-21): scan-noise instruction
+- Added to BOTH _STRIP_PROMPT and _FATHER_PROMPT (Gemini): "Ignore ink smears and very faint
+  characters caused by document scanning." (v1 ADF scans have smears models hallucinate into chars.)
+- The Claude-VISION subagent prompt is INLINE in the coordinator's Agent calls (not these
+  constants) -- when relaunching the vision coordinator (book3 remaining 150, and book4), ADD
+  the same sentence to the worker-prompt rules.
+
 ## Column-width fix (2026-09-21) -- MUST re-slice book4 before its LLM run
 - slice_columns now: widen each column to >= COL_MINW_FRAC(0.6) x median column width (so a
   narrow column can't clip a char's thin extending strokes) + COL_PAD(40)px padding each side,
