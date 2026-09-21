@@ -110,6 +110,13 @@ faint/clipped; Gemini recovers it, Paddle often misreads the tiny header.
   constants) -- when relaunching the vision coordinator (book3 remaining 150, and book4), ADD
   the same sentence to the worker-prompt rules.
 
+## Why the new slicer catches thin columns (e.g. 下 in 273_279_0_0)
+- NOT the widening -- it was lowering MIN_COL_W 40->30 (done in the same width-fix commit). A
+  thin 1-char column like 下 forms a ~34px ink run: rejected at 40, accepted at 30, then widened
+  to CHAR_W+pad. So book3 (OCR'd at MIN_COL_W=40) DROPPED these columns; the new geometry keeps
+  them. => Re-slicing + re-OCRing book3 with the new geometry would auto-recover missed thin
+  columns (paid; disruptive mid-review -- William's call). Until then, add them by hand in QA.
+
 ## Column-width fix (2026-09-21) -- MUST re-slice book4 before its LLM run
 - slice_columns now: widen each column to >= COL_MINW_FRAC(0.6) x median column width (so a
   narrow column can't clip a char's thin extending strokes) + COL_PAD(40)px padding each side,

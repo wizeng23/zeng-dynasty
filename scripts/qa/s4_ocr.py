@@ -808,7 +808,7 @@ function renderCurrent() {{
         <div class="striplayer" id="striplayer"></div>
       </div></div>
     ${{graphHtml}}
-    <div class="cell verified"><span class="lab">Verified — click a column · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="addLeftCol()" class="splitbtn">+ left col</button> · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
+    <div class="cell verified"><span class="lab">Verified — click a column (or the empty space left of it to add one) · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     ${{sliceBlock}}
     ${{readerRowsHtml}}`;
@@ -870,6 +870,19 @@ function renderCurrent() {{
   // blob. Split the paste on newlines and distribute across columns from the focused one,
   // then re-render the verified row so each line is its own editable cell immediately.
   const vrow = document.getElementById("vrow");
+  // Click in the EMPTY space to the LEFT of the leftmost column -> add a new leftmost column
+  // (the RTL-end) and focus it. The panel is row-reverse so columns pack to the right edge and
+  // the empty area is on the left; a click that misses every .vcol and lands left of them adds.
+  vrow.addEventListener("mousedown", (e) => {{
+    if (e.target.closest(".vcol")) return;          // clicked a real column -> normal edit
+    const cells = vrow.querySelectorAll(".vcol");
+    if (cells.length) {{
+      const leftmost = cells[cells.length - 1].getBoundingClientRect();  // last = leftmost (RTL)
+      if (e.clientX >= leftmost.left) return;        // click not to the left of it -> ignore
+    }}
+    e.preventDefault();
+    addLeftCol();
+  }});
   vrow.addEventListener("paste", (e) => {{
     const raw = (e.clipboardData || window.clipboardData).getData("text");
     if (!raw.includes("\\n")) return;               // single-line paste: let it be normal
