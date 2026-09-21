@@ -184,7 +184,11 @@ def load_slice_reads(book: str, books_dir: str) -> dict:
         return out
 
     def clean(v):
-        return "" if v in (None, "?ERR", "?EMPTY") else v
+        if v in (None, "?ERR", "?EMPTY"):
+            return ""
+        # Each strip is ONE column -> flatten any newlines/whitespace the model returned, or
+        # the vertical-rl `white-space:pre` slot would render them as multiple L-to-R lines.
+        return re.sub(r"\s+", "", v)
 
     for f in os.listdir(sdir):
         if not f.endswith(".jsonl") or f.endswith(".vision.jsonl"):
@@ -885,20 +889,33 @@ async function persistFields(map) {{
 async function spliceCol(at, mode) {{
   const cols = currentVerifiedCols();
   const eff = effectiveFields(cols.length);
-  const newFields = {{}};
+  const shifted = {{}};
   if (mode === "insert") {{
     cols.splice(at, 0, "");
-    for (const k in eff) {{ const i = +k; newFields[i >= at ? i + 1 : i] = eff[k]; }}
+    for (const k in eff) {{ const i = +k; shifted[i >= at ? i + 1 : i] = eff[k]; }}
   }} else {{ // delete
     if (!cols.length) return;
     cols.splice(at, 1);
     for (const k in eff) {{ const i = +k; if (i === at) continue;
-                            newFields[i > at ? i - 1 : i] = eff[k]; }}
+                            shifted[i > at ? i - 1 : i] = eff[k]; }}
   }}
+  // Make the shifted map AUTHORITATIVE: any column without a label becomes explicit "none".
+  // Otherwise verifiedFieldCls falls back to the (now stale) auto-detected vision.son_idxs
+  // and a son label re-appears at its OLD index -- i.e. labels don't move with the columns.
+  // Persist BEFORE re-rendering so setVerifiedCols reads the NEW map (it renders from FIELDS).
+  await persistFields(fullFieldMap(shifted, cols.length));
   setVerifiedCols(cols);
-  await persistFields(newFields);
   await saveText(false);                 // persist shifted text WITHOUT advancing the block
   focusCol(mode === "insert" ? at : Math.min(at, cols.length - 1));
+}}
+
+// Build a COMPLETE field map over [0,nCols): labeled columns keep their type, every other
+// column is pinned to "none" so no stale auto-detection can leak a label back in after a
+// structural edit (splice/split). "none" is persisted and overrides detection.
+function fullFieldMap(labels, nCols) {{
+  const out = {{}};
+  for (let i = 0; i < nCols; i++) out[i] = (labels[i] != null ? labels[i] : "none");
+  return out;
 }}
 
 // Split EVERY Verified column longer than MAXCH (=7, the printed page's column height)
@@ -922,8 +939,8 @@ async function splitLongCols() {{
     if (eff[i]) newFields[firstNew] = eff[i];     // label follows to the first chunk
   }});
   if (out.length === cols.length) return;         // nothing over-long
-  setVerifiedCols(out);
-  await persistFields(newFields);
+  await persistFields(fullFieldMap(newFields, out.length));  // authoritative: no stale leak
+  setVerifiedCols(out);                           // render AFTER persist so it reads new map
   await saveText(false);                          // persist without advancing
 }}
 
@@ -1077,7 +1094,14 @@ class Handler(BaseHTTPRequestHandler):
                 ab = dict(b, **analyze(b))          # ab now carries per-reader `fields`
                 ab["graph"] = graph_ref(self.graph_idx, ab, verified.get(b["id"]))
                 ab["hasSlice"] = b["id"] in self.slice_ids  # strip-overlay available?
-                ab["sliceReads"] = self.slice_reads.get(b["id"], {})  # NEW per-strip readings
+                sr = self.slice_reads.get(b["id"], {})
+                ab["sliceReads"] = sr                # NEW per-strip readings
+                # Prefill the Verified box from the BEST reader: the Gemini SLICE reading (it
+                # fixes column order/merge and reads glyphs well). Fall back to the old
+                # whole-crop Claude read when a block has no Gemini slice yet.
+                sg = [re.sub(r"\s+", "", t) for t in sr.get("sgemini", []) if t and t != "?ERR"]
+                if sg:
+                    ab["prefill"] = "\n".join(sg)
                 payload.append(ab)
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":

@@ -81,6 +81,55 @@ faint/clipped; Gemini recovers it, Paddle often misreads the tiny header.
   SendMessage to its agent id (context intact). vision_helper.py: `need`/`write`/`writeobj`
   (writeobj validates each array length == piece count before writing).
 
+## FUTURE (William, 2026-09-21): merge Gemini-slice into verified WITHOUT clobbering names
+- William's 556/623 verified book3 blocks are mostly the FATHER/SON/NAME columns (not the full
+  prose). The Gemini SLICE read is better for the prose/body columns. LATER: design a merge that
+  takes Gemini-slice for the body columns but KEEPS William's verified father/name/son columns.
+- FOR NOW (done): Verified prefill uses Gemini-slice ONLY for UNVERIFIED blocks
+  (verifiedText = done ? VERIFIED[id] : prefill, line ~565). Verified blocks are untouched --
+  confirmed: 2_9_0_0 shows saved 子之禄, not Gemini's 子之祿. Do NOT auto-apply slice to verified.
+
+## PAUSED 2026-09-21 (~5h usage limit) -- resume state
+- Claude-vision coordinator + all workers KILLED (William paused near 5h limit; will restart).
+  STATE SAFE ON DISK: book3 vision = 470 blocks done, 150 remaining. Resume by launching a
+  fresh coordinator (same prompt as before) -- it runs `vision_helper.py need book3`, which
+  skips the 470 done and returns the 150 left. Nothing lost.
+- Book 4 PADDLE-SLICE finished (exit 0): all book4 blocks sliced + Paddled + strip PNGs on
+  disk. NO Gemini/vision on book4 yet (awaiting William's slice review in QA, then his go).
+- Book 3 Gemini: 620/621 complete (1 ?ERR: 85_133_2_0). Book-3 read-all's last 2 blocks were
+  cut off when the chained job was killed but show complete; verify on resume.
+- QA page (8767) fixes landed this session (uncommitted): newline-in-strip flatten on read;
+  splice/split now persist an AUTHORITATIVE full field map (fullFieldMap) BEFORE re-render so
+  son/name labels shift with columns on delete/insert/split; Verified prefill now uses the
+  Gemini SLICE reading for blocks that have it (fallback to whole-crop Claude).
+
+## Book 4 plan (2026-09-21) -- SLICE FIRST, review, THEN LLMs (William's gate)
+- Slicing decoupled from LLM reads: run `--paddle-all` (free, local: geometry + Paddle +
+  strip PNGs) BEFORE any paid reader. Book 4 paddle-slice running now (standalone process).
+- The chained resume job was KILLED so `--read-all book4` does NOT auto-spend Gemini on B4.
+- GATE: William reviews Book 4 slice boundaries in the 8767 QA page (strip overlay) BEFORE
+  Gemini/Claude-vision are launched on Book 4. Only after his OK:
+    1. `--read-all book4` (Gemini) OR a gemini-only fill,
+    2. launch a Book 4 vision coordinator (against the already-sliced strips).
+- Book 3 leftover: 1 block short of full Gemini (620/621; 85_133_2_0 has a ?ERR). Finish with
+  `--book book3 --retry-errs` + `--read-all book3` (skips the 620 done) -- do with the B4 sweep.
+
+## Known data quirk: newlines inside a strip text
+- A model sometimes returns a strip's text with embedded newlines (e.g. gemini "五\n宪\n理").
+  Each strip is ONE column, so newlines are spurious. QA page flattens on read (load_slice_reads
+  `clean()` does re.sub(\s+,'')). STORED jsonl still has them -> when writers are idle, run a
+  one-off normalization over 4_slice/*.jsonl + *.vision.jsonl to strip \s from paddle/gemini/
+  vision before downstream merge/tree consumes them.
+
+## PENDING when the resume run finishes (2026-09-21)
+- Connectivity dropped briefly mid-run -> some strips recorded ?ERR. WHEN the chained run
+  reaches ALL DONE, run the error sweep on BOTH books:
+    PYTHONPATH=. python -m src.bio.s4_slice --book book3 --retry-errs
+    PYTHONPATH=. python -m src.bio.s4_slice --book book4 --retry-errs
+  Then re-count ?ERR; repeat retry-errs until 0 (or only genuinely-unreadable strips remain).
+- Then `--merge-vision` for both books to fold Claude-vision sidecars into the main records.
+- Then commit the 4_slice/*.jsonl reads (currently uncommitted; runs were still writing them).
+
 ## Output format decision (RESOLVED 2026-09-20)
 
 Per-strip reads live in a **separate** dir `books/{book}/bio/4_slice/{stem}.jsonl` (one
