@@ -501,7 +501,8 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   /* FIELD-detection disagreement with Claude: this reader tagged this column as a
      different field (father/name/son/none) than Claude did. Dashed magenta outline,
      distinct from the orange text-diff background. */
-  .vcol.fdiff {{ outline:2px dashed #b5179e; outline-offset:-2px; }}
+  .vcol.fdiff {{ outline:2px dashed #b5179e; outline-offset:-2px; }}     /* Gemini vs Claude */
+  .vcol.fdiff-lo {{ outline:1px dotted #b8b8b8; outline-offset:-1px; }}   /* Paddle-only (muted) */
   /* Field emphasis: father = blue underline, own name = green bold, sons = red bold.
      Applied to the glyphs so the same field reads down every reader row + Verified. */
   .vcol.f-father {{ color:var(--father); text-decoration:underline; text-underline-offset:3px;
@@ -565,7 +566,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   <span class="prog" id="pos"></span>
   <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="background:#ffe9d6">orange</span>=text differs · <span style="outline:2px dashed #b5179e;padding:0 3px">dashed</span>=field differs from Claude</span>
+  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta dash</span>=Gemini↔Claude differ · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only differs</span>
   <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> block · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> to-review · <kbd>e</kbd> edit · <kbd>←/→</kbd> col · <kbd>f</kbd>/<kbd>n</kbd>/<kbd>s</kbd>/<kbd>x</kbd> set father/name/son/none · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
 <div id="stage"><div class="rows" id="rows"></div></div>
@@ -775,8 +776,10 @@ function renderCurrent() {{
     const fc = verifiedFieldCls(i);
     const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
     if (fc === "father") cls.push("horiz");   // father header reads horizontally
-    // Dash the Verified column when the 3 slice readers disagree on it.
-    if (sliceDiff[i]) cls.push("fdiff");
+    // Disagreement dash: strong for Gemini-vs-Claude (fdiff), muted for Paddle-only (pdiff-lo)
+    // so the noisy/often-wrong Paddle reader doesn't distract from the pair to trust.
+    if (sliceDiff[i] === "gc") cls.push("fdiff");
+    else if (sliceDiff[i] === "paddle") cls.push("fdiff-lo");
     verifiedRow += `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
   }}
 
@@ -1325,8 +1328,11 @@ class Handler(BaseHTTPRequestHandler):
                 sr = cur_slice_reads.get(b["id"], {})
                 ab["sliceReads"] = sr                # NEW per-strip readings
                 ab["priorNames"] = prior.get(b["id"])   # {father,name,sons} or None
-                # Verified prefill = the Gemini SLICE reading (best raw OCR); per-column
-                # 3-way disagreement flag = gemini vs claude vs paddle SLICE readers differ.
+                # Verified prefill = the Gemini SLICE reading (best raw OCR). Per-column
+                # disagreement LEVEL, so the noisy/weak Paddle reader is de-emphasized:
+                #   "gc"     = Gemini vs Claude disagree (HIGH priority -- the pair to trust)
+                #   "paddle" = Gemini+Claude AGREE but Paddle differs (LOW priority, muted)
+                #   ""       = all present readers agree
                 def _flat(v):
                     return "" if v in (None, "?ERR", "?EMPTY") else re.sub(r"\s+", "", v)
                 sg = [_flat(t) for t in sr.get("sgemini", [])]
@@ -1335,8 +1341,16 @@ class Handler(BaseHTTPRequestHandler):
                 n = len(sg)
                 slice_diff = []
                 for i in range(n):
-                    present = [r[i] for r in (sg, sv, sp) if i < len(r) and r[i] != ""]
-                    slice_diff.append(len(set(present)) > 1)   # >1 distinct => disagree
+                    g = sg[i] if i < len(sg) else ""
+                    v = sv[i] if i < len(sv) else ""
+                    p = sp[i] if i < len(sp) else ""
+                    gc = g and v and g != v            # gemini vs claude both present & differ
+                    if gc:
+                        slice_diff.append("gc")
+                    elif p and ((g and p != g) or (v and p != v)):
+                        slice_diff.append("paddle")    # only paddle is the odd one out
+                    else:
+                        slice_diff.append("")
                 ab["sliceDiff"] = slice_diff
                 if any(sg):
                     ab["prefill"] = "\n".join(t for t in sg)
