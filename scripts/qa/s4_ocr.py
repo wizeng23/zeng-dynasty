@@ -643,16 +643,37 @@ function renderCurrent() {{
     }});
   }}
 
-  // Verified: same slots as Claude, editable. Field type per slot defaults to Claude's
-  // detected field, overridable via FIELDS[bid][slot] (reviewer's f/n/s/x keys).
+  // Verified: editable columns. For an UNVERIFIED block the default columns come from the
+  // PREFILL (the Gemini SLICE reading -- the best reader), NOT the whole-crop Claude `slots`.
+  // For a verified block, the saved text is authoritative.
   const savedCols = VERIFIED[b.id] !== undefined ? VERIFIED[b.id].split("\\n") : null;
+  const prefillCols = (b.prefill || "").split("\\n");
   const ov = FIELDS[b.id] || {{}};
   const vfields = (b.fields || {{}}).vision || {{}};
+  // Auto-detect fields on the DEFAULT verified columns (prefill for unverified) so labels
+  // align with what's actually shown: col0=father, col1=name, sons after a 生子 column.
+  function detectFieldsOn(cols) {{
+    const f = {{father_idx: cols.length ? 0 : null, name_idx: cols.length > 1 ? 1 : null,
+               son_idxs: []}};
+    const start = cols.findIndex(c => (c||"").includes("生子"));
+    if (start >= 0) {{
+      for (let i = start + 1; i < cols.length; i++) {{
+        if (/生女/.test(cols[i]||"") || /^[配继殁歿葬享寿卒]/.test(cols[i]||"")) break;
+        f.son_idxs.push(i);
+      }}
+    }}
+    return f;
+  }}
+  // Fields backing the Verified row: reviewer overrides win; else auto-detect on the row's
+  // own default columns (prefill=slice for unverified, saved for verified) rather than the
+  // stale whole-crop vision indices.
+  const baseCols = savedCols || prefillCols;
+  const autoFields = detectFieldsOn(baseCols);
   function verifiedFieldCls(i) {{
     // A reviewer override wins over auto-detection. "none" means "explicitly not a field"
     // (return null so no color, but it still suppresses the auto-detected field).
     if (i in ov) return ov[i] === "none" ? null : ov[i];
-    return fieldClassFor(vfields, i);
+    return fieldClassFor(autoFields, i);
   }}
   // Which FIELD TYPES do Claude & Gemini disagree on (father/name/son)? Compare the TEXT
   // each reader detected for that field; if it differs (or one is missing), the Verified
@@ -673,11 +694,12 @@ function renderCurrent() {{
   // fewer (readers split columns differently than the reviewer did). Length = max(slots,
   // saved) so a saved edit is never truncated/dropped on reload. Unsaved blocks default to
   // one editable slot per Claude slot (prefill).
-  const nVerified = Math.max(slots.length, savedCols ? savedCols.length : 0);
+  // Default columns = saved (verified) else prefill (=Gemini slice). Length covers all of
+  // them so nothing is dropped on reload.
+  const nVerified = baseCols.length;
   let verifiedRow = "";
   for (let i = 0; i < nVerified; i++) {{
-    const s = slots[i];
-    const text = savedCols ? (savedCols[i] ?? "") : (s == null ? "" : s);
+    const text = baseCols[i] ?? "";
     const fc = verifiedFieldCls(i);
     const cls = ["vcol", "edit"].concat(fc ? ["f-" + fc] : []);
     if (fc === "father") cls.push("horiz");   // father header reads horizontally
