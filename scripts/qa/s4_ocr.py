@@ -1399,7 +1399,17 @@ class Handler(BaseHTTPRequestHandler):
                         slice_diff.append("")
                 ab["sliceDiff"] = slice_diff
                 if any(sg):
-                    ab["prefill"] = "\n".join(t for t in sg)
+                    cols = list(sg)
+                    # Father (col 0) + name (col 1) come from William's PRIOR verified names
+                    # (trustworthy) rather than Gemini; body columns stay Gemini slice. The
+                    # magenta char-diff on the slice rows still shows any Gemini/Claude conflict.
+                    pn = prior.get(b["id"])
+                    if pn:
+                        if pn.get("father") and len(cols) > 0:
+                            cols[0] = pn["father"]
+                        if pn.get("name") and len(cols) > 1:
+                            cols[1] = pn["name"]
+                    ab["prefill"] = "\n".join(cols)
                 payload.append(ab)
             return self._send(200, json.dumps(payload, ensure_ascii=False))
         if self.path == "/verified":
