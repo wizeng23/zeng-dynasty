@@ -882,7 +882,7 @@ function renderCurrent() {{
       </div></div>
     ${{graphHtml}}
     ${{priorHtml}}
-    <div class="cell verified"><span class="lab">Verified — click a column (or the empty space left of it to add one) · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · Ctrl+Enter save</span>
+    <div class="cell verified"><span class="lab">Verified — click a column (or the empty space left of it to add one) · ←/→ move · f/n/s/x set field · Alt+Enter/Alt+Bksp ins/del col · <button type="button" onclick="splitLongCols()" class="splitbtn">Split &gt;7 (Alt+s)</button> · <button type="button" onclick="fillSons()" class="splitbtn">Fill sons</button> · Ctrl+Enter save</span>
       <div class="vpanel" id="vrow">${{verifiedRow}}</div></div>
     ${{sliceBlock}}
     ${{readerRowsHtml}}`;
@@ -1067,6 +1067,78 @@ function fullFieldMap(labels, nCols) {{
   const out = {{}};
   for (let i = 0; i < nCols; i++) out[i] = (labels[i] != null ? labels[i] : "none");
   return out;
+}}
+
+// Fill the son columns from William's PRIOR verified son names (bio-derived, RTL/eldest
+// order, 1-to-1 with the person's actual sons). For each prior son we conservatively fuzzy-
+// match a Verified column that sits AFTER the 生子 marker (son columns are always past it;
+// this avoids grabbing a date/description column earlier in the bio) and overwrite it; an
+// unmatched son is inserted right after 生子 (RTL order). Skipped/description lines between
+// sons are left untouched.
+function _sonScore(a, b) {{
+  // conservative similarity: shared generation char (first char) OR high char overlap.
+  if (!a || !b) return 0;
+  const ca = [...a], cb = [...b];
+  const genMatch = ca[0] === cb[0] ? 1 : 0;           // 昭/宪/庆... generation char
+  const setB = new Set(cb);
+  const overlap = ca.filter(c => setB.has(c)).length / Math.max(ca.length, cb.length);
+  const lenSim = 1 - Math.abs(ca.length - cb.length) / Math.max(ca.length, cb.length);
+  // require the gen char to match OR overlap to be strong; else score 0 (won't hijack).
+  if (!genMatch && overlap < 0.5) return 0;
+  return genMatch * 2 + overlap + lenSim * 0.5;
+}}
+async function fillSons() {{
+  const b = BLOCKS[CUR];
+  const priorSons = (b.priorNames && b.priorNames.sons) ? b.priorNames.sons.slice() : [];
+  if (!priorSons.length) {{ alert("No prior verified sons for this block."); return; }}
+  let cols = currentVerifiedCols();
+  const eff = effectiveFields(cols.length);        // current labels {{idx:type}}
+  // 生子 marker column (son columns live after it). If absent, we can't safely place -> bail.
+  const marker = cols.findIndex(c => (c || "").includes("生子"));
+  if (marker < 0) {{ alert("No 生子 column found; add it first, then Fill sons."); return; }}
+  // candidate columns = those AFTER the marker, not already father/name.
+  const assigned = {{}};    // colIdx -> sonName
+  const usedCols = new Set();
+  for (const son of priorSons) {{                    // RTL/eldest order preserved
+    let best = -1, bestScore = 0;
+    for (let i = marker + 1; i < cols.length; i++) {{
+      if (usedCols.has(i)) continue;
+      if (eff[i] === "father" || eff[i] === "name") continue;
+      const s = _sonScore(son, cols[i]);
+      if (s > bestScore) {{ bestScore = s; best = i; }}
+    }}
+    if (best >= 0 && bestScore > 0) {{ assigned[best] = son; usedCols.add(best); }}
+    else assigned["INSERT_" + son] = son;           // no match -> insert later
+  }}
+  // Apply overwrites to matched columns.
+  const newLabels = {{}};
+  for (const k in eff) newLabels[+k] = eff[k];
+  // Clear any inherited/auto-detected `son` label from post-marker columns we did NOT match,
+  // so after Fill the son-labeled columns are EXACTLY the prior sons -- a garbage/description
+  // column left over (e.g. unmatched OCR junk) won't stay tagged son.
+  for (let i = marker + 1; i < cols.length; i++) {{
+    if (newLabels[i] === "son" && !usedCols.has(i)) delete newLabels[i];
+  }}
+  for (const [idx, son] of Object.entries(assigned)) {{
+    if (idx.startsWith("INSERT_")) continue;
+    cols[+idx] = son; newLabels[+idx] = "son";
+  }}
+  // Insert unmatched sons right after the marker (RTL order: eldest first == closest to marker).
+  let insAt = marker + 1;
+  for (const son of priorSons) {{
+    if (assigned["INSERT_" + son] === undefined) continue;
+    cols.splice(insAt, 0, son);
+    // shift labels >= insAt up by one, then tag the new col
+    const shifted = {{}};
+    for (const k in newLabels) {{ const i = +k; shifted[i >= insAt ? i + 1 : i] = newLabels[k]; }}
+    shifted[insAt] = "son";
+    for (const k in newLabels) delete newLabels[k];
+    Object.assign(newLabels, shifted);
+    insAt++;
+  }}
+  await persistFields(fullFieldMap(newLabels, cols.length));
+  setVerifiedCols(cols);
+  await saveText(false);
 }}
 
 // Split EVERY Verified column longer than MAXCH (=7, the printed page's column height)
