@@ -305,7 +305,8 @@ def norm_variants(s: str) -> str:
 # DISAGREE at a char position on exactly this pair, picking the preferred (correct) one. The
 # column still counts as a disagreement (stays magenta) so the reviewer confirms.
 _MISREAD_PAIRS = {frozenset(("夭", "天")): "夭",     # 天 is the misread of 夭 (die young)
-                  frozenset(("究", "宪")): "宪"}     # 究 is the misread of the gen-char 宪
+                  frozenset(("究", "宪")): "宪",     # 究 is the misread of the gen-char 宪
+                  frozenset(("黄", "黃")): "黄"}     # 黃 (U+9EC3) misread of 黄 (U+9EC4) surname
 
 
 def resolve_misreads(g: str, v: str) -> str:
@@ -603,7 +604,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   <span class="prog" id="pos"></span>
   <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta</span>=Gemini↔Claude conflict · <span style="outline:2px dashed #0d9488;padding:0 3px">teal</span>=auto-resolved misread (夭/天,究/宪) · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only</span>
+  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta</span>=Gemini↔Claude conflict · <span style="outline:2px dashed #0d9488;padding:0 3px">teal</span>=auto-resolved misread (夭/天,究/宪,黄/黃) · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only</span>
   <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> block · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> to-review · <kbd>e</kbd> edit · <kbd>←/→</kbd> col · <kbd>f</kbd>/<kbd>n</kbd>/<kbd>s</kbd>/<kbd>x</kbd> set father/name/son/none · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
 <div id="stage"><div class="rows" id="rows"></div></div>
