@@ -1161,12 +1161,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, html, "text/html; charset=utf-8")
         if self.path == "/data":
             verified = load_verified(self.book, self.data_dir)
+            # Load slice data FRESH per request (not cached at startup) so blocks sliced/updated
+            # while the server runs -- e.g. a recovery run -- show up without a restart.
+            cur_slice_ids = slice_ids(self.book, self.books_dir)
+            cur_slice_reads = load_slice_reads(self.book, self.books_dir)
             payload = []
             for b in self.blocks:
                 ab = dict(b, **analyze(b))          # ab now carries per-reader `fields`
                 ab["graph"] = graph_ref(self.graph_idx, ab, verified.get(b["id"]))
-                ab["hasSlice"] = b["id"] in self.slice_ids  # strip-overlay available?
-                sr = self.slice_reads.get(b["id"], {})
+                ab["hasSlice"] = b["id"] in cur_slice_ids  # strip-overlay available?
+                sr = cur_slice_reads.get(b["id"], {})
                 ab["sliceReads"] = sr                # NEW per-strip readings
                 # Prefill the Verified box from the BEST reader: the Gemini SLICE reading (it
                 # fixes column order/merge and reads glyphs well). Fall back to the old
