@@ -45,12 +45,13 @@ SEG_DIR = os.path.join("bio", "3_segment")
 RIGHT_STRIP_W = 400        # width of the right region holding father header + name
 RULE_DARK_FRAC = 0.55      # a row is a "rule line" if >=55% of its pixels are ink
 GAP_INK_FRAC = 0.04        # an x-column is a "gap" if its ink <= 4% of the column peak
-MIN_COL_W = 40             # ignore slivers narrower than this when slicing columns
 MIN_GAP_W = 18             # a run of gap-columns >= this wide separates two columns
 COL_PAD = 40               # whitespace padding added to EACH side of a column strip
-COL_MINW_FRAC = 0.6        # a column is widened to >= this * the block's typical (median)
-                           # column width, so a stroke-clipped narrow column (e.g. a thin
-                           # extending radical) is not cut off
+# Every scan is the same resolution, so a printed character column is ~120px wide. Widen each
+# detected column to at least this (covers thin extending strokes that ink-projection misses),
+# then + COL_PAD each side => ~200px total strip width.
+CHAR_W = 120
+MIN_COL_W = 30             # ignore true slivers (specks) narrower than this before widening
 
 
 @dataclass
@@ -153,12 +154,12 @@ def split_father_name(strip: Image.Image) -> tuple[Piece, Piece]:
 def slice_columns(body: Image.Image) -> list[Piece]:
     """Cut the body into vertical column strips by whitespace projection, RIGHT-TO-LEFT.
 
-    Each raw ink run is then (a) widened symmetrically to at least the block's typical column
-    width so a narrow column doesn't clip a character's thin extending strokes, and (b) padded
-    by ``COL_PAD`` px on each side. Both are clamped to the body's bounds; columns may overlap
-    slightly after padding, which is fine (each strip is OCR'd on its own).
+    Each raw ink run is then (a) widened symmetrically to at least ``CHAR_W`` (the fixed
+    printed-character width; every scan is the same resolution) so a narrow column doesn't clip
+    a character's thin extending strokes, and (b) padded by ``COL_PAD`` px on each side. Both
+    are clamped to the body's bounds; columns may overlap slightly after padding, which is fine
+    (each strip is OCR'd on its own).
     """
-    import statistics
     a = _gray(body)
     ink = _ink(a)
     H, W = a.shape
@@ -185,19 +186,14 @@ def slice_columns(body: Image.Image) -> list[Piece]:
     if not runs:
         return []
 
-    # typical column width = median of the raw ink-run widths; widen each run to at least
-    # COL_MINW_FRAC of it (covers the widest-inked part) so thin strokes aren't clipped.
-    widths = [e - s for s, e in runs]
-    typical = statistics.median(widths)
-    min_w = max(MIN_COL_W, int(round(COL_MINW_FRAC * typical)))
-
+    # Widen each run to at least CHAR_W (fixed printed-char width) so thin strokes aren't
+    # clipped, then pad COL_PAD px each side (=> ~CHAR_W + 2*COL_PAD total).
     cols: list[tuple[int, int]] = []
     for s, e in runs:
-        w = e - s
-        if w < min_w:                             # widen symmetrically around the center
+        if e - s < CHAR_W:                        # widen symmetrically around the center
             c = (s + e) / 2.0
-            s = c - min_w / 2.0
-            e = c + min_w / 2.0
+            s = c - CHAR_W / 2.0
+            e = c + CHAR_W / 2.0
         s -= COL_PAD                              # whitespace padding each side
         e += COL_PAD
         cols.append((max(0, int(round(s))), min(W, int(round(e)))))
