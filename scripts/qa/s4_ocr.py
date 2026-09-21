@@ -289,9 +289,8 @@ def _stored_slice_pieces(book: str, books_dir: str, bid: str):
 _SONS_START = re.compile("生子")
 
 # Variant-glyph normalization: readers spell the SAME character different ways (Gemini favors
-# 歿 for 殁 U+6B81 -- the form the book uses). Normalize to the canonical (right-hand) form so
-# a pure variant difference is auto-corrected in the prefill and never counts as a real
-# reader disagreement. Extend this map as more variant pairs turn up.
+# 歿 for 殁 U+6B81 -- the form the book uses). Normalize to the canonical form EVERYWHERE (safe
+# -- same character) so a pure variant difference never counts as a disagreement. Extend freely.
 _VARIANT_NORM = {"歿": "殁"}   # {variant: canonical}
 
 
@@ -299,6 +298,28 @@ def norm_variants(s: str) -> str:
     if not s:
         return s
     return "".join(_VARIANT_NORM.get(c, c) for c in s)
+
+
+# Misread PAIRS: two genuinely different characters a reader confuses. Unlike variants, we do
+# NOT blanket-normalize (e.g. 究 is real in 研究生) -- we only resolve when Gemini and Claude
+# DISAGREE at a char position on exactly this pair, picking the preferred (correct) one. The
+# column still counts as a disagreement (stays magenta) so the reviewer confirms.
+_MISREAD_PAIRS = {frozenset(("夭", "天")): "夭",     # 天 is the misread of 夭 (die young)
+                  frozenset(("究", "宪")): "宪"}     # 究 is the misread of the gen-char 宪
+
+
+def resolve_misreads(g: str, v: str) -> str:
+    """Return g with each char resolved to the preferred glyph where g and v disagree on a
+    known misread pair (position-aligned). Non-disagreements and unequal lengths are untouched."""
+    if not g or len(g) != len(v):
+        return g
+    out = list(g)
+    for k in range(len(g)):
+        if g[k] != v[k]:
+            pref = _MISREAD_PAIRS.get(frozenset((g[k], v[k])))
+            if pref:
+                out[k] = pref
+    return "".join(out)
 
 
 def detect_fields(cols: list[str]) -> dict:
@@ -1380,7 +1401,7 @@ class Handler(BaseHTTPRequestHandler):
                 def _flat(v):
                     if v in (None, "?ERR", "?EMPTY"):
                         return ""
-                    return norm_variants(re.sub(r"\s+", "", v))   # 歿->殁 etc.
+                    return norm_variants(re.sub(r"\s+", "", v))   # 歿->殁 (universal variant)
                 sg = [_flat(t) for t in sr.get("sgemini", [])]
                 sv = [_flat(t) for t in sr.get("svision", [])]
                 sp = [_flat(t) for t in sr.get("spaddle", [])]
@@ -1399,10 +1420,13 @@ class Handler(BaseHTTPRequestHandler):
                         slice_diff.append("")
                 ab["sliceDiff"] = slice_diff
                 if any(sg):
-                    cols = list(sg)
-                    # Father (col 0) + name (col 1) come from William's PRIOR verified names
-                    # (trustworthy) rather than Gemini; body columns stay Gemini slice. The
-                    # magenta char-diff on the slice rows still shows any Gemini/Claude conflict.
+                    # prefill = Gemini slice, with per-char disagreement resolution vs Claude:
+                    # where they differ at a position on a known misread pair, pick the preferred
+                    # char (夭 over 天, 宪 over 究). Column still flags magenta (real disagreement).
+                    cols = [resolve_misreads(sg[i], sv[i] if i < len(sv) else "")
+                            for i in range(n)]
+                    # Father (col 0) + name (col 1) from William's PRIOR verified names
+                    # (trustworthy) rather than Gemini; body columns stay Gemini slice.
                     pn = prior.get(b["id"])
                     if pn:
                         if pn.get("father") and len(cols) > 0:
