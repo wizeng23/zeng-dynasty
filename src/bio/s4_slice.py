@@ -327,7 +327,8 @@ def ocr_pieces(pieces: list[Piece], engine) -> None:
 # names its own single orientation -- no confusing "OR a caption" branch. One added
 # clause of genealogy context to steer glyph disambiguation (e.g. 夭 vs 天); kept to one
 # sentence since prompt tokens are paid.
-_SCAN_NOISE = " Ignore ink smears and very faint characters caused by document scanning."
+_SCAN_NOISE = (" Ignore ink smears and very faint characters caused by document scanning, "
+               "and ignore any horizontal lines at the top or bottom borders (crop artifacts).")
 _STRIP_PROMPT = (
     "This image is ONE vertical column of characters from a biography entry in a Chinese "
     "genealogy. Transcribe EVERY character top-to-bottom in reading order. Output ONLY the "
