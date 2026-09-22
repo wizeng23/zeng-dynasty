@@ -313,6 +313,20 @@ _MISREAD_PAIRS = {frozenset(("夭", "天")): "夭",     # 天 is the misread of 
                   # then both readers AGREE on 桃, so this only fires in the 双祧 context.
 
 
+def strip_leading_line(g: str, v: str) -> tuple:
+    """A residual top rule-line that trim_rules missed gets OCR'd as a leading 一 by one reader.
+    If g and v differ ONLY by a leading 一 on one side, drop it from both so they agree and the
+    column isn't flagged. Only acts when it's the sole difference -- a legitimate leading 一
+    (一九三三年, 一月, where both readers agree) is untouched."""
+    if not g or not v or g == v:
+        return g, v
+    if g.startswith("一") and g[1:] == v:
+        return g[1:], v
+    if v.startswith("一") and v[1:] == g:
+        return g, v[1:]
+    return g, v
+
+
 def resolve_misreads(g: str, v: str) -> str:
     """Return g with each char resolved to the preferred glyph where g and v disagree on a
     known misread pair (position-aligned). Non-disagreements and unequal lengths are untouched."""
@@ -1454,7 +1468,12 @@ class Handler(BaseHTTPRequestHandler):
                 sg = [_flat(t) for t in sr.get("sgemini", [])]
                 sv = [_flat(t) for t in sr.get("svision", [])]
                 sp = [_flat(t) for t in sr.get("spaddle", [])]
+                # Drop a spurious leading 一 (residual top rule-line OCR'd by one reader) where
+                # it's the ONLY difference between Gemini and Claude, so the column agrees.
                 n = len(sg)
+                for i in range(n):
+                    if i < len(sv):
+                        sg[i], sv[i] = strip_leading_line(sg[i], sv[i])
                 slice_diff = []
                 for i in range(n):
                     g = sg[i] if i < len(sg) else ""
