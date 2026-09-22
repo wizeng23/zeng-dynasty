@@ -324,6 +324,22 @@ def resolve_misreads(g: str, v: str) -> str:
     return "".join(out)
 
 
+def _son_score(a: str, b: str) -> float:
+    """Conservative similarity for matching a prior son name to a column: shared generation
+    char (first char) OR high char overlap. 0 = don't match (won't hijack a date/desc column).
+    Mirror of the JS _sonScore in the Fill-sons button."""
+    if not a or not b:
+        return 0.0
+    ca, cb = list(a), list(b)
+    gen = 1 if ca[0] == cb[0] else 0
+    setb = set(cb)
+    overlap = sum(1 for c in ca if c in setb) / max(len(ca), len(cb))
+    lensim = 1 - abs(len(ca) - len(cb)) / max(len(ca), len(cb))
+    if not gen and overlap < 0.5:
+        return 0.0
+    return gen * 2 + overlap + lensim * 0.5
+
+
 def detect_fields(cols: list[str]) -> dict:
     """Best-effort field detection over one reader's columns (column indices).
 
@@ -539,6 +555,9 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   .vcol.fdiff {{ outline:2px dashed #b5179e; outline-offset:-2px; }}     /* Gemini vs Claude */
   .vcol.fdiff-mr {{ outline:2px dashed #0d9488; outline-offset:-2px; }}   /* misread pair, auto-resolved (teal) */
   .vcol.fdiff-lo {{ outline:1px dotted #b8b8b8; outline-offset:-1px; }}   /* Paddle-only (muted) */
+  /* Column whose value was auto-filled from William's prior verification (not OCR): green
+     tint + a solid green top bar, so it's visibly "mine, verified" vs a raw OCR column. */
+  .vcol.prior-filled {{ background:#e6f6ec; box-shadow:inset 0 3px 0 #0a7f3f; }}
   /* Per-CHARACTER diff box: the exact glyph where Gemini and Claude slice reads differ. */
   .cdiff {{ outline:2px solid #b5179e; outline-offset:1px; border-radius:3px;
             background:#fbeaf5; }}
@@ -605,7 +624,7 @@ PAGE = """<!doctype html><html lang="zh"><head><meta charset="utf-8">
   <span class="prog" id="pos"></span>
   <span class="status" id="status"></span>
   <span class="prog" id="prog"></span>
-  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta</span>=Gemini↔Claude conflict · <span style="outline:2px dashed #0d9488;padding:0 3px">teal</span>=auto-resolved misread (夭/天,究/宪,黄/黃) · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only</span>
+  <span class="legend"><b style="color:var(--father);text-decoration:underline">father</b> · <b style="color:var(--name)">name</b> · <b style="color:var(--son)">son</b> · <span style="outline:2px dashed #b5179e;padding:0 3px">magenta</span>=Gemini↔Claude conflict · <span style="outline:2px dashed #0d9488;padding:0 3px">teal</span>=auto-resolved misread (夭/天,究/宪,黄/黃) · <span style="outline:1px dotted #b8b8b8;padding:0 3px">gray dot</span>=Paddle-only · <span style="background:#e6f6ec;box-shadow:inset 0 3px 0 #0a7f3f;padding:0 3px">green</span>=from your prior verified</span>
   <span class="keys"><kbd>Shift</kbd>+<kbd>←/→</kbd> block · <kbd>Shift</kbd>+<kbd>↑/↓</kbd> to-review · <kbd>e</kbd> edit · <kbd>←/→</kbd> col · <kbd>f</kbd>/<kbd>n</kbd>/<kbd>s</kbd>/<kbd>x</kbd> set father/name/son/none · <kbd>Esc</kbd> stop · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> save+next</span>
 </header>
 <div id="stage"><div class="rows" id="rows"></div></div>
@@ -827,6 +846,9 @@ function renderCurrent() {{
   // they don't all agree. baseCols == the Gemini slice columns for unverified blocks, so
   // sliceDiff[i] aligns to column i. This is the FULL-TEXT verification signal.
   const sliceDiff = (!savedCols && b.sliceDiff) ? b.sliceDiff : [];
+  // Columns whose prefill text came from William's PRIOR verified names (father/name/sons),
+  // overriding OCR -- shown with a distinct marker so it's clear the value is his, not OCR.
+  const priorFilled = new Set((!savedCols && b.priorFilled) ? b.priorFilled : []);
   let verifiedRow = "";
   for (let i = 0; i < nVerified; i++) {{
     const text = baseCols[i] ?? "";
@@ -839,6 +861,7 @@ function renderCurrent() {{
     if (sliceDiff[i] === "gc") cls.push("fdiff");
     else if (sliceDiff[i] === "misread") cls.push("fdiff-mr");
     else if (sliceDiff[i] === "paddle") cls.push("fdiff-lo");
+    if (priorFilled.has(i)) cls.push("prior-filled");   // value from prior verification
     verifiedRow += `<span class="${{cls.join(" ")}}" contenteditable="plaintext-only" data-i="${{i}}">${{escapeHtml(text)}}</span>`;
   }}
 
@@ -1054,12 +1077,12 @@ function currentVerifiedCols() {{
 function setVerifiedCols(cols) {{
   const b = BLOCKS[CUR];
   const ov = FIELDS[b.id] || {{}};
-  const vfields = (b.fields || {{}}).vision || {{}};
+  const det = detectFieldsCols(cols);          // detect on the NEW column text (not stale vision)
   const fieldCls = (i) => {{
     if (i in ov) return ov[i] === "none" ? null : ov[i];
-    if (i === vfields.father_idx) return "father";
-    if (i === vfields.name_idx) return "name";
-    if ((vfields.son_idxs || []).includes(i)) return "son";
+    if (i === det.father_idx) return "father";
+    if (i === det.name_idx) return "name";
+    if (det.son_idxs.includes(i)) return "son";
     return null;
   }};
   const vrow = document.getElementById("vrow");
@@ -1071,20 +1094,38 @@ function setVerifiedCols(cols) {{
   }}).join("");
 }}
 
-// The EFFECTIVE field type of each current Verified column (override else auto-detect),
-// as an explicit index->type map. Used before a structural edit so labels move with the
-// columns (auto-detected indices would otherwise go stale after a splice).
+// Auto-detect field type per column on ACTUAL column text (col0=father, col1=name, sons after
+// a 生子 column). Same logic as renderCurrent's detectFieldsOn -- kept in one place so every
+// path agrees. Returns {{father_idx, name_idx, son_idxs}}.
+function detectFieldsCols(cols) {{
+  const f = {{father_idx: cols.length ? 0 : null, name_idx: cols.length > 1 ? 1 : null,
+             son_idxs: []}};
+  const start = cols.findIndex(c => (c||"").includes("生子"));
+  if (start >= 0) {{
+    for (let i = start + 1; i < cols.length; i++) {{
+      if (/生女/.test(cols[i]||"") || /^[配继殁歿葬享寿卒]/.test(cols[i]||"")) break;
+      f.son_idxs.push(i);
+    }}
+  }}
+  return f;
+}}
+
+// The EFFECTIVE field type of each current Verified column (override else auto-detect on the
+// CURRENT column text). Used before a structural edit so labels move with the columns. Detects
+// on the live columns -- NOT the stale whole-crop b.fields.vision indices, which don't line up
+// with the prefill/Gemini-slice column positions and previously mis-shifted son labels.
 function effectiveFields(nCols) {{
   const b = BLOCKS[CUR];
   const ov = FIELDS[b.id] || {{}};
-  const vf = (b.fields || {{}}).vision || {{}};
+  const cols = currentVerifiedCols();
+  const det = detectFieldsCols(cols);
   const out = {{}};
   for (let i = 0; i < nCols; i++) {{
     let t = null;
     if (i in ov) t = ov[i] === "none" ? null : ov[i];
-    else if (i === vf.father_idx) t = "father";
-    else if (i === vf.name_idx) t = "name";
-    else if ((vf.son_idxs || []).includes(i)) t = "son";
+    else if (i === det.father_idx) t = "father";
+    else if (i === det.name_idx) t = "name";
+    else if (det.son_idxs.includes(i)) t = "son";
     if (t) out[i] = t;
   }}
   return out;
@@ -1434,14 +1475,40 @@ class Handler(BaseHTTPRequestHandler):
                     # char (夭 over 天, 宪 over 究). Column still flags magenta (real disagreement).
                     cols = [resolve_misreads(sg[i], sv[i] if i < len(sv) else "")
                             for i in range(n)]
-                    # Father (col 0) + name (col 1) from William's PRIOR verified names
+                    # Father (col 0) + name (col 1) + SONS from William's PRIOR verified names
                     # (trustworthy) rather than Gemini; body columns stay Gemini slice.
+                    # prior_filled = column indices whose text came from prior verification, so
+                    # the UI can flag them visually.
+                    prior_filled = []
                     pn = prior.get(b["id"])
                     if pn:
-                        if pn.get("father") and len(cols) > 0:
-                            cols[0] = pn["father"]
-                        if pn.get("name") and len(cols) > 1:
-                            cols[1] = pn["name"]
+                        if pn.get("father") and len(cols) > 0 and cols[0] != pn["father"]:
+                            cols[0] = pn["father"]; prior_filled.append(0)
+                        elif pn.get("father") and len(cols) > 0:
+                            pass
+                        if pn.get("name") and len(cols) > 1 and cols[1] != pn["name"]:
+                            cols[1] = pn["name"]; prior_filled.append(1)
+                        # Sons: fuzzy-match each prior son to a son column AFTER 生子 and override
+                        # it only when it DIFFERS from OCR. No-match sons are left as Gemini text.
+                        psons = pn.get("sons") or []
+                        if psons:
+                            marker = next((k for k, c in enumerate(cols) if "生子" in c), -1)
+                            if marker >= 0:
+                                used = set()
+                                for son in psons:
+                                    best, best_s = -1, 0.0
+                                    for k in range(marker + 1, len(cols)):
+                                        if k in used:
+                                            continue
+                                        s = _son_score(son, cols[k])
+                                        if s > best_s:
+                                            best_s, best = s, k
+                                    if best >= 0 and best_s > 0:
+                                        used.add(best)
+                                        if cols[best] != son:
+                                            cols[best] = son
+                                            prior_filled.append(best)
+                    ab["priorFilled"] = prior_filled
                     ab["prefill"] = "\n".join(cols)
                 payload.append(ab)
             return self._send(200, json.dumps(payload, ensure_ascii=False))
