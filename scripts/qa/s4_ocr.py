@@ -710,14 +710,25 @@ function slotRow(cells) {{
 const VARIANT_NORM = {{ "歿": "殁", "緒": "绪", "別": "别" }};
 function normVar(s) {{ return (s||"").replace(/./g, c => VARIANT_NORM[c] || c); }}
 
-// Per-character diff markup between two column strings (Claude vs Gemini). Position-aligned;
-// a char present in THIS string but differing from (or missing in) the OTHER is boxed.
+// Per-character diff markup between two column strings (Claude vs Gemini). Aligned by longest
+// common subsequence, so an inserted/dropped char (e.g. an extra prefix 一) boxes ONLY that char
+// instead of shifting and boxing everything after it. Chars of THIS string outside the LCS are boxed.
 function charDiffHtml(mine, other) {{
   const a = [...(mine||"")], b = [...(other||"")];
-  return a.map((ch,i) => {{
-    const diff = (i >= b.length) || (b[i] !== ch);
-    return diff ? `<span class="cdiff">${{escapeHtml(ch)}}</span>` : escapeHtml(ch);
-  }}).join("");
+  const n = a.length, m = b.length;
+  const L = Array.from({{length: n + 1}}, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      L[i][j] = a[i] === b[j] ? L[i+1][j+1] + 1 : Math.max(L[i+1][j], L[i][j+1]);
+  const keep = new Array(n).fill(false);
+  let i = 0, j = 0;
+  while (i < n && j < m) {{
+    if (a[i] === b[j]) {{ keep[i] = true; i++; j++; }}
+    else if (L[i+1][j] >= L[i][j+1]) i++;
+    else j++;
+  }}
+  return a.map((ch, k) => keep[k] ? escapeHtml(ch)
+                                  : `<span class="cdiff">${{escapeHtml(ch)}}</span>`).join("");
 }}
 
 function renderCurrent() {{
