@@ -1,0 +1,10 @@
+{"section": "65_68", "stem": "64_64", "id": "65_68_0_0", "band": 0, "generation": 2, "box": [9367, 39, 12253, 1069], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_0_1", "band": 0, "generation": 2, "box": [5157, 55, 7570, 1065], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_0_2", "band": 0, "generation": 2, "box": [1508, 41, 4859, 1069], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_1_0", "band": 1, "generation": 3, "box": [10033, 1083, 12263, 2188], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_1_1", "band": 1, "generation": 3, "box": [7879, 1083, 9734, 2197], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_1_2", "band": 1, "generation": 3, "box": [5347, 1083, 7574, 2198], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_1_3", "band": 1, "generation": 3, "box": [3817, 1083, 4860, 2193], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_1_4", "band": 1, "generation": 3, "box": [2172, 1083, 3236, 2188], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_1_5", "band": 1, "generation": 3, "box": [783, 1083, 1858, 2184], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}
+{"section": "65_68", "stem": "64_64", "id": "65_68_2_0", "band": 2, "generation": 4, "box": [11193, 2223, 12258, 3351], "expected_per_gen": [3, 6, 1, 0, 0], "detected_per_gen": [3, 6, 1, 0, 0], "gate_passed": true}

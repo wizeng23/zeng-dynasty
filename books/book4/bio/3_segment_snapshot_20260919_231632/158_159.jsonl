@@ -1,0 +1,3 @@
+{"section": "158_159", "stem": "157_157", "id": "158_159_0_0", "band": 0, "generation": 2, "box": [4863, 37, 5897, 1047], "expected_per_gen": [3, 0, 0, 0, 0], "detected_per_gen": [3, 0, 0, 0, 0], "gate_passed": true}
+{"section": "158_159", "stem": "157_157", "id": "158_159_0_1", "band": 0, "generation": 2, "box": [3675, 38, 4555, 1045], "expected_per_gen": [3, 0, 0, 0, 0], "detected_per_gen": [3, 0, 0, 0, 0], "gate_passed": true}
+{"section": "158_159", "stem": "157_157", "id": "158_159_0_2", "band": 0, "generation": 2, "box": [2436, 55, 3296, 1042], "expected_per_gen": [3, 0, 0, 0, 0], "detected_per_gen": [3, 0, 0, 0, 0], "gate_passed": true}
