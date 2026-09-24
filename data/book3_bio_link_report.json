@@ -154,8 +154,8 @@
       "matched": 19,
       "blocks": 19,
       "how": {
-        "fuzzy": 3,
-        "exact": 15,
+        "fuzzy": 2,
+        "exact": 16,
         "positional": 1
       },
       "unmatched_blocks": [],
@@ -186,10 +186,10 @@
     }
   },
   "totals": {
-    "exact": 566,
+    "exact": 567,
     "matched": 619,
     "blocks": 623,
-    "fuzzy": 43,
+    "fuzzy": 42,
     "positional": 9,
     "sons": 1
   }
