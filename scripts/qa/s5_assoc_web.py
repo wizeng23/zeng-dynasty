@@ -186,20 +186,21 @@ PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>Bio ↔ graph
 <style>
 :root{--bg:#fafaf8;--fg:#222;--mut:#777;--ok:#1b7f3b;--bad:#c62828;--soft:#b7791f;--line:#e2e2dc;--card:#fff}
 body{margin:0;font:14px/1.45 -apple-system,system-ui,"PingFang SC",sans-serif;background:var(--bg);color:var(--fg)}
-header{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:8px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header{position:fixed;top:0;left:0;right:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);padding:8px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 header b{font-size:15px} select,button,input{font:inherit}
 button{padding:4px 11px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}
 button.v{border-color:var(--ok);color:var(--ok)} button.f{border-color:var(--bad);color:var(--bad)}
 .pill{padding:1px 8px;border-radius:10px;font-size:12px;background:#eee}
 .pill.verified{background:#e3f4e8;color:var(--ok)} .pill.flagged{background:#fde8e8;color:var(--bad)}
-main{padding:12px 16px 80px;max-width:1500px}
+main{padding:calc(var(--hdr-h,56px) + 12px) 16px 80px;max-width:1500px}
 .sum{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
 .sum span{padding:3px 9px;border-radius:6px;background:#fff;border:1px solid var(--line)}
 .sum .exact{border-color:var(--ok);color:var(--ok);font-weight:600}
 .sum .warn{border-color:var(--bad);color:var(--bad);font-weight:600}
 table{border-collapse:collapse;width:100%;background:var(--card)}
 th,td{border-bottom:1px solid var(--line);padding:5px 7px;vertical-align:top;text-align:left}
-th{background:#f3f3ef;font-weight:600;font-size:12px;color:#555;position:sticky;top:49px}
+td{white-space:nowrap} td:last-child{white-space:normal}  /* keep names/son lists on one line; scan column wraps */
+th{background:#f3f3ef;font-weight:600;font-size:12px;color:#555;position:sticky;top:var(--hdr-h,56px);z-index:2}
 tr.gen td{background:#f7f7f3;font-weight:600;color:#555}
 tr.bad{background:#fff5f5} tr.nobio{background:#fffbea} tr.soft{background:#fffdf3}
 .ok{color:var(--ok)} .bad{color:var(--bad);font-weight:600} .soft{color:var(--soft)} .na{color:var(--mut)}
@@ -229,6 +230,8 @@ textarea{width:320px;height:26px;vertical-align:middle}
 <div id="zoom" onclick="this.style.display='none'"><img id="zimg"></div>
 <script>
 let BOOK=null, DATA=null, REVIEW={}, LIST=[], I=0;
+new ResizeObserver(([e])=>document.documentElement.style.setProperty("--hdr-h",
+  document.querySelector("header").offsetHeight+"px")).observe(document.querySelector("header"));
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function zoom(src){ $("zimg").src=src; $("zoom").style.display="block"; }
@@ -271,7 +274,7 @@ function render(){
       <span class="${sm.unlinked_bios?"warn":""}">${sm.unlinked_bios} unlinked bio(s)</span>
       <span class="${sm.bad?"warn":""}">${sm.bad} failed check(s)</span>
       <span>${sm.soft} leaf(s) whose sons aren't in the graph</span></div>`;
-  h+=`<table><tr><th>graph node</th><th>graph father</th><th>bio (click to zoom)</th><th>name</th><th>father</th><th>bio sons</th><th>graph children (cross-book)</th><th>sons</th></tr>`;
+  h+=`<table><tr><th>graph node</th><th>graph father</th><th>bio name</th><th>bio father</th><th>bio sons</th><th>graph children (cross-book)</th><th>sons</th><th>bio scan (click to zoom)</th></tr>`;
   let g=null;
   for(const row of sg.rows){
     if(row.generation!==g){ g=row.generation; h+=`<tr class="gen"><td colspan="8">generation ${g}</td></tr>`; }
@@ -279,7 +282,7 @@ function render(){
     const cls=!b?"nobio":Object.values(c).includes("bad")?"bad":c.sons==="graph_empty"?"soft":"";
     const gimg=row.name_img?`<img class="nm" src="${row.name_img}" loading="lazy"> `:"";
     let bioCell, nameC="", faC="", sonsC="", bS="", gS="";
-    if(!b){ bioCell='<span class="bad">no bio linked</span>'; [bS,gS]=sonsCell([],row.children); }
+    if(!b){ bioCell='<span class="bad">no bio linked</span>'; nameC=bioCell; [bS,gS]=sonsCell([],row.children); }
     else{
       bioCell=`<img class="blk" src="${b.img}" loading="lazy" onclick="zoom(this.src)"><div class="mut">${esc(b.block)}${b.qa_flags.length?' · <span class="bad">'+esc(b.qa_flags.join("; "))+'</span>':""}</div>`;
       nameC=`${chk(c.name)} <span class="nm">${esc(b.name)}</span>`;
@@ -289,12 +292,12 @@ function render(){
       sonsC=chk(c.sons)+(c.sons==="graph_empty"?' <span class="soft">graph has no children (continues in Book 4?)</span>':"");
     }
     h+=`<tr class="${cls}"><td>${gimg}<span class="nm">${esc(row.name)}</span><div class="mut">${esc(row.prov)} · id ${row.id}</div></td>
-        <td>${esc(row.father||"—")}</td><td>${bioCell}</td><td>${nameC}</td><td>${faC}</td><td>${bS}</td><td>${gS}</td><td>${sonsC}</td></tr>`;
+        <td>${esc(row.father||"—")}</td><td>${nameC}</td><td>${faC}</td><td>${bS}</td><td>${gS}</td><td>${sonsC}</td><td>${bioCell}</td></tr>`;
   }
   h+="</table>";
   if(sg.unlinked_bios.length){
-    h+=`<div class="ub"><b class="bad">Bios with no graph node (${sg.unlinked_bios.length})</b><table><tr><th>bio</th><th>gen</th><th>name</th><th>father</th><th>sons</th></tr>`;
-    for(const u of sg.unlinked_bios) h+=`<tr><td><img class="blk" src="${u.img}" onclick="zoom(this.src)"><div class="mut">${esc(u.block)}</div></td><td>${u.generation??""}</td><td class="nm">${esc(u.name)}</td><td>${esc(u.father_header||"")}</td><td>${u.sons.map(esc).join("、")||'<span class="mut">none</span>'}</td></tr>`;
+    h+=`<div class="ub"><b class="bad">Bios with no graph node (${sg.unlinked_bios.length})</b><table><tr><th>gen</th><th>name</th><th>father</th><th>sons</th><th>bio scan</th></tr>`;
+    for(const u of sg.unlinked_bios) h+=`<tr><td>${u.generation??""}</td><td class="nm">${esc(u.name)}</td><td>${esc(u.father_header||"")}</td><td>${u.sons.map(esc).join("、")||'<span class="mut">none</span>'}</td><td><img class="blk" src="${u.img}" onclick="zoom(this.src)"><div class="mut">${esc(u.block)}</div></td></tr>`;
     h+="</table></div>";
   }
   $("main").innerHTML=h; window.scrollTo(0,0);

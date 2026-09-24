@@ -4,6 +4,19 @@ Rolling handoff note for the next session. Read `docs/history.md` Era 10 and
 `docs/bridge-revisit-notes.md` (bottom sections) for the why; this file is the
 what-is-left.
 
+## TODO (later, William + grandpa): bio vs graph name mismatches
+
+The bio pages' father / name / son text often disagrees with the graph's name by a character.
+Frequently it's a typo in the book itself, not OCR. Example (2026-09-25): graph node 广掬
+(`b3 10_17_12`, crop `books/book3/5_names/34.png`, clearly 掬), but all his sons' bio headers
+say father 菊, and his own bio reads 广菊. William will confirm each case with his grandpa.
+**Until then the website uses the graph's name.** Don't "fix" either side without asking.
+Where to find them: `scripts/qa/s5_father_char.py` (father-char flags, grouped by father),
+and the association QA page `scripts/qa/s5_assoc_web.py` (:8770: name / father / sons
+checks per subgraph). Note the linker's father-char gate (`s5_link._father_ok`) leaves a bio
+unlinked when BOTH its name and its father char disagree with the graph; e.g. 昭镏/昭镦/昭锗
+(sons of 广掬) stay unlinked until this review.
+
 ## Bio stage 4 (field OCR) — DONE for Books 3 & 4 (2026-09-19)
 
 `src/bio/s4_ocr.py`, branch `stage-4-bio-ocr` (rebased on latest main, S3 fully done incl.
