@@ -177,15 +177,26 @@ def split_father_name(strip: Image.Image) -> tuple[Piece, Piece]:
         while i < H and dark[i]:
             i += 1
         bands.append((s, i))
+    # Bridge tiny intra-glyph gaps (<= MERGE_GAP rows) so a header whose strokes leave a few
+    # blank rows (e.g. 子三兰) stays ONE band instead of splitting into sub-MIN_BAND slivers --
+    # otherwise the first name char gets mistaken for the header.
+    MERGE_GAP = 15
+    merged: list[tuple[int, int]] = []
+    for b in bands:
+        if merged and b[0] - merged[-1][1] <= MERGE_GAP:
+            merged[-1] = (merged[-1][0], b[1])
+        else:
+            merged.append(b)
     MIN_BAND = max(20, int(0.05 * H))            # a real text band is at least this tall
-    real = [b for b in bands if b[1] - b[0] >= MIN_BAND]
+    real = [b for b in merged if b[1] - b[0] >= MIN_BAND]
     if not real:
         # no clear header -> treat whole strip as name
         return (Piece("father", [0, 0, W, 0], strip.crop((0, 0, W, 0))),
                 Piece("name", [0, 0, W, H], strip.crop((0, 0, W, H))))
     fs, fe = real[0]                              # father header band
-    # cut = midpoint of the gap after the father band (start of the next band, or fe)
-    nxt = next((b[0] for b in real[1:] if b[0] > fe), None)
+    # cut = midpoint of the gap after the father band. The next band may be THIN (三's strokes
+    # are each ~11px), so take the next band of ANY size -- MIN_BAND only picks the header.
+    nxt = next((b[0] for b in merged if b[0] >= fe), None)
     cut = (fe + nxt) // 2 if nxt else fe
     father = Piece("father", [0, fs, W, fe], strip.crop((0, fs, W, fe)))
     name = Piece("name", [0, cut, W, H], strip.crop((0, cut, W, H)))
