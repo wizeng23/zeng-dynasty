@@ -723,6 +723,18 @@ Result vs the old `4_ocr` path: link **619/623** (was 615/620), exact-name **490
 bio-stitch **10→13** merges, roots **→40**, **879** bios folded, **0** integrity errors. Book 4
 stays on `4_ocr` until its review lands.
 
+
+**Follow-up (2026-09-24): Book 4 on the builder + son-parse fixes.** After rebasing onto
+William's full verification, Book 4 now also runs through `s5_build_bio` (was `4_ocr`).
+Builder fixes: field overrides apply PER SLOT on top of auto-detect, matching the QA tool
+(an override that only unmarked trailing columns used to zero a block's sons, e.g. b4
+`7_12_0_1` 祥均/祥斌); a column can hold several space-separated sons written by bare given
+char (`杆 楷` under 昭鸿 -> 宪杆/宪楷, generation char restored from the father); `一` added to
+the ordinals (`一二夭折` is a death note, not a son); gen+ordinal+status (`宪次夭`) dropped;
+`生于<num>名` accepted as a misprinted header; a `son` label on the name slot is kept as the
+name and flagged (b4 `102_102_1_0`). Result: b3 758 sons, b4 71; link b3 619/623, b4 300/307
+(exact 284->290 like-for-like -- the one lost link is graph node b4 `272_272_3` OCR'd as
+`广⿰钅席`, a gen-2 Book 4 person who should be 繁X); 13 stitch merges, 878 bios, 0 integrity errors.
 ---
 
 ## Pipeline status (snapshot)

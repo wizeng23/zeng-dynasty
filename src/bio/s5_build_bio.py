@@ -51,9 +51,21 @@ logger = logging.getLogger(__name__)
 # (三庆坤 -> 庆坤, 宪棕 张出 -> 宪棕). NOT used to gate whether a column is a name: many real
 # sons are 2-char names outside this set (和平, 友明, 国辉 in later/modern branches).
 GEN_CHARS = set("传纪广昭宪庆繁祥令")
+# The same characters in generation order: a person whose name starts with GEN_ORDER[k] has
+# sons named GEN_ORDER[k+1]+X. Used to restore the implicit generation char when a bio lists
+# sons by bare given char ("杆 楷" under 昭鸿 = 宪杆, 宪楷).
+GEN_ORDER = "传纪广昭宪庆繁祥令"
+
+
+def son_gen_char(name: str | None) -> str | None:
+    """The generation char of this person's sons, or None if their name isn't gen-headed."""
+    if not name or name[0] not in GEN_ORDER:
+        return None
+    k = GEN_ORDER.index(name[0])
+    return GEN_ORDER[k + 1] if k + 1 < len(GEN_ORDER) else None
 
 # Birth-order / ordinal glyphs that can PREFIX a son name in a column (长庆煌, 三昭汉, 次昭洪).
-ORDINAL_PREFIX = set("长次幼之二三四五六七八九十")
+ORDINAL_PREFIX = set("长次幼之一二三四五六七八九十")
 
 # Markers that make a column a STATUS note, not a name: died-young / line-terminated /
 # adoption-and-inheritance phrases with no own name to match against the graph.
@@ -79,7 +91,9 @@ _KINSHIP_NOTE = re.compile(r"承嗣|名下|俱止|出继|入继|编继")
 # the printed count -- plus ONE extra column only when it is the last one before a terminator
 # and looks like a name (the off-by-one case). No count -> keep all up to the terminator.
 _COUNT = "一二三四五六七八九十两"
-_SONS_HEADER = re.compile(rf"生子([{_COUNT}])")
+# "生于<num>名" is a known misprint of the header (b4 187_189_0_0); a birth clause is always
+# "生于<date>", never "生于<num>名", so accepting it is unambiguous.
+_SONS_HEADER = re.compile(rf"生子([{_COUNT}])|生于([{_COUNT}])名")
 _SONS_END = re.compile(r"^[配继殁歿葬享寿卒女]")  # life-event / 女=daughter column ends the sons
 _COUNT_VAL = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
               "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
@@ -96,7 +110,7 @@ def auto_son_idxs(lines: list[str]) -> list[int]:
     for i, c in enumerate(lines):
         m = _SONS_HEADER.search(c)
         if m:
-            start, n_expected = i, _COUNT_VAL.get(m.group(1), 0)
+            start, n_expected = i, _COUNT_VAL.get(m.group(1) or m.group(2), 0)
     if start is None:
         return []
     # candidate son columns run until a hard terminator.
@@ -125,20 +139,30 @@ def _lines(text: str) -> list[str]:
 
 
 def son_idxs(bid: str, lines: list[str], fields: dict) -> list[int]:
-    """Son piece-indices for a block: manual override if present, else auto-detect."""
-    override = fields.get(bid)
-    if override:
-        return sorted(int(k) for k, v in override.items() if v == "son")
-    return auto_son_idxs(lines)
+    """Son piece-indices: auto-detect, with the reviewer's overrides applied PER SLOT.
+
+    Same resolution as the QA tool (``effectiveFields`` in scripts/qa/s4_ocr.py): a slot the
+    reviewer labelled wins (``son`` adds it, any other role -- incl. ``none`` -- removes it);
+    every unlabelled slot keeps its auto-detected role. An override that only unmarks a few
+    trailing columns therefore keeps the real sons instead of zeroing them.
+    """
+    idxs = set(auto_son_idxs(lines))
+    for k, role in (fields.get(bid) or {}).items():
+        if role == "son":
+            idxs.add(int(k))
+        else:
+            idxs.discard(int(k))
+    return sorted(idxs)
 
 
 def role_idx(bid: str, lines: list[str], fields: dict, role: str, default: int | None) -> int | None:
     """The single piece-index for ``father``/``name``: override if present, else default."""
-    override = fields.get(bid)
-    if override:
-        hit = [int(k) for k, v in override.items() if v == role]
-        if hit:
-            return hit[0]
+    override = fields.get(bid) or {}
+    hit = [int(k) for k, v in override.items() if v == role]
+    if hit:
+        return hit[0]
+    if default is not None and str(default) in override:
+        return None  # the reviewer relabelled the default slot as something else
     return default if default is not None and default < len(lines) else None
 
 
@@ -173,6 +197,9 @@ def extract_son_name(col: str) -> str | None:
     gen_positions = [i for i, ch in enumerate(col) if ch in GEN_CHARS and i + 1 < len(col)]
     if len(gen_positions) == 1:
         i = gen_positions[0]
+        # gen char + ORDINAL + status is a death note, not a name ("宪次夭" = 2nd son died young).
+        if col[i + 1] in ORDINAL_PREFIX and _STATUS.search(col[i + 1:]):
+            return None
         return col[i:i + 2]
     if len(gen_positions) > 1:
         return None  # multiple generation chars => multiple names in one column; don't guess.
@@ -188,8 +215,49 @@ def extract_son_name(col: str) -> str | None:
     return body[:2]
 
 
+def extract_son_names(col: str, son_gen: str | None) -> list[str]:
+    """All son names in one column -- a column can hold several space-separated sons.
+
+    Tokens (split on whitespace) are one of:
+      * a bare given char (``杆 楷``, ``椿 次幼殁``): the generation char is implicit, so it's
+        restored from the father's generation (``son_gen``) -> ``宪杆``, ``宪楷``, ``宪椿``;
+      * a gen-headed name, possibly with a note token beside it (``宪棕 张出``: X出 = born of
+        mother X; ``庆有 为昭``: heir to 昭…) -> the name, via :func:`extract_son_name`;
+      * a note / status token (``夭``, ``次幼殁``, ``张出``, ``二三``) -> skipped.
+    A single-token column goes straight to :func:`extract_son_name`. A lone single-char
+    column (``沺``, ``广``, ``下``) is a wrapped name fragment and is NOT expanded (no guess).
+    """
+    tokens = col.split()
+    if len(tokens) <= 1:
+        nm = extract_son_name(col)
+        return [nm] if nm else []
+    out = []
+    for tok in tokens:
+        if len(tok) == 1:
+            if (son_gen and tok not in ORDINAL_PREFIX and tok not in GEN_CHARS
+                    and not _STATUS.search(tok)):
+                out.append(son_gen + tok)
+        elif any(ch in GEN_CHARS for ch in tok):
+            nm = extract_son_name(tok)
+            if nm:
+                out.append(nm)
+        # else: a note/status token (张出, 次幼殁, 二三) -- skip
+    return out
+
+
 def build_record(bid: str, text: str, fields: dict) -> dict:
     lines = _lines(text)
+    qa_flags = []
+    override = fields.get(bid) or {}
+    # A "son" label on the NAME slot (1) can't be right -- son columns only follow the 生子
+    # header -- it's a mis-click (b4 102_102_1_0: 三长 labelled son, but the tree has 三长 with
+    # the bio's father). Keep slot 1 as the name and flag it for review; the data file is
+    # the reviewer's and is never rewritten here.
+    name_slot_conflict = override.get("1") == "son" and not any(
+        _SONS_HEADER.search(c) for c in lines[:1])
+    if name_slot_conflict:
+        fields = {**fields, bid: {k: v for k, v in override.items() if k != "1"}}
+        qa_flags.append("fields_conflict: slot 1 (name) labelled son; kept as name")
     fa_i = role_idx(bid, lines, fields, "father", 0)
     nm_i = role_idx(bid, lines, fields, "name", 1)
     father_header = lines[fa_i] if fa_i is not None else ""
@@ -201,9 +269,8 @@ def build_record(bid: str, text: str, fields: dict) -> dict:
             continue
         raw = lines[i].strip()
         sons_raw.append(raw)
-        nm = extract_son_name(raw)
-        if nm:                       # skip pure-status (died-young) entries with no name
-            sons.append(nm)
+        # pure-status (died-young) entries yield nothing; a column may yield several sons.
+        sons.extend(extract_son_names(raw, son_gen_char(name)))
 
     # match the field shape s5_link reads (per-reader dicts; only the verified read here).
     return {
@@ -216,7 +283,7 @@ def build_record(bid: str, text: str, fields: dict) -> dict:
         "sons_raw": sons_raw,
         "daughters": {"vision": []},
         "birth": {"vision": None},
-        "qa_flags": [],
+        "qa_flags": qa_flags,
         "raw": {"vision": {"text": text}},   # lossless: the full verified transcription
     }
 

@@ -1,105 +1,16 @@
 {
   "book": "book4",
-  "checked": 301,
-  "clean": 205,
+  "checked": 300,
+  "clean": 204,
   "flagged": 96,
   "root_or_missing_father": 0,
   "problem_kinds": {
-    "order_multigraph": 68,
+    "order_multigraph": 67,
     "name_mismatch": 23,
-    "order_mismatch": 5,
+    "order_mismatch": 6,
     "non_son_head": 5
   },
   "flagged_by_father": [
-    {
-      "father_id": 6,
-      "father_name": "庆炘",
-      "father_prov": "16_16_0/291_291_0",
-      "children_flagged": [
-        {
-          "id": 103,
-          "name": "繁圣",
-          "prov": "77_77_1",
-          "header": "子之炘",
-          "problems": [
-            "order_multigraph:之(=0)!=idx1"
-          ]
-        },
-        {
-          "id": 104,
-          "name": "繁垵",
-          "prov": "114_114_1",
-          "header": "子之炘",
-          "problems": [
-            "order_multigraph:之(=0)!=idx2"
-          ]
-        },
-        {
-          "id": 105,
-          "name": "繁懿",
-          "prov": "155_155_1",
-          "header": "子长炘",
-          "problems": [
-            "order_multigraph:长(=0)!=idx3"
-          ]
-        },
-        {
-          "id": 106,
-          "name": "繁林",
-          "prov": "190_190_1",
-          "header": "子长炘",
-          "problems": [
-            "order_multigraph:长(=0)!=idx4"
-          ]
-        },
-        {
-          "id": 107,
-          "name": "繁盛",
-          "prov": "190_190_2/272_272_2",
-          "header": "子次炘",
-          "problems": [
-            "order_multigraph:次(=1)!=idx5"
-          ]
-        },
-        {
-          "id": 108,
-          "name": "繁财",
-          "prov": "190_190_3",
-          "header": "子三炘",
-          "problems": [
-            "order_multigraph:三(=2)!=idx6"
-          ]
-        },
-        {
-          "id": 109,
-          "name": "繁星",
-          "prov": "272_272_1",
-          "header": "子长炘",
-          "problems": [
-            "order_multigraph:长(=0)!=idx7"
-          ]
-        },
-        {
-          "id": 110,
-          "name": "广⿰钅席",
-          "prov": "272_272_3",
-          "header": "子三炘",
-          "problems": [
-            "order_multigraph:三(=2)!=idx8"
-          ]
-        },
-        {
-          "id": 111,
-          "name": "繁斌",
-          "prov": "291_291_1",
-          "header": "子之祈",
-          "problems": [
-            "order_multigraph:之(=0)!=idx9",
-            "name_mismatch:祈!=炘"
-          ]
-        }
-      ]
-    },
     {
       "father_id": 10,
       "father_name": "庆辉",
@@ -184,6 +95,86 @@
           "header": "子三辉",
           "problems": [
             "order_multigraph:三(=2)!=idx9"
+          ]
+        }
+      ]
+    },
+    {
+      "father_id": 6,
+      "father_name": "庆炘",
+      "father_prov": "16_16_0/291_291_0",
+      "children_flagged": [
+        {
+          "id": 103,
+          "name": "繁圣",
+          "prov": "77_77_1",
+          "header": "子之炘",
+          "problems": [
+            "order_multigraph:之(=0)!=idx1"
+          ]
+        },
+        {
+          "id": 104,
+          "name": "繁垵",
+          "prov": "114_114_1",
+          "header": "子之炘",
+          "problems": [
+            "order_multigraph:之(=0)!=idx2"
+          ]
+        },
+        {
+          "id": 105,
+          "name": "繁懿",
+          "prov": "155_155_1",
+          "header": "子长炘",
+          "problems": [
+            "order_multigraph:长(=0)!=idx3"
+          ]
+        },
+        {
+          "id": 106,
+          "name": "繁林",
+          "prov": "190_190_1",
+          "header": "子长炘",
+          "problems": [
+            "order_multigraph:长(=0)!=idx4"
+          ]
+        },
+        {
+          "id": 107,
+          "name": "繁盛",
+          "prov": "190_190_2/272_272_2",
+          "header": "子次炘",
+          "problems": [
+            "order_multigraph:次(=1)!=idx5"
+          ]
+        },
+        {
+          "id": 108,
+          "name": "繁财",
+          "prov": "190_190_3",
+          "header": "子三炘",
+          "problems": [
+            "order_multigraph:三(=2)!=idx6"
+          ]
+        },
+        {
+          "id": 109,
+          "name": "繁星",
+          "prov": "272_272_1",
+          "header": "子长炘",
+          "problems": [
+            "order_multigraph:长(=0)!=idx7"
+          ]
+        },
+        {
+          "id": 111,
+          "name": "繁斌",
+          "prov": "291_291_1",
+          "header": "子之祈",
+          "problems": [
+            "order_multigraph:之(=0)!=idx9",
+            "name_mismatch:祈!=炘"
           ]
         }
       ]
@@ -862,6 +853,22 @@
       ]
     },
     {
+      "father_id": 13,
+      "father_name": "庆松",
+      "father_prov": "36_36_0",
+      "children_flagged": [
+        {
+          "id": 139,
+          "name": "繁灯",
+          "prov": "36_36_4",
+          "header": "子三松",
+          "problems": [
+            "order_mismatch:三(=2)!=idx1"
+          ]
+        }
+      ]
+    },
+    {
       "father_id": 14,
       "father_name": "庆松",
       "father_prov": "36_36_1",
@@ -870,9 +877,9 @@
           "id": 141,
           "name": "繁煌",
           "prov": "36_36_3",
-          "header": "子三松",
+          "header": "子次松",
           "problems": [
-            "order_mismatch:三(=2)!=idx0"
+            "order_mismatch:次(=1)!=idx0"
           ]
         }
       ]
