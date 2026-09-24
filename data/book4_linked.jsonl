@@ -107,7 +107,7 @@
 {"id": 107, "name": "繁盛", "name_images": ["books/book4/5_names/277.png"], "generation": 2, "father": 6, "children": [], "biography": "亮之祭盛生于公元二〇〇三年七月十五日巳时", "notes": "190_190_2/272_272_2 | ocr_conf=0.9729"}
 {"id": 108, "name": "繁财", "name_images": ["books/book4/5_names/278.png"], "generation": 2, "father": 6, "children": [], "biography": "子三炘繁财字茂金生于公元一九九六年十月二十四日", "notes": "190_190_3 | ocr_conf=0.9654"}
 {"id": 109, "name": "繁星", "name_images": ["books/book4/5_names/388.png"], "generation": 2, "father": 6, "children": [], "biography": "子长炘繁星字志伟生于公元一九八九年己巳六月十九午时", "notes": "272_272_1 | ocr_conf=0.9987"}
-{"id": 110, "name": "广⿰钅席", "name_images": ["books/book4/5_names/390.png"], "generation": 2, "father": 6, "children": [], "biography": "子三炘繁贵字志文生于公元一九九二年壬申三月初五寅时", "notes": "272_272_3 | ocr_conf=0.9202 | flagged: ids"}
+{"id": 110, "name": "繁贵", "name_images": ["books/book4/5_names/390.png"], "generation": 2, "father": 6, "children": [], "biography": "子三炘繁贵字志文生于公元一九九二年壬申三月初五寅时", "notes": "272_272_3 | ocr_conf=0.9202"}
 {"id": 111, "name": "繁斌", "name_images": ["books/book4/5_names/411.png"], "generation": 2, "father": 6, "children": [], "biography": "", "notes": "291_291_1 | ocr_conf=0.9992"}
 {"id": 112, "name": "繁亮", "name_images": ["books/book4/5_names/35.png"], "generation": 2, "father": 7, "children": [], "biography": "", "notes": "18_18_1 | ocr_conf=0.9745"}
 {"id": 113, "name": "繁全", "name_images": ["books/book4/5_names/133.png"], "generation": 2, "father": 7, "children": [], "biography": "", "notes": "81_81_1 | ocr_conf=0.9946"}
