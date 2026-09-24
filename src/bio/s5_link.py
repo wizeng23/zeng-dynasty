@@ -84,12 +84,28 @@ def _fuzzy(a: str, b: str) -> bool:
 
 # --- per-subgraph association ------------------------------------------------------
 
+def _father_ok(blk: dict, nd: dict, father_name: dict[int, str]) -> bool:
+    """The bio's father char (header 子<order>X) agrees with the node's graph father.
+
+    An independent check used to gate the GUESSING stages (fuzzy, positional): a same-gen
+    name one char off (昭泮 vs 昭微) is only accepted when the header names the same father.
+    No father char, or a node without a named father -> no evidence either way -> allowed.
+    """
+    fc = (blk.get("father_char") or {}).get("vision") or (blk.get("father_char") or {}).get("paddle")
+    fa = father_name.get(nd["id"])
+    return not fc or not fa or fa.endswith(fc)
+
+
 def link_generation(blocks: list[dict], nodes: list[dict],
-                    node_children: dict[int, set[str]]):
+                    node_children: dict[int, set[str]],
+                    father_name: dict[int, str] | None = None):
     """Match bio blocks to tree nodes within one generation.
 
     Returns (pairs, unmatched_blocks, unmatched_nodes) where each pair is (block, node, how).
+    ``father_name`` (node id -> its graph father's name) gates the fuzzy and positional
+    stages on the bio's father char, so a near-name can't grab the wrong brother/cousin.
     """
+    father_name = father_name or {}
     pairs = []
     unblk = list(blocks)
     unnode = list(nodes)
@@ -108,7 +124,8 @@ def link_generation(blocks: list[dict], nodes: list[dict],
     # 2. fuzzy name
     for blk in list(unblk):
         nm = _block_name(blk)
-        hit = next((n for n in unnode if nm and _fuzzy(n["name"], nm)), None)
+        hit = next((n for n in unnode if nm and _fuzzy(n["name"], nm)
+                    and _father_ok(blk, n, father_name)), None)
         if hit:
             take(blk, hit, "fuzzy")
     # 3. sons overlap
@@ -120,10 +137,15 @@ def link_generation(blocks: list[dict], nodes: list[dict],
         if hit:
             take(blk, hit, "sons")
     # 4. positional (only if the leftovers line up 1:1, preserving order)
+    #    each positional pair must also pass the father check; a failing pair stays unlinked.
     if len(unblk) == len(unnode) and unblk:
+        keep_b, keep_n = [], []
         for blk, nd in zip(unblk, unnode):
-            pairs.append((blk, nd, "positional"))
-        unblk, unnode = [], []
+            if _father_ok(blk, nd, father_name):
+                pairs.append((blk, nd, "positional"))
+            else:
+                keep_b.append(blk); keep_n.append(nd)
+        unblk, unnode = keep_b, keep_n
     return pairs, unblk, unnode
 
 
@@ -161,6 +183,7 @@ def link_book(book: str, books_dir: str = "books", data_dir: str = "data",
     # node -> set of children names (for the sons signal)
     node_children = {n["id"]: {by_id[c]["name"] for c in n.get("children", []) if c in by_id}
                      for n in tree}
+    father_name = {n["id"]: by_id[n["father"]]["name"] for n in tree if n.get("father") in by_id}
     # tree grouped by stem, gen
     tb = collections.defaultdict(lambda: collections.defaultdict(list))
     for n in tree:
@@ -182,7 +205,7 @@ def link_book(book: str, books_dir: str = "books", data_dir: str = "data",
                    "how": collections.Counter(), "unmatched_blocks": [], "unmatched_nodes": []}
         for g, blks in byg_blk.items():
             nodes = tb.get(stem, {}).get(g, [])
-            pairs, ublk, unode = link_generation(blks, nodes, node_children)
+            pairs, ublk, unode = link_generation(blks, nodes, node_children, father_name)
             for blk, nd, how in pairs:
                 known = [by_id[c]["name"] for c in nd.get("children", []) if c in by_id]
                 linked_by_node[nd["id"]] = make_bio_field(blk, known)

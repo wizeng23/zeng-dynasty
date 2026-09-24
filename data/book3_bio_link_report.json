@@ -13,16 +13,24 @@
     },
     "18_63": {
       "stem": "10_17",
-      "matched": 115,
+      "matched": 112,
       "blocks": 115,
       "how": {
-        "exact": 100,
-        "fuzzy": 10,
-        "positional": 5
+        "exact": 104,
+        "fuzzy": 5,
+        "sons": 2,
+        "positional": 1
       },
-      "unmatched_blocks": [],
+      "unmatched_blocks": [
+        "18_63_2_15",
+        "18_63_2_16",
+        "18_63_2_17"
+      ],
       "unmatched_nodes": [
-        60
+        54,
+        148,
+        149,
+        150
       ]
     },
     "66_77": {
@@ -31,39 +39,48 @@
       "blocks": 33,
       "how": {
         "exact": 28,
-        "fuzzy": 5
+        "fuzzy": 4,
+        "sons": 1
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
     },
     "85_133": {
       "stem": "78_84",
-      "matched": 113,
+      "matched": 111,
       "blocks": 117,
       "how": {
-        "exact": 106,
-        "fuzzy": 6,
-        "positional": 1
+        "exact": 107,
+        "fuzzy": 3,
+        "sons": 1
       },
       "unmatched_blocks": [
+        "85_133_1_4",
         "85_133_1_5",
         "85_133_1_6",
         "85_133_1_10",
-        "85_133_2_12"
+        "85_133_2_8",
+        "85_133_2_9"
       ],
-      "unmatched_nodes": []
+      "unmatched_nodes": [
+        79,
+        181
+      ]
     },
     "139_181": {
       "stem": "134_138",
-      "matched": 79,
+      "matched": 78,
       "blocks": 79,
       "how": {
         "exact": 77,
-        "fuzzy": 2
+        "fuzzy": 1
       },
-      "unmatched_blocks": [],
+      "unmatched_blocks": [
+        "139_181_2_10"
+      ],
       "unmatched_nodes": [
         88,
+        190,
         322
       ]
     },
@@ -105,16 +122,19 @@
     },
     "221_246": {
       "stem": "217_220",
-      "matched": 67,
+      "matched": 66,
       "blocks": 67,
       "how": {
-        "exact": 59,
-        "fuzzy": 7,
+        "exact": 60,
+        "fuzzy": 5,
         "sons": 1
       },
-      "unmatched_blocks": [],
+      "unmatched_blocks": [
+        "221_246_4_10"
+      ],
       "unmatched_nodes": [
         559,
+        575,
         576
       ]
     },
@@ -134,7 +154,8 @@
       "blocks": 22,
       "how": {
         "exact": 19,
-        "fuzzy": 3
+        "fuzzy": 2,
+        "sons": 1
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -186,11 +207,11 @@
     }
   },
   "totals": {
-    "exact": 567,
-    "matched": 619,
+    "exact": 573,
+    "matched": 612,
     "blocks": 623,
-    "fuzzy": 42,
-    "positional": 9,
-    "sons": 1
+    "fuzzy": 29,
+    "sons": 6,
+    "positional": 4
   }
 }
