@@ -633,6 +633,25 @@ the Era-18 flag notes frozen lacks). Deleted the whole dir so `books/book2/` mat
 other books' layout; the old state remains recoverable from git commit `48cc577`. The
 `.gitignore` frozen-tracking rules were reverted since there's no frozen dir left.
 
+## Era 19 — Bio slice re-OCR + full human verification of Books 3 & 4 (2026-09-20 → 2026-09-24)
+
+**Geometric slice re-OCR** (`src/bio/s4_slice.py`): each person-block is cut into
+father / name / ~200px column strips (`CHAR_W=120` + `COL_PAD=40`; full-width rule
+lines trimmed; right region anchored to the rightmost ink) and read by Paddle, Gemini
+3.8-flash and Claude-vision subagents → `books/N/bio/4_slice/`. The father/name cut now
+bridges ≤15px header gaps and cuts before a thin first name char (三/东 were dropped).
+
+**QA tool** (`scripts/qa/s4_ocr.py`, :8767 b3 / :8768 b4): Verified row prefilled from
+the Gemini slice; magenta = Gemini≠Claude, teal = auto-resolved misread pair
+(夭/天, 宪/究, 黄/黃, 祧/桃), gray = Paddle-only; silent variant normalization
+(歿→殁, 緒→绪, 別→别); LCS char-diff boxes; son labels follow column edits; b3 prefilled
+father/name/sons from William's earlier names-only pass (`*_names.json` snapshot).
+
+**Result:** William verified every block — `data/book3_bio_verified.json` 623/623,
+`data/book4_bio_verified.json` 307/307 (+ `_bio_fields.json` labels). A mid-pass agent
+"test cleanup" wiped b3 blocks 14–173; William redid them. Rule since: never write
+human-QA data files (memory `never-clear-human-qa-data`).
+
 ---
 
 ## Pipeline status (snapshot)
