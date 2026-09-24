@@ -654,7 +654,7 @@ human-QA data files (memory `never-clear-human-qa-data`).
 
 ---
 
-## Era 19 — Bio-stitch rewritten to strict node-identity fold (2026-09-19)
+## Era 20 — Bio-stitch rewritten to strict node-identity fold (2026-09-19)
 
 **`src/bio/s5_bio_stitch.py` rewritten** from Era 17's per-child re-parenting to
 **node-identity folding**, mirroring the graph stitcher `src/s7_stitch.py`. A **Book-4
@@ -700,7 +700,7 @@ report-only, nothing consumes it.
 
 ---
 
-## Era 20 — Human-reviewed Book-3 bio OCR wired into stitching (2026-09-21)
+## Era 21 — Human-reviewed Book-3 bio OCR wired into stitching (2026-09-21)
 
 William hand-reviewed Book 3's bio father/name/son OCR in the QA tool, producing two review
 layers: `data/book3_bio_verified.json` (full verified transcription per block) and

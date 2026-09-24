@@ -17,8 +17,8 @@
       "blocks": 115,
       "how": {
         "exact": 100,
-        "fuzzy": 11,
-        "positional": 4
+        "fuzzy": 10,
+        "positional": 5
       },
       "unmatched_blocks": [],
       "unmatched_nodes": [
@@ -133,9 +133,8 @@
       "matched": 22,
       "blocks": 22,
       "how": {
-        "exact": 17,
-        "fuzzy": 3,
-        "sons": 2
+        "exact": 19,
+        "fuzzy": 3
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -145,8 +144,7 @@
       "matched": 31,
       "blocks": 31,
       "how": {
-        "exact": 29,
-        "fuzzy": 2
+        "exact": 31
       },
       "unmatched_blocks": [],
       "unmatched_nodes": []
@@ -156,8 +154,8 @@
       "matched": 19,
       "blocks": 19,
       "how": {
-        "fuzzy": 4,
-        "exact": 14,
+        "fuzzy": 3,
+        "exact": 15,
         "positional": 1
       },
       "unmatched_blocks": [],
@@ -188,11 +186,11 @@
     }
   },
   "totals": {
-    "exact": 561,
+    "exact": 566,
     "matched": 619,
     "blocks": 623,
-    "fuzzy": 47,
-    "positional": 8,
-    "sons": 3
+    "fuzzy": 43,
+    "positional": 9,
+    "sons": 1
   }
 }

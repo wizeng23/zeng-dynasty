@@ -1,11 +1,11 @@
 {
   "book": "book3",
   "checked": 619,
-  "clean": 441,
-  "flagged": 178,
+  "clean": 443,
+  "flagged": 176,
   "root_or_missing_father": 0,
   "problem_kinds": {
-    "name_mismatch": 141,
+    "name_mismatch": 139,
     "order_mismatch": 43,
     "order_unknown": 8,
     "order_multigraph": 3,
@@ -1542,38 +1542,6 @@
       ]
     },
     {
-      "father_id": 22,
-      "father_name": "纪均",
-      "father_prov": "64_65_1",
-      "children_flagged": [
-        {
-          "id": 67,
-          "name": "广鈊",
-          "prov": "64_65_4",
-          "header": "子长童",
-          "problems": [
-            "name_mismatch:童!=均"
-          ]
-        }
-      ]
-    },
-    {
-      "father_id": 24,
-      "father_name": "纪童",
-      "father_prov": "64_65_3",
-      "children_flagged": [
-        {
-          "id": 70,
-          "name": "广釗",
-          "prov": "64_65_6",
-          "header": "子之均",
-          "problems": [
-            "name_mismatch:均!=童"
-          ]
-        }
-      ]
-    },
-    {
       "father_id": 26,
       "father_name": "纪墉",
       "father_prov": "78_84_4",
@@ -1767,7 +1735,7 @@
     },
     {
       "father_id": 143,
-      "father_name": "昭锪",
+      "father_name": "昭⿰钅葱",
       "father_prov": "10_17_37",
       "children_flagged": [
         {
@@ -1776,7 +1744,7 @@
           "prov": "10_17_76",
           "header": "子之镢",
           "problems": [
-            "name_mismatch:镢!=锪"
+            "name_mismatch:镢!=葱"
           ]
         }
       ]
