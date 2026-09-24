@@ -350,7 +350,7 @@ def _strip_ocr_tags(notes: str) -> str:
     kept = [
         s
         for s in segs
-        if not s.startswith(("ocr_conf=", "ocr_low_conf", "ocr_override", "flagged:"))
+        if not s.startswith(("ocr_conf=", "ocr_low_conf", "ocr_override", "flagged:", "note:"))
     ]
     return " | ".join(kept)
 
@@ -369,6 +369,19 @@ def _load_flag_reasons(book: str, data_dir: str = "data") -> dict[str, str]:
     if isinstance(raw, list):
         return {prov: "" for prov in raw}
     return dict(raw)
+
+
+def _load_name_notes(book: str, data_dir: str = "data") -> dict[str, str]:
+    """Return ``{provenance: note}`` from ``{book}_name_notes.json`` (a human layer).
+
+    The graph prints some notes right beside a name (``庆荣幼殁`` = 庆荣, died in childhood;
+    ``宪梁 出继广钜名下`` = adopted out as 广钜's heir). The name is trimmed to the person via
+    ``{book}_overrides.json``; the printed note lives here, keyed by provenance, and
+    :func:`apply_names` folds it into ``notes`` as ``note: <text>`` -- so, like flags, it
+    survives any re-parse / re-apply.
+    """
+    path = os.path.join(data_dir, f"{book}_name_notes.json")
+    return json.load(open(path)) if os.path.exists(path) else {}
 
 
 def _resolve_name(prov: str, ocr_name: str, overrides: dict[str, str]) -> tuple[str, bool]:
@@ -422,6 +435,7 @@ def apply_names(book: str, data_dir: str = "data") -> int:
     ov_path = os.path.join(data_dir, f"{book}_overrides.json")
     overrides = json.load(open(ov_path)) if os.path.exists(ov_path) else {}
     flag_reasons = _load_flag_reasons(book, data_dir)
+    name_notes = _load_name_notes(book, data_dir)
 
     jsonl = os.path.join(data_dir, f"{book}.jsonl")
     lines = [json.loads(line) for line in open(jsonl) if line.strip()]
@@ -448,6 +462,8 @@ def apply_names(book: str, data_dir: str = "data") -> int:
         if prov in flag_reasons:
             reason = flag_reasons[prov]
             tags.append(f"flagged: {reason}" if reason else "flagged")
+        if name_notes.get(prov):
+            tags.append(f"note: {name_notes[prov]}")
         node["notes"] = " | ".join([base, *tags]) if base else " | ".join(tags)
         if name:
             applied += 1
@@ -458,6 +474,62 @@ def apply_names(book: str, data_dir: str = "data") -> int:
         "Applied %d names -> %s (%d nodes with overrides)", applied, jsonl, n_override_nodes
     )
     return applied
+
+
+BOOK_TAG = {"book1": "b1", "book2": "b2", "book3": "b3", "book4": "b4"}
+PER_BOOK_DERIVED = ("{book}_stitched.jsonl", "{book}_linked.jsonl", "{book}_bio_linked.jsonl")
+COMBINED_DERIVED = ("tree.jsonl", "tree_bio.jsonl", "tree_bio_stitched.jsonl", "tree_combined.jsonl")
+
+
+def propagate_names(book: str, provs: set[str], data_dir: str = "data") -> dict[str, int]:
+    """Copy name + ocr/flag/note tags for ``provs`` from ``{book}.jsonl`` into the derived files.
+
+    STRICTLY book-scoped: in the per-book files a node matches only by its exact provenance
+    head, and in the combined trees only by ``{book-tag}:{provenance}`` -- so a node in
+    another book with the same provenance string is never touched (the 2026-09-19
+    rare-glyph pass leaked Book 3's ``272_272_3`` name onto Book 4's this way). Each matched
+    node keeps its own notes head (it may carry a stitch trace) and gets the source's tags.
+    Returns ``{file: nodes_updated}``.
+    """
+    src = {}
+    for line in open(os.path.join(data_dir, f"{book}.jsonl")):
+        n = json.loads(line)
+        head, _, tags = (n.get("notes") or "").partition(" | ")
+        if head in provs:
+            src[head] = (n["name"], tags)
+    missing = provs - set(src)
+    if missing:
+        raise KeyError(f"provenances not in {book}.jsonl: {sorted(missing)}")
+    tag = BOOK_TAG[book]
+    targets = [(f.format(book=book), "") for f in PER_BOOK_DERIVED] + \
+              [(f, f"{tag}:") for f in COMBINED_DERIVED]
+    counts = {}
+    for fname, prefix in targets:
+        path = os.path.join(data_dir, fname)
+        if not os.path.exists(path):
+            continue
+        lines = open(path, encoding="utf-8").read().split("\n")
+        hit = 0
+        for i, line in enumerate(lines):
+            if not line.strip():
+                continue
+            n = json.loads(line)
+            head = (n.get("notes") or "").split(" | ", 1)[0]
+            # the head may be a stitch trace "canon/dup"; match on its first provenance
+            key = head[len(prefix):].split("/", 1)[0] if head.startswith(prefix) else None
+            if prefix and not head.startswith(prefix):
+                continue
+            if key not in src:
+                continue
+            name, tags = src[key]
+            n["name"] = name
+            n["notes"] = f"{head} | {tags}" if tags else head
+            lines[i] = json.dumps(n, ensure_ascii=False)
+            hit += 1
+        if hit:
+            open(path, "w", encoding="utf-8").write("\n".join(lines))
+        counts[fname] = hit
+    return counts
 
 
 def apply_names_by_crop(
