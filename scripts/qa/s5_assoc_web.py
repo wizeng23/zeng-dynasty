@@ -289,7 +289,7 @@ function render(){
       faC=`${chk(c.father)} ${esc(b.father_header||"")} <span class="mut">(${esc(b.father_char||"")})</span>`;
       [bS,gS]=sonsCell(b.sons,row.children);
       if(b.sons_raw.length && b.sons_raw.join("|")!==b.sons.join("|")) bS+=`<div class="mut">raw: ${esc(b.sons_raw.join(" | "))}</div>`;
-      sonsC=chk(c.sons)+(c.sons==="graph_empty"?' <span class="soft">graph has no children (continues in Book 4?)</span>':"");
+      sonsC=c.sons==="graph_empty"?'<span class="soft" title="graph has no children here (sons may continue in Book 4)">?</span>':chk(c.sons);
     }
     h+=`<tr class="${cls}"><td>${gimg}<span class="nm">${esc(row.name)}</span><div class="mut">${esc(row.prov)} · id ${row.id}</div></td>
         <td>${esc(row.father||"—")}</td><td>${nameC}</td><td>${faC}</td><td>${bS}</td><td>${gS}</td><td>${sonsC}</td><td>${bioCell}</td></tr>`;
