@@ -233,12 +233,28 @@ def parse_sons(columns: list[str]) -> list[str]:
     return sons
 
 
+# Glyphs that can sit between 子 and the father char in the header: a birth order
+# (之/长 = eldest, 次/二 = 2nd, 三..十, 幼, 元) or 继 (an adopted-in son).
+_FATHER_ORD = "之长次二三四五六七八九十幼元继"
+
+
 def parse_father(lines: list[str]) -> str | None:
-    """Father name-char from the header line ``子[之|次|…]X`` (line 1 of a vision read)."""
+    """Father name-char from the header line ``子<order>X`` (line 1 of a vision read).
+
+    Strip ``子`` and at most one order glyph; the whole remainder is the father char --
+    usually one character, but an IDS rare glyph (``⿰钅舀``) spans several codepoints and
+    must be kept whole. A header with nothing after the order glyph (``子长``, a truncated
+    read) has no father char -> None.
+    """
     if not lines:
         return None
-    m = re.match(rf"子[之{_ORD}]?(.)", lines[0])
-    return m.group(1) if m else None
+    h = (lines[0] or "").strip()
+    if not h.startswith("子"):
+        return None
+    rest = h[1:]
+    if len(rest) > 1 and rest[0] in _FATHER_ORD:
+        rest = rest[1:]
+    return rest or None
 
 
 def parse_daughters(columns: list[str]) -> list[str]:

@@ -130,7 +130,7 @@ def load_book(book: str) -> dict:
                 if not fa or not fa.get("name") or not b_fc:
                     c["father"] = "na"
                 else:
-                    c["father"] = "ok" if b_fc[-1] == fa["name"][-1] else "bad"
+                    c["father"] = "ok" if fa["name"].endswith(b_fc) else "bad"   # b_fc may be an IDS
                 if b_sons == kids:
                     c["sons"] = "ok"
                 elif b_sons and not kids:

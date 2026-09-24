@@ -166,53 +166,58 @@ def role_idx(bid: str, lines: list[str], fields: dict, role: str, default: int |
     return default if default is not None and default < len(lines) else None
 
 
-def extract_son_name(col: str) -> str | None:
-    """Pull the given name out of a son column, or None if it carries no matchable name.
+def extract_son_name(col: str, son_gen: str | None = None) -> str | None:
+    """Pull the son's name out of one son column, or None if it holds no name.
 
-    The 677 clean 2-char columns are the common case; this handles the messy tail without
-    guessing (a WRONG son name breaks the exact-ordered stitch match worse than a missing
-    one, so ambiguous columns return None to be reported rather than fabricated). Order:
+    Rule-based (no knowledge of the graph); :func:`refine_sons` later re-reads each column
+    against the linked node's graph children, which rescues any real son these rules miss.
 
-      1. rare-glyph IDS name (``广⿰钅舀`` -- ``⿰`` describes one character) -> keep whole;
-      2. drop spaces, then anchor on a generation char if EXACTLY one is present
-         (``三庆坤`` -> ``庆坤``, ``宪棕张出`` -> ``宪棕``); two+ gen chars = multiple names -> None;
-      3. no gen char: strip a leading ordinal (长/次/三…) and a leading ``子``, then cut at
-         the first status marker; keep the first 2 chars if 2 remain and they aren't status
-         (``观音夭`` -> ``观音``, ``和平`` -> ``和平``; ``次子夭`` -> None, ``双桃承嗣`` -> None).
+      1. rare-glyph IDS name (``广⿰钅舀``) -> kept whole;
+      2. an adoption/inheritance note (承嗣/名下/出继/入继/编继/俱止) -> None (not needed for
+         stitching; a son it names is recovered by the graph-reference pass);
+      3. exactly one generation char -> gen char + next (``三庆坤``->``庆坤``, ``宪棕张出``->``宪棕``);
+         gen+ordinal+status (``宪次夭``) is a death note -> None; 2+ gen chars -> None;
+      4. otherwise strip leading ordinals, and a ``子`` right after them (``次子夭``), cut at the
+         first status marker (``夭/殁/折…``, incl. a ``幼`` before it), then: nothing or only
+         ordinals left -> None (``长夭``); one char left after an ordinal -> that son by bare
+         given char, generation restored (``三栯`` -> ``宪栯``); else the remaining name, up to 3
+         chars (``门女子``, ``石女子幼殁``->``石女子``, ``子恒``, ``观音夭``->``观音``).
     """
     col = col.strip()
     if not col:
         return None
     if "⿰" in col or "⿱" in col or "⿴" in col:      # IDS rare-glyph name, kept whole
         return col
-    col = col.replace(" ", "").replace("　", "")
-
-    # A kinship/inheritance note is not a son even when it names a gen-char target: "半昭汉
-    # 名下承嗣" = "inherits under 昭汉's name", 昭汉 is the target, not this person's son. So
-    # veto BEFORE the gen-char extraction. Likewise "门女子"/"石女子" are stillbirth/daughter
-    # placeholders (女子), not sons.
-    if _KINSHIP_NOTE.search(col) or "女子" in col:
+    col = col.replace(" ", "").replace("\u3000", "")
+    if _KINSHIP_NOTE.search(col):
         return None
 
     gen_positions = [i for i, ch in enumerate(col) if ch in GEN_CHARS and i + 1 < len(col)]
     if len(gen_positions) == 1:
         i = gen_positions[0]
-        # gen char + ORDINAL + status is a death note, not a name ("宪次夭" = 2nd son died young).
         if col[i + 1] in ORDINAL_PREFIX and _STATUS.search(col[i + 1:]):
             return None
         return col[i:i + 2]
     if len(gen_positions) > 1:
-        return None  # multiple generation chars => multiple names in one column; don't guess.
-
-    body = col
-    while body and (body[0] in ORDINAL_PREFIX or body[0] == "子"):
-        body = body[1:]
-    if _STATUS.search(body):                          # a status tail: keep only the head
-        body = _STATUS.split(body)[0]
-    body = body.strip()
-    if len(body) < 2:                                 # nothing but ordinal/status left
         return None
-    return body[:2]
+
+    body, had_ord = col, False
+    while body and body[0] in ORDINAL_PREFIX:
+        body, had_ord = body[1:], True
+    if had_ord and body.startswith("子"):             # 次子夭 / 长子幼殁: "the 2nd son ..."
+        body = body[1:]
+    if _STATUS.search(body):
+        body = _STATUS.split(body)[0]
+    body = body.rstrip("幼早").strip()                  # 幼殁 / 早夭: the 幼/早 belongs to the status
+    if not body or all(ch in ORDINAL_PREFIX or ch == "子" for ch in body):
+        return None
+    if len(body) == 1:
+        # a bare given char after an ordinal (三栯 = "3rd son: 栯"); a lone single-char column
+        # with no ordinal is a wrapped name fragment (广, 下) -- not expanded.
+        if had_ord and son_gen and body not in GEN_CHARS:
+            return son_gen + body
+        return None
+    return body if len(body) <= 3 else body[:2]
 
 
 def extract_son_names(col: str, son_gen: str | None) -> list[str]:
@@ -229,7 +234,7 @@ def extract_son_names(col: str, son_gen: str | None) -> list[str]:
     """
     tokens = col.split()
     if len(tokens) <= 1:
-        nm = extract_son_name(col)
+        nm = extract_son_name(col, son_gen)
         return [nm] if nm else []
     out = []
     for tok in tokens:
@@ -242,6 +247,28 @@ def extract_son_names(col: str, son_gen: str | None) -> list[str]:
             if nm:
                 out.append(nm)
         # else: a note/status token (张出, 次幼殁, 二三) -- skip
+    return out
+
+
+def refine_sons(sons_raw: list[str], known: list[str], son_gen: str | None) -> list[str]:
+    """Re-read the son columns against the sons the graph says this person has.
+
+    Run once the bio is linked to its graph node (``known`` = that node's children names).
+    A column that contains a known son's name yields exactly that name, with any description
+    around it stripped (``昭演出继失考`` -> ``昭演`` if 昭演 is a graph child) -- this keeps real
+    sons that the rules drop. Other columns fall back to :func:`extract_son_names`. Each name
+    is kept once, in column order (a note repeating an already-listed son adds nothing).
+    """
+    out: list[str] = []
+    for col in sons_raw:
+        c = col.replace(" ", "")
+        # a known name of 2+ chars may sit inside description text; a 1-char one (棚) only
+        # counts as the whole column or surname + name (曾棚), never as a stray char in a note.
+        found = sorted({k for k in known if k and (k in c if len(k) >= 2 else c in (k, "曾" + k))},
+                       key=c.index)
+        for nm in (found or extract_son_names(col, son_gen)):
+            if nm not in out:
+                out.append(nm)
     return out
 
 

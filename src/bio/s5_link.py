@@ -127,13 +127,26 @@ def link_generation(blocks: list[dict], nodes: list[dict],
     return pairs, unblk, unnode
 
 
-def make_bio_field(blk: dict) -> dict:
-    """The bio payload folded onto a tree node (structured + provenance + lossless raw)."""
+def make_bio_field(blk: dict, known_sons: list[str] | None = None) -> dict:
+    """The bio payload folded onto a tree node (structured + provenance + lossless raw).
+
+    For a reviewed record (from ``s5_build_bio``, which keeps ``sons_raw``) the son list is
+    re-read against ``known_sons`` -- the linked node's graph children -- so a column holding
+    a real son that the rule-based parse dropped still yields him (see ``refine_sons``).
+    """
+    sons = blk.get("sons")
+    if blk.get("sons_raw") and known_sons:
+        from src.bio.s5_build_bio import refine_sons, son_gen_char
+        refined = refine_sons(blk["sons_raw"], known_sons,
+                              son_gen_char((blk.get("name") or {}).get("vision")))
+        sons = {**(sons or {}), "vision": refined}
     return {
         "block_id": blk["id"],
         "name_ocr": blk.get("name"),
         "father_char": blk.get("father_char"),
-        "sons": blk.get("sons"),
+        "sons": sons,
+        "sons_raw": blk.get("sons_raw"),
+        "father_header": blk.get("father_header"),
         "daughters": blk.get("daughters"),
         "birth": blk.get("birth"),
         "qa_flags": blk.get("qa_flags", []),
@@ -171,7 +184,8 @@ def link_book(book: str, books_dir: str = "books", data_dir: str = "data",
             nodes = tb.get(stem, {}).get(g, [])
             pairs, ublk, unode = link_generation(blks, nodes, node_children)
             for blk, nd, how in pairs:
-                linked_by_node[nd["id"]] = make_bio_field(blk)
+                known = [by_id[c]["name"] for c in nd.get("children", []) if c in by_id]
+                linked_by_node[nd["id"]] = make_bio_field(blk, known)
                 sec_rep["matched"] += 1
                 sec_rep["how"][how] += 1
                 report["totals"][how] += 1
